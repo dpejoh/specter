@@ -8,29 +8,43 @@ PIF_DIR="/data/adb/modules/playintegrityfix"
 
 check_network || { log "PIF" "Error: No internet connection"; exit 1; }
 
-if [ ! -d "$PIF_DIR" ]; then
-  log "PIF" "Error: Play Integrity Fix not installed"
+if [ ! -d "$PIF_DIR" ] || [ ! -f "$PIF_DIR/module.prop" ]; then
+  log "PIF" "Error: Play Integrity Fix not found at $PIF_DIR"
   exit 1
 fi
 
-MODULE_NAME=$(grep "^name=" "$PIF_DIR/module.prop" 2>/dev/null | cut -d= -f2-)
-[ -z "$MODULE_NAME" ] && { log "PIF" "Error: Cannot read module.prop"; exit 1; }
+# Detect variant by checking scripts on disk
+if [ -f "$PIF_DIR/autopif_ota.sh" ]; then
+  log "PIF" "Variant: Play Integrity Fix [INJECT]"
+else
+  log "PIF" "Variant: Play Integrity Fork"
+fi
 
-case "$MODULE_NAME" in
-  "Play Integrity Fix [INJECT]")
-    log "PIF" "Detected INJECT variant"
-    sh "$PIF_DIR/autopif_ota.sh" || log "PIF" "Warning: autopif_ota.sh failed"
-    sh "$PIF_DIR/autopif.sh" || log "PIF" "Warning: autopif.sh failed"
-    ;;
-  "Play Integrity Fork")
-    log "PIF" "Detected Fork variant"
-    sh "$PIF_DIR/autopif4.sh" -m || log "PIF" "Warning: autopif4.sh failed"
-    ;;
-  *)
-    log "PIF" "Error: Unknown module variant: $MODULE_NAME"
-    exit 1
-    ;;
-esac
+_ran=0
 
+if [ -f "$PIF_DIR/autopif_ota.sh" ]; then
+  log "PIF" "Running autopif_ota.sh..."
+  sh "$PIF_DIR/autopif_ota.sh" && log "PIF" "autopif_ota.sh done" || log "PIF" "Warning: autopif_ota.sh failed"
+  _ran=$((_ran + 1))
+fi
+
+if [ -f "$PIF_DIR/autopif.sh" ]; then
+  log "PIF" "Running autopif.sh..."
+  sh "$PIF_DIR/autopif.sh" && log "PIF" "autopif.sh done" || log "PIF" "Warning: autopif.sh failed"
+  _ran=$((_ran + 1))
+fi
+
+if [ -f "$PIF_DIR/autopif4.sh" ]; then
+  log "PIF" "Running autopif4.sh..."
+  sh "$PIF_DIR/autopif4.sh" -m && log "PIF" "autopif4.sh done" || log "PIF" "Warning: autopif4.sh failed"
+  _ran=$((_ran + 1))
+fi
+
+if [ "$_ran" -eq 0 ]; then
+  log "PIF" "Error: No update scripts found in $PIF_DIR"
+  exit 1
+fi
+
+unset _ran
 log "PIF" "Finish"
 exit 0

@@ -64,7 +64,6 @@ export async function migrateLocalStorage() {
       selectedLanguage: 'lang',
       themeMode: 'theme',
       themePreset: 'theme_preset',
-      clockFormat: 'clock_format',
     };
     for (const [oldKey, newKey] of Object.entries(map)) {
       const val = localStorage.getItem(oldKey);

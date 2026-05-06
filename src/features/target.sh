@@ -14,43 +14,32 @@ if [ -d "/data/adb/modules/TA_utl" ] || [ -d "/data/adb/modules/.TA_utl" ]; then
   exit 0
 fi
 
-_author=$(grep 'author=' /data/adb/modules/tricky_store/module.prop 2>/dev/null | head -1 | cut -d= -f2 | tr '[:upper:]' '[:lower:]')
-case "$_author" in
+case "$(grep 'author=' /data/adb/modules/tricky_store/module.prop 2>/dev/null | head -1 | cut -d= -f2 | tr '[:upper:]' '[:lower:]')" in
   *jingmatrix*)
-    log "TARGET" "TEESimulator detected — locked.xml section"
-    _customize="/sdcard/Specter/customize.txt"
-    if [ -f "$_customize" ] && [ "$(head -1 "$_customize" 2>/dev/null)" != "#disable" ]; then
-      _locked=$(grep -v '^#' "$_customize" | sed 's/[!?]$//' 2>/dev/null || echo "")
+    log "TARGET" "TEESimulator — generating locked.xml section"
+    _cust="/sdcard/Specter/customize.txt"
+    if [ -f "$_cust" ] && [ "$(head -1 "$_cust" 2>/dev/null)" != "#disable" ]; then
+      _locked=$(grep -v '^#' "$_cust" | sed 's/[!?]$//' 2>/dev/null || echo "")
       if [ -n "$_locked" ]; then
         [ -f "$TARGET_TXT" ] && cp "$TARGET_TXT" "${TARGET_TXT}.bak"
         _tmp=$(mktemp 2>/dev/null || echo "/data/local/tmp/.specter_tee_$$")
-        : > "$_tmp"
+        _locked_f="/data/local/tmp/.specter_locked.$$"
+        printf '%s\n' $_locked > "$_locked_f"
         if [ -f "$TARGET_TXT" ] && [ -s "$TARGET_TXT" ]; then
-          while IFS= read -r _line || [ -n "$_line" ]; do
-            [ -z "$_line" ] && continue
-            [ "${_line#\[}" != "$_line" ] && continue
-            _skip=false
-            for _e in $_locked; do
-              case "$_line" in "$_e"|"$_e!"|"$_e?") _skip=true; break ;; esac
-            done
-            [ "$_skip" = "false" ] && echo "$_line" >> "$_tmp"
-          done < "$TARGET_TXT"
+          sed '/^\[/d' "$TARGET_TXT" | grep -Fvxf "$_locked_f" > "$_tmp"
         fi
-        echo "[locked.xml]" >> "$_tmp"
-        for _e in $_locked; do echo "$_e" >> "$_tmp"; done
-        mv -f "$_tmp" "$TARGET_TXT"
-        rm -f "$_tmp"
-        log "TARGET" "Preserved existing entries, appended [locked.xml] section"
-        unset _tmp _e _skip _line
+        rm -f "$_locked_f"
+        printf '%s\n' '[locked.xml]' $_locked >> "$_tmp"
+        [ -s "$_tmp" ] && mv -f "$_tmp" "$TARGET_TXT" || rm -f "$_tmp"
+        unset _tmp
       fi
       unset _locked
     fi
-    unset _author _customize
+    unset _cust
     log "TARGET" "Finish (TEESimulator)"
     exit 0
     ;;
 esac
-unset _author
 
 _count=0
 MODULE_ROOT="${MODDIR%/features}"

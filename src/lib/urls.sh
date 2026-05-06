@@ -1,7 +1,7 @@
 # shellcheck shell=sh disable=SC2034
 KEYBOX_URL="https://rawbin.netlify.app/key"
 ATTESTATION_URL="https://rawbin.netlify.app/clips/attestation"
-HMA_CONFIG_URL="https://rawbin.netlify.app/clips/config"
+HMA_CONFIG_URL="https://rawbin.netlify.app/clips/hma"
 CATALOG_URL="https://rawbin.netlify.app/key/catalog"
 GOOGLE_REVOCATION_URL="https://android.googleapis.com/attestation/status?encrypted=0"
 RKA_HOST="rp.mhmrdd.me"

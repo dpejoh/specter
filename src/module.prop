@@ -1,7 +1,7 @@
 id=Specter
 name=Specter
-version=v1.0.0
-versionCode=100
+version=v1.1.0
+versionCode=110
 author=dpejoh
 description=A systemless module to achieve and maintain device integrity - keybox management, security spoofing, and detection avoidance
 updateJson=https://raw.githubusercontent.com/dpejoh/specter/main/update.json

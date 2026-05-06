@@ -5,6 +5,8 @@ MODDIR=${0%/*}
 . "$MODDIR/../lib/paths.sh"
 . "$MODDIR/../lib/urls.sh"
 
+log "KEYBOX_INFO" "Start"
+
 KEYBOX_FILE="/data/adb/tricky_store/keybox.xml"
 INFO_PATH="$MODDIR/../webroot/json/keybox_info.json"
 
@@ -94,4 +96,5 @@ cat <<EOF > "$INFO_PATH"
 EOF
 
 unset _installed _source _source_version _text _up_to_date _revoked _serial _history_json _entry _provider _latest_for_source
+log "KEYBOX_INFO" "Finish"
 exit 0

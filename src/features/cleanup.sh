@@ -117,4 +117,5 @@ fi
 
 unset _rm _pkg
 log "CLEANUP" "Cleanup completed"
+log "CLEANUP" "Finish"
 exit 0

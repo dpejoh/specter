@@ -18,7 +18,7 @@ fi
 
 CFG="/data/user/$(id -u)/${MOD}/files/rka_configs.json"
 
-RKA_NAME="Specter RKA"
+RKA_NAME="Yuri RKA"
 RKA_UDP=0
 
 prev_id=""
@@ -53,5 +53,6 @@ for _oid in $(ja_ids "$CFG"); do
   ja_set "$CFG" "$_oid" isActive false b
 done
 
+log "RKA" "RKA config updated for $RKA_NAME"
 log "RKA" "Finish"
 exit 0

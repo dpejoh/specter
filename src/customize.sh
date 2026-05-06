@@ -15,24 +15,21 @@ _vol() {
 }
 
 ui_print ""
-ui_print "*********************************"
-ui_print "*****Specter Installer*******"
-ui_print "*********************************"
+ui_print "____                  _            "
+ui_print "/ ___| _ __   ___  ___| |_ ___ _ __ "
+ui_print "\\___ \\| '_ \\ / _ \\/ __| __/ _ \\ '__|"
+ui_print " ___) | |_) |  __/ (__| ||  __/ |   "
+ui_print "|____/| .__/ \\___|\\___|\\__\\___|_|   "
+ui_print "      |_|                           "
 ui_print ""
 
-_has_ksu=false; _has_ap=false; _has_magisk=false
-[ -n "$KSU" ] && _has_ksu=true
-[ -n "$APATCH" ] && _has_ap=true
-[ -n "$MAGISK_VER_CODE" ] && _has_magisk=true
-if [ "$_has_magisk" = true ]; then
-  ui_print "- Magisk root detected"
-elif [ "$_has_ksu" = true ]; then
-  ui_print "- KernelSU root detected"
-elif [ "$_has_ap" = true ]; then
-  ui_print "- APatch root detected"
-else
-  ui_print "- Root detected"
-fi
+detect_root_solution
+case "$ROOT_SOL" in
+  kernelsu) ui_print "- KernelSU root detected" ;;
+  apatch)   ui_print "- APatch root detected"   ;;
+  magisk)   ui_print "- Magisk root detected"   ;;
+  legacy)   ui_print "- Legacy root detected"   ;;
+esac
 
 _ts_found=false
 if [ -d "/data/adb/modules/tricky_store" ] || [ -d "/data/adb/modules_update/tricky_store" ]; then
@@ -110,11 +107,5 @@ unset _ts_found
 
 mkdir -p "$MODPATH/webroot/json"
 RUNTIME_DIR=$(printf '%s' "$MODPATH" | sed 's|/modules_update/|/modules/|')
-cat > "$MODPATH/webroot/json/module_paths.json" <<JSON
-{"MODDIR": "$RUNTIME_DIR"}
-JSON
-unset RUNTIME_DIR
-
-run_device_info "$TMPDIR" "$MODPATH"
 
 return 0

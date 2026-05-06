@@ -92,40 +92,6 @@ detect_root_solution() {
         ROOT_SOL="magisk"
     fi
 
-    log "ROOT" "Detected root solution: $ROOT_SOL"
-}
-
-resetprop_if_diff() {
-    _rid_name="$1" _rid_expected="$2"
-    _rid_current=$(resetprop "$_rid_name" 2>/dev/null || echo "")
-
-    if [ -z "$_rid_current" ] || [ "$_rid_current" != "$_rid_expected" ]; then
-        case "$ROOT_SOL" in
-            legacy) setprop "$_rid_name" "$_rid_expected" 2>/dev/null || true ;;
-            *) resetprop -n "$_rid_name" "$_rid_expected" 2>/dev/null || true ;;
-        esac
-    fi
-
-    unset _rid_name _rid_expected _rid_current
-}
-
-resetprop_if_match() {
-    _rim_name="$1" _rim_contains="$2" _rim_value="$3"
-    _rim_current=$(resetprop "$_rim_name" 2>/dev/null || echo "")
-
-    case "$_rim_current" in
-        *"$_rim_contains"*)
-            case "$ROOT_SOL" in
-                legacy) setprop "$_rim_name" "$_rim_value" 2>/dev/null || true ;;
-                *) resetprop -n "$_rim_name" "$_rim_value" 2>/dev/null || true ;;
-            esac
-            unset _rim_name _rim_contains _rim_value _rim_current
-            return 0
-            ;;
-    esac
-
-    unset _rim_name _rim_contains _rim_value _rim_current
-    return 1
 }
 
 SPECTER_DIR="/data/adb/Specter"
@@ -133,24 +99,42 @@ GMS_PROPS_FILE="/data/system/gms_certified_props.json"
 GOOGLE_REVOCATION_URL="${GOOGLE_REVOCATION_URL:-https://android.googleapis.com/attestation/status?encrypted=0}"
 PERSIST_RESTORE_FILE="$SPECTER_DIR/persist_backup.txt"
 
-persistprop() {
-    _pp_name="$1" _pp_value="$2"
-    _pp_restore=""
+sp_try() {
+  _st_name="$1"
+  if [ $# -eq 2 ]; then
+    _st_expected="$2"
+    _st_current=$(resetprop "$_st_name" 2>/dev/null || echo "")
+    [ -z "$_st_current" ] || [ "$_st_current" = "$_st_expected" ] && return 0
+  elif [ $# -ge 3 ]; then
+    _st_needle="$2" _st_value="$3"
+    _st_current=$(resetprop "$_st_name" 2>/dev/null || echo "")
+    case "$_st_current" in *"$_st_needle"*) ;; *) return 1 ;; esac
+    _st_expected="$_st_value"
+  else
+    return 1
+  fi
+  case "$ROOT_SOL" in
+    legacy) setprop "$_st_name" "$_st_expected" 2>/dev/null || true ;;
+    *) resetprop -n "$_st_name" "$_st_expected" 2>/dev/null || true ;;
+  esac
+  unset _st_name _st_expected _st_current _st_needle _st_value
+  return 0
+}
 
-    case "$ROOT_SOL" in
-        legacy) setprop "$_pp_name" "$_pp_value" 2>/dev/null || true ;;
-        *) resetprop -n -p "$_pp_name" "$_pp_value" 2>/dev/null || true ;;
-    esac
-
-    _pp_restore=$(resetprop "$_pp_name" 2>/dev/null || echo "")
-    if [ -n "$_pp_restore" ]; then
+sp_persist() {
+  _sp_name="$1" _sp_value="$2"
+  case "$ROOT_SOL" in
+    legacy) setprop "$_sp_name" "$_sp_value" 2>/dev/null || true ;;
+    *) resetprop -n -p "$_sp_name" "$_sp_value" 2>/dev/null || true ;;
+  esac
+  _sp_restore=$(resetprop "$_sp_name" 2>/dev/null || echo "")
+  if [ -n "$_sp_restore" ]; then
     ensure_dir "$SPECTER_DIR"
-    if ! grep -qs "^resetprop -n -p \"$_pp_name\"" "$PERSIST_RESTORE_FILE" 2>/dev/null; then
-      echo "resetprop -n -p \"$_pp_name\" \"$_pp_restore\"" >> "$PERSIST_RESTORE_FILE" 2>/dev/null || true
-        fi
+    if ! grep -qsF "|$_sp_name|" "$PERSIST_RESTORE_FILE" 2>/dev/null; then
+      echo "restore|$_sp_name|$_sp_restore" >> "$PERSIST_RESTORE_FILE" 2>/dev/null || true
     fi
-
-    unset _pp_name _pp_value _pp_restore
+  fi
+  unset _sp_name _sp_value _sp_restore
 }
 
 hide_recovery_folders() {
@@ -220,22 +204,22 @@ apply_prop_hardening() {
     check_prop "ro.hardware.virtual_device" "0"
     check_prop "ro.boot.selinux" "enforcing"
     check_prop "ro.crypto.state" "encrypted"
-    resetprop_if_diff "ro.boot.warranty_bit" "0"
-    resetprop_if_diff "ro.vendor.boot.warranty_bit" "0"
-    resetprop_if_diff "ro.vendor.warranty_bit" "0"
-    resetprop_if_diff "ro.warranty_bit" "0"
-    resetprop_if_diff "ro.is_ever_orange" "0"
+    sp_try "ro.boot.warranty_bit" "0"
+    sp_try "ro.vendor.boot.warranty_bit" "0"
+    sp_try "ro.vendor.warranty_bit" "0"
+    sp_try "ro.warranty_bit" "0"
+    sp_try "ro.is_ever_orange" "0"
 
     while IFS= read -r _aph_prop; do
         [ -z "$_aph_prop" ] && continue
-        resetprop_if_diff "$_aph_prop" "user"
+        sp_try "$_aph_prop" "user"
     done <<PROPS
 $(resetprop 2>/dev/null | grep -oE 'ro.*\.build\.type' | grep -v 'ro.build.type' || true)
 PROPS
 
     while IFS= read -r _aph_prop; do
         [ -z "$_aph_prop" ] && continue
-        resetprop_if_diff "$_aph_prop" "release-keys"
+        sp_try "$_aph_prop" "release-keys"
     done <<PROPS
 $(resetprop 2>/dev/null | grep -oE 'ro.*\.build\.tags' | grep -v 'ro.build.tags' || true)
 PROPS
@@ -289,16 +273,16 @@ disable_rom_spoof_engines() {
   fi
 
   for _hook in persist.sys.pihooks.first_api_level persist.sys.pihooks.security_patch; do
-    resetprop 2>/dev/null | grep -q "$_hook" || persistprop "$_hook" ""
+    resetprop 2>/dev/null | grep -q "$_hook" || sp_persist "$_hook" ""
   done
 
-  persistprop persist.sys.pihooks.disable.gms_props true
-  persistprop persist.sys.pihooks.disable.gms_key_attestation_block true
-  persistprop persist.sys.entryhooks_enabled false
-  persistprop persist.sys.pixelprops.gms false
-  persistprop persist.sys.pixelprops.gapps false
-  persistprop persist.sys.pixelprops.google false
-  persistprop persist.sys.pixelprops.pi false
+  sp_persist persist.sys.pihooks.disable.gms_props true
+  sp_persist persist.sys.pihooks.disable.gms_key_attestation_block true
+  sp_persist persist.sys.entryhooks_enabled false
+  sp_persist persist.sys.pixelprops.gms false
+  sp_persist persist.sys.pixelprops.gapps false
+  sp_persist persist.sys.pixelprops.google false
+  sp_persist persist.sys.pixelprops.pi false
 
   if [ -f "$_gms" ] && [ "$(resetprop persist.sys.spoof.gms 2>/dev/null)" != "false" ]; then
     resetprop persist.sys.spoof.gms false
@@ -424,16 +408,16 @@ resolve_module_root() {
 block_rom_spoof_engines() {
   if resetprop 2>/dev/null | grep -qE 'persist\.sys\.(pihooks|entryhooks|pixelprops)' || [ -f /data/system/gms_certified_props.json ]; then
     for _hook in persist.sys.pihooks.first_api_level persist.sys.pihooks.security_patch; do
-      resetprop 2>/dev/null | grep -q "$_hook" || resetprop -n -p "$_hook" "" 2>/dev/null || true
+      resetprop 2>/dev/null | grep -q "$_hook" || sp_persist "$_hook" ""
     done
     unset _hook
-    resetprop -n -p persist.sys.pihooks.disable.gms_props true 2>/dev/null || true
-    resetprop -n -p persist.sys.pihooks.disable.gms_key_attestation_block true 2>/dev/null || true
-    resetprop -n -p persist.sys.entryhooks_enabled false 2>/dev/null || true
-    resetprop -n -p persist.sys.pixelprops.gms false 2>/dev/null || true
-    resetprop -n -p persist.sys.pixelprops.gapps false 2>/dev/null || true
-    resetprop -n -p persist.sys.pixelprops.google false 2>/dev/null || true
-    resetprop -n -p persist.sys.pixelprops.pi false 2>/dev/null || true
+    sp_persist persist.sys.pihooks.disable.gms_props true
+    sp_persist persist.sys.pihooks.disable.gms_key_attestation_block true
+    sp_persist persist.sys.entryhooks_enabled false
+    sp_persist persist.sys.pixelprops.gms false
+    sp_persist persist.sys.pixelprops.gapps false
+    sp_persist persist.sys.pixelprops.google false
+    sp_persist persist.sys.pixelprops.pi false
     if [ -f /data/system/gms_certified_props.json ] && [ "$(resetprop persist.sys.spoof.gms 2>/dev/null)" != "false" ]; then
       resetprop persist.sys.spoof.gms false 2>/dev/null || true
     fi
@@ -441,9 +425,13 @@ block_rom_spoof_engines() {
 }
 
 disable_bootloader_spoofer() {
-  if grep -q "es.chiteroman.bootloaderspoofer" /data/system/packages.list 2>/dev/null; then
-    timeout 5 pm uninstall --user 0 es.chiteroman.bootloaderspoofer >/dev/null 2>&1 || true
-  fi
+  _spoofers="es.chiteroman.bootloaderspoofer com.sevtinge.hyperceiler com.luckyzyx.luckytool"
+  for _pkg in $_spoofers; do
+    if grep -q "$_pkg" /data/system/packages.list 2>/dev/null; then
+      timeout 5 pm uninstall --user 0 "$_pkg" >/dev/null 2>&1 || true
+    fi
+  done
+  unset _pkg
   _wpp_xml="/data/data/com.wmods.wppenhacer/shared_prefs/com.wmods.wppenhacer_preferences.xml"
   if [ -f "$_wpp_xml" ] && grep -q 'name="bootloader_spoofer" value="true"' "$_wpp_xml" 2>/dev/null; then
     sed -i 's/\(name="bootloader_spoofer" value=\)"true"/\1"false"/' "$_wpp_xml" 2>/dev/null || true

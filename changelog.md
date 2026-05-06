@@ -76,3 +76,50 @@
 - Removed "Set Necessary App" feature
 - Removed app icon and banner image
 - Cleaned up dead code and unused dependencies
+
+## v1.1.0
+
+### GMS & Boot Stability
+- Removed multi-package GMS force-stop from boot loop — was logging users out of Google accounts and causing root manager crashes. Replaced with lightweight Play Store-only kill via `kill_play_store.sh`.
+- Added `detect_root_solution()` call in `service.sh` and `boot-completed.sh` so `$ROOT_SOL` is properly set before prop operations.
+- Replaced inline installer-env root detection in `customize.sh` with `detect_root_solution()`.
+
+### Property System
+- Replaced `resetprop_if_diff` / `resetprop_if_match` with streamlined `sp_try()`.
+- Renamed `persistprop` → `sp_persist()`.
+- Added `disable_bootloader_spoofer()` — scans for 3 packages (bootloader spoofer, HyperCeiler, LuckyTool).
+
+### HMA-OSS
+- Uses `$HMA_DIR`/`$HMA_FILE` from centralized `paths.sh`.
+- Built-in fallback template with 60 apps using proper HMA-OSS schema.
+
+### Boot Hash
+- Guarded `read_vbmeta()` with command availability check — no more exit 127 on devices without sha256sum/blockdev.
+
+### Target Script
+- TEESimulator locked.xml section rewritten — uses `sed`+`grep -Fvxf` with temp files (compatible with Android's mksh).
+- Props in `service.sh` reorganized into logical groups.
+
+### New Files
+- `features/kill_play_store.sh` — Play Store kill moved here, out of boot loop.
+- `features/suspicious_props.sh` — scanner for persistent prop artifacts.
+- `lib/package_list.sh` — extended with centralized package lists.
+
+### Removed
+- `post-fs-data.sh` — merged into `service.sh`.
+- `webroot/js/clock.ts` — dead file.
+- Orphaned i18n keys cleaned up from 4 translation files.
+
+### WebUI
+- RTL centering for nav-bar and toast.
+- Synced missing i18n keys across all translations, cleaned up orphaned keys.
+- Removed hardcoded module path fallback.
+
+### Logging
+- Most feature scripts follow `[TAG] Start` / `[TAG] Finish` pattern (16/18; `cleanup.sh` and `kill_play_store.sh` use alternative wording).
+- `pif.sh`: rewritten to detect variant by script presence on disk, logs variant and per-script results.
+- `pif2.sh`: logs spoof engine detection status.
+- `zygisk_next.sh`: state-aware loop, reports N/3 settings applied.
+
+### Other
+- curl binary verification before use — falls back to wget if broken.
