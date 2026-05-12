@@ -1,21 +1,24 @@
 # Specter
 
 <p align="center">
-  <img src="./screenshots/home.png" width="22%" alt="Home">
-  <img src="./screenshots/tools.png" width="22%" alt="Tools">
-  <img src="./screenshots/control.png" width="22%" alt="Control">
-  <img src="./screenshots/settings.png" width="22%" alt="Settings">
+  <img src="./screenshots/home.png" width="19%" alt="Home">
+  <img src="./screenshots/tools.png" width="19%" alt="Tools">
+  <img src="./screenshots/target.png" width="19%" alt="App Targeting">
+  <img src="./screenshots/control.png" width="19%" alt="Control">
+  <img src="./screenshots/settings.png" width="19%" alt="Settings">
 </p>
 
 [![latest release](https://img.shields.io/github/v/release/dpejoh/specter?label=Release&logo=github)](https://github.com/dpejoh/specter/releases/latest)
 
-Keybox management, security spoofing, and detection avoidance — all in one module.
+Keybox management, security spoofing, and detection avoidance: clean, focused, no bloat.
 
 [Download](https://github.com/dpejoh/specter/releases/latest)
 
 ## Background
 
-Specter is a fork of Yurikey, rewritten for clean architecture, proper error handling, and multi-source keybox support. 100% free, no paywalls, no business agenda — just a module that works.
+Specter is a complete rewrite of what I originally built as Yurikey. After the rewrite was turned down by Yuri, I went my own way.
+
+The module is clean by design: that's what makes it the right choice, not bloat and gimmicks like others. With a clean webUI that gives you the best experience.
 
 ## Support
 
@@ -28,23 +31,23 @@ If Specter helps you out, consider supporting the project:
 
 ## Quick start
 
-1. Install [Play Integrity Fix](https://github.com/KOWX712/PlayIntegrityFix/releases/latest) or [Play Integrity Fork](https://github.com/osm0sis/PlayIntegrityFork/releases/latest)
-2. Install [Tricky Store](https://github.com/5ec1cff/TrickyStore/releases/latest)
+1. Install any PIF fork such as [Play Integrity Fix](https://github.com/KOWX712/PlayIntegrityFix/releases/latest) or [Play Integrity Fork](https://github.com/osm0sis/PlayIntegrityFork/releases/latest)
+2. Install [Tricky Store](https://github.com/5ec1cff/TrickyStore/releases/latest) or any fork such as [TEESimulator](https://github.com/JingMatrix/TEESimulator) or [TEESimulator-RS](https://github.com/Enginex0/TEESimulator-RS)
 3. Install Specter via Magisk / KernelSU / APatch
-4. Open WebUI → Tools tab → Install a keybox
+4. Open the WebUI and configure as you like
 
 ## Features
 
-- **Keybox** — multi-source catalog, custom keybox (file/URL/path), Google revocation checking, private keybox support, backup and restore
-- **Tools** — target.txt, security patch, verified boot hash, blacklist, smartmerge, TEESimulator support, GMS kill, PIF fix, HMA-OSS / Zygisk Next / RKA configs, detection cleanup, Widevine L1
-- **Control** — per-feature toggles (boot hardening, bootloader spoofer block, ROM spoof blocking, LSPosed clean, recovery hide, action pipeline steps), conflict resolution management (NoHello, TSupport-Advance, TreatWheel, Sensitive Props, Yurikey, Integrity Box)
-- **Settings** — theme (dark/light/auto + 9 color presets + Monet), language, dev mode with terminal, project contributors
+- **Keybox**: multi-source catalog, custom keybox (file/URL/path), Google revocation checking, private keybox support, backup and restore
+- **Tools**: target.txt, App Targeting (per-app states + blacklist), security patch, TEESimulator support, GMS kill, PIF fix, HMA-OSS / Zygisk Next / RKA configs, detection cleanup, Widevine L1
+- **Control**: per-feature toggles (boot hardening, bootloader spoofer block, ROM spoof blocking, LSPosed clean, recovery hide, action pipeline steps), conflict resolution management (NoHello, TSupport-Advance, TreatWheel, Sensitive Props, Yurikey, Integrity Box)
+- **Settings**: theme (dark/light/auto + 9 color presets + Monet), language, dev mode with terminal, project contributors
 
 ## Requirements
 
 - Root access (Magisk / KernelSU / APatch)
 - Tricky Store
-- Play Integrity Fix or Play Integrity Fork (recommended)
+- Play Integrity Fix or any fork (recommended)
 
 ## Build from source
 
@@ -59,11 +62,20 @@ Output: `module.zip`
 
 ## Legal
 
-For educational purposes only. The developer does not condone illegal activities — bypassing DRM, violating terms of service, or committing fraud. Users are solely responsible for complying with applicable laws.
+```
+FOR EDUCATIONAL PURPOSES ONLY.
+THE DEVELOPER DOES NOT CONDONE ILLEGAL ACTIVITIES INCLUDING BYPASSING DRM, VIOLATING TERMS OF SERVICE, OR COMMITTING FRAUD.
+USERS ARE SOLELY RESPONSIBLE FOR COMPLYING WITH APPLICABLE LAWS.
+```
 
 ## Warning
 
-Using this software may void your warranty, cause boot loops, break apps (banking, streaming, etc.), or result in account bans. No warranty is provided. Use at your own risk. Always maintain backups of important data.
+```
+SPECTER IS PROGRAMMED NOT TO CAUSE PROBLEMS, BUT AN UNLOCKED PHONE ALWAYS COMES WITH RISKS.
+NOTHING IS 100% GUARANTEED. USE AT YOUR OWN RISK.
+YOUR WARRANTY MAY BE VOIDED, APPS MAY BREAK, AND ACCOUNT BANS ARE POSSIBLE.
+ALWAYS MAINTAIN BACKUPS OF IMPORTANT DATA.
+```
 
 ## License
 
