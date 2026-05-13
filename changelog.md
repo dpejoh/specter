@@ -1,5 +1,53 @@
 # Specter Changelog
 
+## v1.3.1
+
+### WebUI Refactoring — Complete Restructure
+
+- **app.ts split** from 844 to 140 lines — extracted 5 domain modules: `navigation.ts` (nav tabs, scroll), `toggles.ts` (control toggles, dev mode), `actions.ts` (script runners, confirm dialog), `security-patch-ui.ts` (patch date dialog), `keybox-ui.ts` (install button, provider select, full custom keybox flow with serial detection + catalog matching)
+- **target-apps.ts cleanup** — eliminated 7 module-level mutable variables (`apps`, `filteredApps`, `currentFilter`, `currentSearch`, `showSystemApps`, `sysPkgs`, `mode`); all state is now local to `openTargetAppsManager` closure. Extracted 60-line inline HTML template to `buildOverlayHTML()`. State-dependent helpers (`nextState`, `stateIcons`, `stateText`, `stateLabelKey`) now receive `mode` as a parameter — pure functions with no global state.
+
+### Performance — Caching & Network
+
+- **Batch config init** (`cfg.ts`): new `cfgInit()` reads all config files in a single bridge exec (`for f in config/*.val; do ...`) instead of ~15 separate shell spawns. Eliminates ~15× bridge round trips on first load.
+- **HTTP fetch cache** (`utils.ts`): `fetchJson()` now accepts optional `ttlMs` parameter. Remote API calls are cached in-memory — keybox catalog: 5 min, dev.json: 30 min. Local `/json/.*` calls are never cached (always fresh).
+- **Network polling reduced** (`network.ts`): interval lowered from 3s to 15s. Browser `online`/`offline` events cover instant status changes.
+- **Device init streamlined** (`device.ts`): `initDevice()` runs shell scripts directly (no pre-fetch). The original pattern — run script, then fetch JSON — restored after stale-while-revalidate caused a regression.
+
+### APatch / KSU Compatibility
+
+- **`download()` PATH fix** (`common.sh`): added `/data/adb/ap/bin:/data/adb/ksu/bin` so `busybox` is found on APatch and KernelSU. Uses `busybox wget` (with `--no-check-certificate`) as primary transport — same pattern as PlayIntegrityFix. Falls back to `curl` if busybox wget fails.
+- **`check_network()`** (`common.sh`): same PATH fix. Uses `busybox wget -qO /dev/null` instead of `wget --spider` (not supported by busybox/toybox wget).
+
+### Keybox Fallback Fix
+
+- **Dead fallback URLs replaced** (`keybox.sh`): the fallback loop probed `keybox0` through `keybox9` under `/key/fallback/` which returned 404. Replaced with `FALLBACK_KEYBOXES` in `urls.sh` — real provider/version pairs (`Yuri/8`, `OGCOMPLEX/1`, `Trigon/1`, `Evokerr/1`, `Fateh/1`) that actually exist on the server.
+- **Fallback probing method** (`keybox.sh`): removed non-portable `wget --spider`/`curl --head` probe. Now uses the proven `download()` function directly — tries each URL, accepts the first non-empty response.
+
+### Type Safety
+
+- **MDC type declarations** (`mdc.d.ts`): typed all 17 Material Design custom elements (`md-switch`, `md-dialog`, `md-select`, `md-outlined-text-field`, `md-menu`, `md-chip`, `md-filter-chip`, `md-assist-chip`, `md-navigation-tab`, `md-filled-button`, `md-filled-tonal-button`, `md-text-button`, `md-circular-progress`, `md-outlined-segmented-button`, `md-outlined-select`, `md-select-option`, `md-filled-text-field`). All extend `HTMLElement`, eliminating ~60 `as any` type assertions across the codebase.
+- **Dialog factory** (`dialog.ts`): added `createDialog()`, `showDialog()`, `showConfirm()` — encapsulates the 6-step dialog boilerplate (`createElement`, `innerHTML`, `appendChild`, `querySelector`, `addEventListener`, `show`/`close`) repeated 10+ times across the codebase.
+- **Zero type errors**: full project passes `tsc --noEmit` cleanly.
+
+### Code Cleanup
+
+- **Duplicated toggle array removed**: `CONTROL_TOGGLES` extracted to `constants.ts` — the same 10-entry toggle array was defined identically in `wireControlToggles()` and `refreshControlToggles()`.
+- **Duplicated month calc removed**: `defaultSecurityPatch()` extracted to `constants.ts` — the same 6-line month calculation appeared twice in `wireSecurityPatch()`.
+- **Private `escapeHtml` removed** (`file-browser.ts`): now imports from `utils.ts` instead of maintaining its own copy.
+- **Dead export removed**: `evictFetchCache` from `utils.ts` — declared but never imported anywhere.
+- **Removed `CONTROL_TOGGLES` unused import** from `app.ts`.
+
+### Security Patch
+
+- **System fallback** (`device-info.sh`): now reads `ro.build.version.security_patch` (the real build property, never lies) alongside the spoofed Tricky Store value. `device.ts:applyDeviceInfo()` shows the spoofed patch if set, falls back to the real system patch. The info card always shows meaningful data — no more `—` when the user hasn't set a spoofed value.
+
+### UI Fixes
+
+- **Nav bar indicator invisible on first load** (`navigation.ts`): the "pill" background on the active tab never appeared on initial page load. Root cause: the first tab already had `nav-tab--active` in HTML, so `navigateTo('#home')` skipped `activateTab()` entirely, and `reposition()` was never called. The indicator div had no `left`/`width` set. Fixed by calling `reposition()` on the already-active tab after `navigateTo()`.
+- **Responsive browse button** (`keybox-ui.ts`, `app.css`): the file browser row now uses two separate buttons toggled via `@media (max-width: 480px)` — `md-filled-tonal-button` with "Browse" text on wide screens, native `<button>` with `folder_open` icon on narrow screens. Both use `--md-sys-color-primary-container` background for visual consistency. Icon is perfectly centered via `display:inline-flex; align-items:center; justify-content:center`.
+- **File browser row layout** (`keybox-ui.ts`): the assist chip now uses `flex:1` and `text-overflow:ellipsis` to fill available width with truncation. Browse button is a 40×40px square on narrow screens, auto-sized on wide. The flex container uses `width:100%` to fill the card.
+
 ## v1.3.0
 
 ### VBMeta / Boot Hash — Complete Overhaul
@@ -122,6 +170,129 @@
 - Updated `docs/CONFLICTS.md` — removed VBMeta-Fixer row, updated NoHello and TSupport descriptions.
 - Fixed `README.md` — updated nav reference from Setup to Tools, merged Maintain features into Tools description, added Control page to features list.
 
+## v1.2.0
+
+### Feature Toggle System
+- Added Control page — new nav tab with per-feature enable/disable toggles.
+- Boot Behavior section — toggle recovery folder hiding, boot hardening, bootloader spoofer block, ROM spoof engine block, and LSPosed ODEX cleanup individually.
+- Action Pipeline section — toggle individual action-button steps: kill Play Store, regenerate target, set security patch, set verified boot hash, set fingerprint.
+- Toggle values stored as config files via `cfg_get`/`cfg_set` — survive reboots and app uninstalls.
+- Every feature script sources `config_env.sh` and gates itself against its toggle before running.
+
+### Conflict Resolution System
+- Data-driven conflict registry (`_conflict_registry`) in `common.sh` — single source of truth for module metadata, scripts, and feature claims.
+- `_conflict_claimed()` iterates all registry entries dynamically — adding a new conflicting module requires one line in the registry. No hardcoded case blocks.
+- `resolve_conflicts()` and `_conflict_claimed()` are now fully data-driven loops over the registry instead of per-module hardcoded blocks.
+- `apply_conflict_toggles()` now correctly enables Specter features when no module claims priority, and disables them when any `priority_module` claims the feature.
+- `conflict_set_choice()` — saves choice to module config, renames/restores the conflicting module's boot scripts, and recalculates all toggles.
+- Config migration: old `/data/adb/Specter/config/conflict_*.val` files are automatically migrated to module config on first boot.
+- Conflict backup system restored — `conflict_backups.txt` tracks renamed scripts so `uninstall.sh` can restore them.
+- WebUI integration: `conflicts.sh` helper script exposes JSON status and set commands to the WebUI.
+- Removed hardcoded module lists from TypeScript — all conflict data comes from shell registry via JSON.
+- Toggle states refresh live after conflict change — no page reload needed.
+- `apply_prop_hardening()` now consistently returns 0 — prevents `set -e` exits in cleanup.sh.
+
+### WebUI Restructure
+- Merged Setup and Maintain pages into single Tools page — 5 nav tabs reduced to 4 for better phone fit.
+- Old `#setup` and `#maintain` URL hashes automatically migrate to `#tools` on first load.
+- Last-visited tab persistence migrated accordingly.
+
+### Navigation
+- Double-tap nav tab: 1 tap switches page (no scroll reset), 2 taps on same tab scrolls to top.
+- Nav bar right-padding clipping fixed — removed `max-width` constraint.
+
+### Install Behavior
+- Removed forced `target.sh` execution on module flash — no longer overwrites user's custom target.txt on reinstall.
+- Conflict detection prompt during install — detects bootloader spoofer, HyperCeiler, LuckyTool packages and asks whether to block them at boot.
+
+### Action Pipeline
+- Replaced monolithic `orchestrator.sh` call in `action.sh` with individually gated feature calls — skipped features log nothing and don't abort the pipeline.
+- `block_rom_spoof_engines` wrapped in background subshell for boot safety.
+
+### Feature Script Improvements
+- `gms.sh`: DroidGuard process kill by name pattern — kills droidguard processes even if their packages aren't listed.
+- `target.sh`: TEESimulator detection refactored to use `_is_teesimulator` helper instead of fragile module.prop author parsing.
+- `boot_hash.sh`: persists computed boot hash via `cfg_set stored_boot_hash`.
+- `package_list.sh`: `GMS_KILL_LIST` deduplicated and reorganized — removed redundant entries, added safetycore.
+- `disable_bootloader_spoofer` respects user's install-time conflict choice flag.
+
+### Dialog Redesign (Material Design 3)
+- `confirmDestructive`: Rewritten per M3 alert dialog spec — added `warning` icon in error-container circle, action name as headline, `md-filled-button` with error tokens for confirm action. Removed all inline styles.
+- `openFileBrowser`: Complete rewrite — replaced 40+ inline style attributes with CSS classes, removed inline `onmouseenter`/`onmouseleave` event handlers (now CSS `:hover`), fixed button from `md-filled-tonal-button` to `md-filled-button`, added XSS-safe `escapeHtml()`.
+- `privateChoice`: Both buttons changed to `md-text-button` (equal binary choice), removed `type="alert"`, removed all inline styles.
+- `detectedDialog`: Added `type="alert"`, changed confirm button to `md-filled-button`, replaced all inline styles with CSS classes.
+- `showErrorDialog`: Added `type="alert"` for proper alertdialog ARIA role, renamed generic class.
+- `runDevAction`: Scoped generic class names to avoid conflicts.
+- `danger_confirm` translation changed from `"Continue"` to `"Proceed"` across all 5 languages.
+
+### README
+- Updated screenshot grid to match new nav structure — replaced `setup.png`/`maintain.png` with `tools.png`/`control.png`.
+
+### Documentation
+- Added Legal disclaimer — educational purposes only, no liability for misuse.
+- Added Warning section — outlines risks (warranty void, boot loops, app bans, etc.).
+- Added Support section with Ko-fi, PayPal, BTC, and ETC donation options.
+- Added `docs/CONFLICTS.md` — conflict handling policy with per-module resolution table.
+
+### Other
+- README simplified — replaced verbose background with quick start, streamlined features list, added screenshot grid.
+- Removed CI badge from README.
+
+## v1.1.0
+
+### GMS & Boot Stability
+- Removed multi-package GMS force-stop from boot loop — was logging users out of Google accounts and causing root manager crashes. Replaced with lightweight Play Store-only kill via `kill_play_store.sh`.
+- Added `detect_root_solution()` call in `service.sh` and `boot-completed.sh` so `$ROOT_SOL` is properly set before prop operations.
+- Replaced inline installer-env root detection in `customize.sh` with `detect_root_solution()`.
+
+### Property System
+- Replaced `resetprop_if_diff` / `resetprop_if_match` with streamlined `sp_try()`.
+- Renamed `persistprop` → `sp_persist()`.
+- Added `disable_bootloader_spoofer()` — scans for 3 packages (bootloader spoofer, HyperCeiler, LuckyTool).
+
+### HMA-OSS
+- Uses `$HMA_DIR`/`$HMA_FILE` from centralized `paths.sh`.
+- Built-in fallback template with 60 apps using proper HMA-OSS schema.
+
+### Boot Hash
+- Guarded `read_vbmeta()` with command availability check — no more exit 127 on devices without sha256sum/blockdev.
+
+### Target Script
+- TEESimulator locked.xml section rewritten — uses `sed`+`grep -Fvxf` with temp files (compatible with Android's mksh).
+- Props in `service.sh` reorganized into logical groups.
+
+### New Files
+- `features/kill_play_store.sh` — Play Store kill moved here, out of boot loop.
+- `features/suspicious_props.sh` — scanner for persistent prop artifacts.
+- `lib/package_list.sh` — extended with centralized package lists.
+
+### Removed
+- `post-fs-data.sh` — merged into `service.sh`.
+- `webroot/js/clock.ts` — dead file.
+- Orphaned i18n keys cleaned up from 4 translation files.
+
+### WebUI
+- Navigation restructured: replaced Actions/Advanced/Keybox/Tools with Home/Setup/Maintain/Settings — clearer per-tab purpose.
+- Added Danger Zone section under Maintain tab — red error-colored header for destructive operations.
+- Added confirmation dialog for all destructive actions — error-colored alert with Cancel/Continue.
+- URL hash routing (`#home`, `#setup`, `#maintain`, `#settings`) with `popstate` listener for back/forward.
+- Tab persistence — last visited tab saved to localStorage, restored on reload.
+- Removed active-tab guard — re-tapping navigates to the tab (acts as refresh).
+- Increased section title font sizes for better readability.
+- Danger Zone description spacing tightened.
+- RTL centering for nav-bar and toast.
+- Synced missing i18n keys across all translations, cleaned up orphaned keys.
+- Removed hardcoded module path fallback.
+
+### Logging
+- Most feature scripts follow `[TAG] Start` / `[TAG] Finish` pattern (16/18; `cleanup.sh` and `kill_play_store.sh` use alternative wording).
+- `pif.sh`: rewritten to detect variant by script presence on disk, logs variant and per-script results.
+- `pif2.sh`: logs spoof engine detection status.
+- `zygisk_next.sh`: state-aware loop, reports N/3 settings applied.
+
+### Other
+- curl binary verification before use — falls back to wget if broken.
+
 ## v1.0.0
 
 ### Architecture
@@ -198,174 +369,3 @@
 - Removed "Set Necessary App" feature
 - Removed app icon and banner image
 - Cleaned up dead code and unused dependencies
-
-## v1.1.0
-
-### GMS & Boot Stability
-- Removed multi-package GMS force-stop from boot loop — was logging users out of Google accounts and causing root manager crashes. Replaced with lightweight Play Store-only kill via `kill_play_store.sh`.
-- Added `detect_root_solution()` call in `service.sh` and `boot-completed.sh` so `$ROOT_SOL` is properly set before prop operations.
-- Replaced inline installer-env root detection in `customize.sh` with `detect_root_solution()`.
-
-### Property System
-- Replaced `resetprop_if_diff` / `resetprop_if_match` with streamlined `sp_try()`.
-- Renamed `persistprop` → `sp_persist()`.
-- Added `disable_bootloader_spoofer()` — scans for 3 packages (bootloader spoofer, HyperCeiler, LuckyTool).
-
-### HMA-OSS
-- Uses `$HMA_DIR`/`$HMA_FILE` from centralized `paths.sh`.
-- Built-in fallback template with 60 apps using proper HMA-OSS schema.
-
-### Boot Hash
-- Guarded `read_vbmeta()` with command availability check — no more exit 127 on devices without sha256sum/blockdev.
-
-### Target Script
-- TEESimulator locked.xml section rewritten — uses `sed`+`grep -Fvxf` with temp files (compatible with Android's mksh).
-- Props in `service.sh` reorganized into logical groups.
-
-### New Files
-- `features/kill_play_store.sh` — Play Store kill moved here, out of boot loop.
-- `features/suspicious_props.sh` — scanner for persistent prop artifacts.
-- `lib/package_list.sh` — extended with centralized package lists.
-
-### Removed
-- `post-fs-data.sh` — merged into `service.sh`.
-- `webroot/js/clock.ts` — dead file.
-- Orphaned i18n keys cleaned up from 4 translation files.
-
-### WebUI
-- Navigation restructured: replaced Actions/Advanced/Keybox/Tools with Home/Setup/Maintain/Settings — clearer per-tab purpose.
-- Added Danger Zone section under Maintain tab — red error-colored header for destructive operations.
-- Added confirmation dialog for all destructive actions — error-colored alert with Cancel/Continue.
-- URL hash routing (`#home`, `#setup`, `#maintain`, `#settings`) with `popstate` listener for back/forward.
-- Tab persistence — last visited tab saved to localStorage, restored on reload.
-- Removed active-tab guard — re-tapping navigates to the tab (acts as refresh).
-- Increased section title font sizes for better readability.
-- Danger Zone description spacing tightened.
-- RTL centering for nav-bar and toast.
-- Synced missing i18n keys across all translations, cleaned up orphaned keys.
-- Removed hardcoded module path fallback.
-
-### Logging
-- Most feature scripts follow `[TAG] Start` / `[TAG] Finish` pattern (16/18; `cleanup.sh` and `kill_play_store.sh` use alternative wording).
-- `pif.sh`: rewritten to detect variant by script presence on disk, logs variant and per-script results.
-- `pif2.sh`: logs spoof engine detection status.
-- `zygisk_next.sh`: state-aware loop, reports N/3 settings applied.
-
-### Other
-- curl binary verification before use — falls back to wget if broken.
-
-## v1.2.0
-
-### Feature Toggle System
-- Added Control page — new nav tab with per-feature enable/disable toggles.
-- Boot Behavior section — toggle recovery folder hiding, boot hardening, bootloader spoofer block, ROM spoof engine block, and LSPosed ODEX cleanup individually.
-- Action Pipeline section — toggle individual action-button steps: kill Play Store, regenerate target, set security patch, set verified boot hash, set fingerprint.
-- Toggle values stored as config files via `cfg_get`/`cfg_set` — survive reboots and app uninstalls.
-- Every feature script sources `config_env.sh` and gates itself against its toggle before running.
-
-### Conflict Resolution System
-- Data-driven conflict registry (`_conflict_registry`) in `common.sh` — single source of truth for module metadata, scripts, and feature claims.
-- `_conflict_claimed()` iterates all registry entries dynamically — adding a new conflicting module requires one line in the registry. No hardcoded case blocks.
-- `resolve_conflicts()` and `_conflict_claimed()` are now fully data-driven loops over the registry instead of per-module hardcoded blocks.
-- `apply_conflict_toggles()` now correctly enables Specter features when no module claims priority, and disables them when any `priority_module` claims the feature.
-- `conflict_set_choice()` — saves choice to module config, renames/restores the conflicting module's boot scripts, and recalculates all toggles.
-- Config migration: old `/data/adb/Specter/config/conflict_*.val` files are automatically migrated to module config on first boot.
-- Conflict backup system restored — `conflict_backups.txt` tracks renamed scripts so `uninstall.sh` can restore them.
-- WebUI integration: `conflicts.sh` helper script exposes JSON status and set commands to the WebUI.
-- Removed hardcoded module lists from TypeScript — all conflict data comes from shell registry via JSON.
-- Toggle states refresh live after conflict change — no page reload needed.
-- `apply_prop_hardening()` now consistently returns 0 — prevents `set -e` exits in cleanup.sh.
-
-### WebUI Restructure
-- Merged Setup and Maintain pages into single Tools page — 5 nav tabs reduced to 4 for better phone fit.
-- Old `#setup` and `#maintain` URL hashes automatically migrate to `#tools` on first load.
-- Last-visited tab persistence migrated accordingly.
-
-### Navigation
-- Double-tap nav tab: 1 tap switches page (no scroll reset), 2 taps on same tab scrolls to top.
-- Nav bar right-padding clipping fixed — removed `max-width` constraint.
-
-### Install Behavior
-- Removed forced `target.sh` execution on module flash — no longer overwrites user's custom target.txt on reinstall.
-- Conflict detection prompt during install — detects bootloader spoofer, HyperCeiler, LuckyTool packages and asks whether to block them at boot.
-
-### Action Pipeline
-- Replaced monolithic `orchestrator.sh` call in `action.sh` with individually gated feature calls — skipped features log nothing and don't abort the pipeline.
-- `block_rom_spoof_engines` wrapped in background subshell for boot safety.
-
-### Feature Script Improvements
-- `gms.sh`: DroidGuard process kill by name pattern — kills droidguard processes even if their packages aren't listed.
-- `target.sh`: TEESimulator detection refactored to use `_is_teesimulator` helper instead of fragile module.prop author parsing.
-- `boot_hash.sh`: persists computed boot hash via `cfg_set stored_boot_hash`.
-- `package_list.sh`: `GMS_KILL_LIST` deduplicated and reorganized — removed redundant entries, added safetycore.
-- `disable_bootloader_spoofer` respects user's install-time conflict choice flag.
-
-### Dialog Redesign (Material Design 3)
-- `confirmDestructive`: Rewritten per M3 alert dialog spec — added `warning` icon in error-container circle, action name as headline, `md-filled-button` with error tokens for confirm action. Removed all inline styles.
-- `openFileBrowser`: Complete rewrite — replaced 40+ inline style attributes with CSS classes, removed inline `onmouseenter`/`onmouseleave` event handlers (now CSS `:hover`), fixed button from `md-filled-tonal-button` to `md-filled-button`, added XSS-safe `escapeHtml()`.
-- `privateChoice`: Both buttons changed to `md-text-button` (equal binary choice), removed `type="alert"`, removed all inline styles.
-- `detectedDialog`: Added `type="alert"`, changed confirm button to `md-filled-button`, replaced all inline styles with CSS classes.
-- `showErrorDialog`: Added `type="alert"` for proper alertdialog ARIA role, renamed generic class.
-- `runDevAction`: Scoped generic class names to avoid conflicts.
-- `danger_confirm` translation changed from `"Continue"` to `"Proceed"` across all 5 languages.
-
-### README
-- Updated screenshot grid to match new nav structure — replaced `setup.png`/`maintain.png` with `tools.png`/`control.png`.
-
-### Documentation
-- Added Legal disclaimer — educational purposes only, no liability for misuse.
-- Added Warning section — outlines risks (warranty void, boot loops, app bans, etc.).
-- Added Support section with Ko-fi, PayPal, BTC, and ETC donation options.
-- Added `docs/CONFLICTS.md` — conflict handling policy with per-module resolution table.
-
-### Other
-- README simplified — replaced verbose background with quick start, streamlined features list, added screenshot grid.
-- Removed CI badge from README.
-
-## v1.3.1
-
-### WebUI Refactoring — Complete Restructure
-
-- **app.ts split** from 844 to 140 lines — extracted 5 domain modules: `navigation.ts` (nav tabs, scroll), `toggles.ts` (control toggles, dev mode), `actions.ts` (script runners, confirm dialog), `security-patch-ui.ts` (patch date dialog), `keybox-ui.ts` (install button, provider select, full custom keybox flow with serial detection + catalog matching)
-- **target-apps.ts cleanup** — eliminated 7 module-level mutable variables (`apps`, `filteredApps`, `currentFilter`, `currentSearch`, `showSystemApps`, `sysPkgs`, `mode`); all state is now local to `openTargetAppsManager` closure. Extracted 60-line inline HTML template to `buildOverlayHTML()`. State-dependent helpers (`nextState`, `stateIcons`, `stateText`, `stateLabelKey`) now receive `mode` as a parameter — pure functions with no global state.
-
-### Performance — Caching & Network
-
-- **Batch config init** (`cfg.ts`): new `cfgInit()` reads all config files in a single bridge exec (`for f in config/*.val; do ...`) instead of ~15 separate shell spawns. Eliminates ~15× bridge round trips on first load.
-- **HTTP fetch cache** (`utils.ts`): `fetchJson()` now accepts optional `ttlMs` parameter. Remote API calls are cached in-memory — keybox catalog: 5 min, dev.json: 30 min. Local `/json/.*` calls are never cached (always fresh).
-- **Network polling reduced** (`network.ts`): interval lowered from 3s to 15s. Browser `online`/`offline` events cover instant status changes.
-- **Device init streamlined** (`device.ts`): `initDevice()` runs shell scripts directly (no pre-fetch). The original pattern — run script, then fetch JSON — restored after stale-while-revalidate caused a regression.
-
-### APatch / KSU Compatibility
-
-- **`download()` PATH fix** (`common.sh`): added `/data/adb/ap/bin:/data/adb/ksu/bin` so `busybox` is found on APatch and KernelSU. Uses `busybox wget` (with `--no-check-certificate`) as primary transport — same pattern as PlayIntegrityFix. Falls back to `curl` if busybox wget fails.
-- **`check_network()`** (`common.sh`): same PATH fix. Uses `busybox wget -qO /dev/null` instead of `wget --spider` (not supported by busybox/toybox wget).
-
-### Keybox Fallback Fix
-
-- **Dead fallback URLs replaced** (`keybox.sh`): the fallback loop probed `keybox0` through `keybox9` under `/key/fallback/` which returned 404. Replaced with `FALLBACK_KEYBOXES` in `urls.sh` — real provider/version pairs (`Yuri/8`, `OGCOMPLEX/1`, `Trigon/1`, `Evokerr/1`, `Fateh/1`) that actually exist on the server.
-- **Fallback probing method** (`keybox.sh`): removed non-portable `wget --spider`/`curl --head` probe. Now uses the proven `download()` function directly — tries each URL, accepts the first non-empty response.
-
-### Type Safety
-
-- **MDC type declarations** (`mdc.d.ts`): typed all 17 Material Design custom elements (`md-switch`, `md-dialog`, `md-select`, `md-outlined-text-field`, `md-menu`, `md-chip`, `md-filter-chip`, `md-assist-chip`, `md-navigation-tab`, `md-filled-button`, `md-filled-tonal-button`, `md-text-button`, `md-circular-progress`, `md-outlined-segmented-button`, `md-outlined-select`, `md-select-option`, `md-filled-text-field`). All extend `HTMLElement`, eliminating ~60 `as any` type assertions across the codebase.
-- **Dialog factory** (`dialog.ts`): added `createDialog()`, `showDialog()`, `showConfirm()` — encapsulates the 6-step dialog boilerplate (`createElement`, `innerHTML`, `appendChild`, `querySelector`, `addEventListener`, `show`/`close`) repeated 10+ times across the codebase.
-- **Zero type errors**: full project passes `tsc --noEmit` cleanly.
-
-### Code Cleanup
-
-- **Duplicated toggle array removed**: `CONTROL_TOGGLES` extracted to `constants.ts` — the same 10-entry toggle array was defined identically in `wireControlToggles()` and `refreshControlToggles()`.
-- **Duplicated month calc removed**: `defaultSecurityPatch()` extracted to `constants.ts` — the same 6-line month calculation appeared twice in `wireSecurityPatch()`.
-- **Private `escapeHtml` removed** (`file-browser.ts`): now imports from `utils.ts` instead of maintaining its own copy.
-- **Dead export removed**: `evictFetchCache` from `utils.ts` — declared but never imported anywhere.
-- **Removed `CONTROL_TOGGLES` unused import** from `app.ts`.
-
-### Security Patch
-
-- **System fallback** (`device-info.sh`): now reads `ro.build.version.security_patch` (the real build property, never lies) alongside the spoofed Tricky Store value. `device.ts:applyDeviceInfo()` shows the spoofed patch if set, falls back to the real system patch. The info card always shows meaningful data — no more `—` when the user hasn't set a spoofed value.
-
-### UI Fixes
-
-- **Nav bar indicator invisible on first load** (`navigation.ts`): the "pill" background on the active tab never appeared on initial page load. Root cause: the first tab already had `nav-tab--active` in HTML, so `navigateTo('#home')` skipped `activateTab()` entirely, and `reposition()` was never called. The indicator div had no `left`/`width` set. Fixed by calling `reposition()` on the already-active tab after `navigateTo()`.
-- **Responsive browse button** (`keybox-ui.ts`, `app.css`): the file browser row now uses two separate buttons toggled via `@media (max-width: 480px)` — `md-filled-tonal-button` with "Browse" text on wide screens, native `<button>` with `folder_open` icon on narrow screens. Both use `--md-sys-color-primary-container` background for visual consistency. Icon is perfectly centered via `display:inline-flex; align-items:center; justify-content:center`.
-- **File browser row layout** (`keybox-ui.ts`): the assist chip now uses `flex:1` and `text-overflow:ellipsis` to fill available width with truncation. Browse button is a 40×40px square on narrow screens, auto-sized on wide. The flex container uses `width:100%` to fill the card.
