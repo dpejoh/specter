@@ -2,6 +2,16 @@
 
 ## v1.3.3
 
+### Dynamic Module Description
+
+- **Rewrote boot-time module description** (`lib/boot_core.sh`) — priority-based status line replaces the old `"Active | <version>"` with context-aware info:
+  - 🚨 Tricky Store not installed — hard dependency warning shown if the module directory is missing
+  - 🚨 Conflict: `<name>` — conflicting module detected, shown with full priority
+  - 🔑 `<provider> <version> · ✅/❌ | <N> apps | 🛡️ <patch>` — keybox dashboard showing provider name, version, active/revoked status, target.txt app count, and spoofed security patch date
+  - 🎭 TEE Sim — shown when locked.xml (TEE Simulator mode) is active
+  - ❌ No keybox — shown when no keybox is installed, still shows app count and patch date
+- **Updated static description** in `module.prop` to `"Unified Play Integrity and root hiding stack for Android"`
+
 ### TEE Check — App-Level Attestation (One-Time)
 
 - **New one-time TEE check** — `customize.sh` downloads a tiny ContentProvider APK (8.4KB) from rawbin, installs it, runs the **same attestation check as TEESimulator-RS** (`KeyPairGenerator` + `setAttestationChallenge` in Android Keystore), caches the result to `/data/adb/Specter/tee_status`, then uninstalls and deletes the APK. Only runs once — never again after caching.

@@ -29,14 +29,54 @@ done
 unset _bf
 log "BOOT" "Boot-time features done"
 
-# Module description
-_release=$(getprop ro.build.version.release 2>/dev/null || echo "Unknown")
-if [ -f "$TARGET_FILE" ]; then
-  cfg_set "override.description" "Active | $_release"
+# Module description — rich status line
+
+if [ ! -d "/data/adb/modules/tricky_store" ] && [ ! -d "/data/adb/modules_update/tricky_store" ]; then
+  cfg_set "override.description" "🚨 Tricky Store not installed"
+
 else
-  cfg_set "override.description" "Run action button to set up keybox"
+  _cf=""
+  while IFS='|' read -r _id _name _rem; do
+    [ -z "$_id" ] && continue
+    _conflict_detect "$_id" || continue
+    _cf="$_name"
+    break
+  done <<CF_EOF
+$(_conflict_registry)
+CF_EOF
+
+  if [ -n "$_cf" ]; then
+    cfg_set "override.description" "🚨 Conflict: $_cf"
+    unset _cf _id _name _rem
+  else
+    unset _cf _id _name _rem
+
+    # Keybox dashboard
+    _kb_src=$(grep -o '"source":"[^"]*"' "$MODDIR/webroot/json/keybox_info.json" 2>/dev/null | cut -d'"' -f4)
+    _kb_ver=$(grep -o '"text":"[^"]*"' "$MODDIR/webroot/json/keybox_info.json" 2>/dev/null | cut -d'"' -f4)
+    _kb_rev=$(grep -o '"revoked":true' "$MODDIR/webroot/json/keybox_info.json" 2>/dev/null)
+
+    [ -z "$_kb_src" ] && _kb_src=$(cfg_get 'kb_provider' '')
+    [ -z "$_kb_src" ] && [ "$(cfg_get 'kb_private' 'false')" = "true" ] && _kb_src="Private"
+
+    _apps=$(wc -l < "$TARGET_TXT" 2>/dev/null || echo 0)
+    _patch=$(grep '^boot=' "$SECURITY_PATCH_FILE" 2>/dev/null | cut -d= -f2) && [ -z "$_patch" ] && _patch="-"
+
+    if [ -f "$LOCKED_FILE" ]; then
+      cfg_set "override.description" "🎭 TEE Sim | $_apps apps | 🛡️ $_patch"
+    elif [ -f "$TARGET_FILE" ]; then
+      _title="$_kb_src${_kb_ver:+ $_kb_ver}"
+      if [ -n "$_kb_rev" ]; then
+        cfg_set "override.description" "🔑 $_title · ❌ | $_apps apps | 🛡️ $_patch"
+      else
+        cfg_set "override.description" "🔑 $_title · ✅ | $_apps apps | 🛡️ $_patch"
+      fi
+    else
+      cfg_set "override.description" "❌ No keybox | $_apps apps | 🛡️ $_patch"
+    fi
+    unset _kb_src _kb_ver _kb_rev _apps _patch _title _status
+  fi
 fi
-unset _release
 
 # Delayed spoofing — 120s delay to re-apply props that system may have overridden
 (
