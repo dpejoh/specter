@@ -9,9 +9,9 @@ Install these modules in order, then reboot:
 | # | Module | Options | Note |
 |---|---|---|---|
 | 1 | Zygisk implementation | ZygiskNext, ReZygisk | ZygiskNext is more stable |
-| 2 | Integrity store | Tricky Store, TEESimulator, TEESimulator-RS | TEESimulator-RS is the most active |
+| 2 | Keystore spoofer | Tricky Store, TEESimulator, TEESimulator-RS | TEESimulator-RS is the most active |
 | 3 | Play Integrity fix | PlayIntegrityFork, PIF Inject | PIF Inject is the most active |
-| 4 | Root hiding WebUI | Specter | |
+| 4 | Props, Vbmeta, Keybox.. | Specter | |
 | 5 | App hiding | HMA-OSS Zygisk | Required for HMA-OSS, preferred over LSPosed |
 
 Pick one option per category. Installing multiples will cause conflicts.
