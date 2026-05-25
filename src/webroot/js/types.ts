@@ -27,7 +27,6 @@ export interface InfoJson {
   root?: string;
   root_sol?: string;
   version?: string;
-  keybox_format?: string;
   tee_status?: string;
   security_patch?: string;
   build_patch?: string;

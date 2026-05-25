@@ -17,15 +17,6 @@ _version=$(_escape_json "$(grep '^version=' "$MODULE_ROOT/module.prop" | cut -d'
 detect_root_solution
 _root_type="$ROOT_TYPE"
 
-# Keybox format
-if [ -f "/data/adb/tricky_store/locked.xml" ]; then
-  _keybox_format="locked.xml"
-elif [ -f "/data/adb/tricky_store/keybox.xml" ]; then
-  _keybox_format="keybox.xml"
-else
-  _keybox_format="none"
-fi
-
 # Security patch date — real system value + optional spoofed value
 _build_patch=$(getprop ro.build.version.security_patch 2>/dev/null || echo "")
 _patch_date=$(grep '^boot=' /data/adb/tricky_store/security_patch.txt 2>/dev/null | cut -d= -f2 || echo "")
@@ -57,7 +48,6 @@ cat <<EOF > "$INFO_PATH"
   "root": "$_root_type",
   "root_sol": "$ROOT_SOL",
   "version": "$_version",
-  "keybox_format": "$_keybox_format",
   "tee_status": "$_tee_status",
   "security_patch": "$_patch_date",
   "build_patch": "$_build_patch",
@@ -68,4 +58,4 @@ cat <<EOF > "$INFO_PATH"
   }
 }
 EOF
-unset _android_ver _kernel_ver _root_type _version _keybox_format _tee_status _build_patch _patch_date _twrp _blacklist _recovery_detected _rd
+unset _android_ver _kernel_ver _root_type _version _tee_status _build_patch _patch_date _twrp _blacklist _recovery_detected _rd

@@ -100,29 +100,29 @@ section:not([hidden]) {
   margin-inline-end: 12px;
   font-size: 0.8125rem;
   font-weight: 500;
-  color: #2e7d32;
+  color: var(--md-sys-color-tertiary, #2e7d32);
 }
 .network-chip md-icon {
   font-size: 20px;
-  color: #2e7d32;
+  color: var(--md-sys-color-tertiary, #2e7d32);
 }
 [data-theme-resolved="dark"] .network-chip {
-  color: #81c784;
+  color: var(--md-sys-color-tertiary, #81c784);
 }
 [data-theme-resolved="dark"] .network-chip md-icon {
-  color: #81c784;
+  color: var(--md-sys-color-tertiary, #81c784);
 }
 .network-chip.offline {
-  color: #d32f2f;
+  color: var(--md-sys-color-error, #d32f2f);
 }
 .network-chip.offline md-icon {
-  color: #d32f2f;
+  color: var(--md-sys-color-error, #d32f2f);
 }
 [data-theme-resolved="dark"] .network-chip.offline {
-  color: #e57373;
+  color: var(--md-sys-color-error, #e57373);
 }
 [data-theme-resolved="dark"] .network-chip.offline md-icon {
-  color: #e57373;
+  color: var(--md-sys-color-error, #e57373);
 }
 
 .hero-card {
@@ -180,8 +180,8 @@ section:not([hidden]) {
 }
 
 .keybox-chip--softbanned {
-  background: var(--md-sys-color-tertiary-fixed-dim, #FFB74D);
-  color: var(--md-sys-color-on-tertiary-fixed, #1C1B1F);
+  background: var(--md-sys-color-tertiary-container, #FFB74D);
+  color: var(--md-sys-color-on-tertiary-container, #1C1B1F);
 }
 
 .keybox-chip--active {

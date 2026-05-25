@@ -1,9 +1,9 @@
-import { fetchJson, setText, shellEscape } from './utils.js';
-import { runScript, exec, getModuleDir } from './bridge.js';
+import { fetchJson, setText } from './utils.js';
+import { runScript } from './bridge.js';
 import { appendToOutput } from './terminal.js';
 import { API_URLS } from './constants.js';
 import { getTranslation } from './i18n.js';
-import type { InfoJson, KeyboxInfoJson, CatalogJson, CatalogEntry } from './types.js';
+import type { InfoJson, KeyboxInfoJson } from './types.js';
 
 const CACHE_TTL = 30000;
 
@@ -61,120 +61,9 @@ export async function refreshKeyboxStatus(exec = true): Promise<KeyboxInfoJson |
       console.warn('Keybox info script failed:', e);
     }
   }
-
-  interface LocalKeyboxInfo {
-    installed: boolean;
-    serial?: string;
-    is_private?: boolean;
-  }
-
-  const localInfo = await fetchJson<LocalKeyboxInfo>(API_URLS.KEYBOX_INFO);
-  if (!localInfo) return null;
-
-  const statusData: KeyboxInfoJson = {
-    installed: localInfo.installed,
-    source: '',
-    source_version: '',
-    text: '',
-    up_to_date: false,
-    revoked: false,
-    softbanned: false
-  };
-
-  if (!localInfo.installed) {
-    applyKeyboxStatus(statusData);
-    return statusData;
-  }
-
-  if (localInfo.is_private) {
-    statusData.source = 'Private';
-    statusData.text = 'Keybox';
-    statusData.up_to_date = true;
-
-    if (localInfo.serial) {
-      try {
-        const serialDec = BigInt('0x' + localInfo.serial).toString();
-        const googleRevocationText = await fetch('https://android.googleapis.com/attestation/status?encrypted=0')
-          .then(res => res.text())
-          .catch(() => '');
-        if (googleRevocationText.includes(`"${localInfo.serial}"`) || (serialDec && googleRevocationText.includes(`"${serialDec}"`))) {
-          statusData.revoked = true;
-        }
-      } catch (e) {
-        console.warn('Google revocation check failed:', e);
-      }
-    }
-    applyKeyboxStatus(statusData);
-    writeKeyboxStatus(statusData);
-    return statusData;
-  }
-
-  try {
-    const [catalog, googleRevocationText] = await Promise.all([
-      fetchJson<CatalogJson>(API_URLS.KEY_CATALOG, 300000),
-      fetch('https://android.googleapis.com/attestation/status?encrypted=0')
-        .then(res => res.text())
-        .catch(() => '')
-    ]);
-
-    let serialDec = '';
-    if (localInfo.serial) {
-      try {
-        serialDec = BigInt('0x' + localInfo.serial).toString();
-      } catch (e) {}
-    }
-
-    if (localInfo.serial && googleRevocationText) {
-      if (googleRevocationText.includes(`"${localInfo.serial}"`) || (serialDec && googleRevocationText.includes(`"${serialDec}"`))) {
-        statusData.revoked = true;
-      }
-    }
-
-    if (catalog && catalog.entries && localInfo.serial) {
-      const { cfgGet } = await import('./cfg.js');
-      const provider = await cfgGet('kb_provider', 'auto') || 'auto';
-      let matchedProvider = provider;
-      if (provider === 'auto' && catalog.working) {
-        matchedProvider = catalog.working.source;
-      }
-
-      let entry = catalog.entries.find((e: CatalogEntry) =>
-        (matchedProvider === 'auto' || e.source.toLowerCase() === matchedProvider.toLowerCase()) &&
-        (e.serial === localInfo.serial || e.serial === serialDec)
-      );
-
-      if (!entry) {
-        entry = catalog.entries.find((e: CatalogEntry) => e.serial === localInfo.serial || e.serial === serialDec);
-      }
-
-      if (entry) {
-        statusData.source = entry.source || 'unknown';
-        statusData.source_version = entry.version || '?';
-        statusData.text = entry.text || '';
-        statusData.softbanned = entry.softbanned || false;
-
-        const latestForSource = catalog.latest?.[statusData.source];
-        if (statusData.source_version && latestForSource && statusData.source_version === latestForSource) {
-          statusData.up_to_date = true;
-        }
-      }
-    }
-  } catch (e) {
-    console.warn('Keybox catalog analysis failed:', e);
-  }
-
-  applyKeyboxStatus(statusData);
-  writeKeyboxStatus(statusData);
-  return statusData;
-}
-
-async function writeKeyboxStatus(data: KeyboxInfoJson) {
-  const modDir = getModuleDir();
-  if (!modDir) return;
-  const jsonStr = JSON.stringify(data);
-  await exec(`printf '%s' ${shellEscape(jsonStr)} > ${shellEscape(modDir + '/webroot/json/keybox_info.json')}`)
-    .catch(() => {});
-  runScript('refresh_desc.sh').catch(() => {});
+  const data = await fetchJson<KeyboxInfoJson>(API_URLS.KEYBOX_INFO);
+  if (data) applyKeyboxStatus(data);
+  return data;
 }
 
 function applyAllDeviceInfo(data: InfoJson) {
@@ -270,7 +159,7 @@ interface ConflictModule {
   key: string;
   friendlyName: string;
   detected: boolean;
-  prioritySpecter: boolean; // true = Specter handles it, false = module handles it
+  prioritySpecter: boolean;
 }
 
 export async function refreshConflictStatus(): Promise<ConflictModule[]> {
