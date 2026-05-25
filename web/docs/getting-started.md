@@ -3,7 +3,7 @@
 ## Prerequisites
 
 1. Root via Magisk, KernelSU, or APatch
-2. [Tricky Store](https://github.com/5ec1cff/TrickyStore/releases/latest) or one if its forks ([TEESimulator](https://github.com/JingMatrix/TEESimulator/releases/latest),v [TEESimulator-RS](https://github.com/Enginex0/TEESimulator-RS/releases/latest)) installed
+2. [Tricky Store](https://github.com/5ec1cff/TrickyStore/releases/latest) or one of its forks ([TEESimulator](https://github.com/JingMatrix/TEESimulator/releases/latest), [TEESimulator-RS](https://github.com/Enginex0/TEESimulator-RS/releases/latest)) installed
 3. A PIF fork (recommended): [Play Integrity Fix](https://github.com/KOWX712/PlayIntegrityFix/releases/latest) or [Play Integrity Fork](https://github.com/osm0sis/PlayIntegrityFork/releases/latest)
 
 ## Install

@@ -101,6 +101,7 @@
   "ta_state_unchecked": "No en lista de destino",
   "ta_title": "Segmentación de apps",
   "role_Founder & Lead Developer": "Fundador y desarrollador principal",
+  "role_WebUI Contributor": "Colaborador de la interfaz web",
   "conflict_priority_module": "Prioridad ←",
   "conflict_priority_specter": "Prioridad ← Specter",
   "custom_kb_active": "Activo",
@@ -188,6 +189,7 @@
   "terminal_clear": "Limpiar",
   "theme_mode_auto": "Automático",
   "theme_mode_dark": "Oscuro",
+  "theme_mode_amoled": "AMOLED",
   "theme_mode_light": "Claro",
   "theme_preset_monet": "Sistema",
   "tools_danger_zone": "Zona de peligro",
@@ -208,5 +210,5 @@
   "control_toggle_prop_handler_desc": "Restablecer propiedades de estado de inicio (vbmeta, verifiedboot, flash.locked) al inicio",
   "sp_fetch": "Obtener",
   "sp_fetching": "Obteniendo último parche de seguridad...",
-  "sp_fetched": "Último parche de seguridad obtenido",
+  "sp_fetched": "Último parche de seguridad obtenido"
 }

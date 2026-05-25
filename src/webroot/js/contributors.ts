@@ -23,12 +23,14 @@ export async function loadContributors() {
            src="${escapeHtml(dev.avatar || '')}"
            alt="${escapeHtml(dev.name)}"
            loading="lazy" />
-      <p class="md-typescale-label-large contributor-name">
-        ${escapeHtml(dev.name)}
-      </p>
-      <p class="md-typescale-label-small contributor-role">
-        ${escapeHtml(getTranslation('role_' + dev.role) || dev.role)}
-      </p>
+      <div class="contributor-info">
+        <p class="md-typescale-label-large contributor-name">
+          ${escapeHtml(dev.name)}
+        </p>
+        <p class="md-typescale-label-small contributor-role">
+          ${escapeHtml(getTranslation('role_' + dev.role) || dev.role)}
+        </p>
+      </div>
     </md-outlined-card>
   `).join('');
 
@@ -38,7 +40,7 @@ export async function loadContributors() {
 
   grid.querySelectorAll('[data-url]').forEach(card => {
     card.addEventListener('click', () => {
-      openUrl(decodeURI((card as HTMLElement).dataset.url || ''));
+      openUrl(decodeURIComponent((card as HTMLElement).dataset.url || ''));
     });
   });
 }

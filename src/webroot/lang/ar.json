@@ -101,6 +101,7 @@
   "ta_state_unchecked": "غير موجود في قائمة التوجيه",
   "ta_title": "توجيه التطبيقات",
   "role_Founder & Lead Developer": "المؤسس والمطور الرئيسي",
+  "role_WebUI Contributor": "مساهم في الواجهة",
   "conflict_priority_module": "الأولوية ←",
   "conflict_priority_specter": "الأولوية ← Specter",
   "custom_kb_active": "نشط",
@@ -188,6 +189,7 @@
   "terminal_clear": "مسح",
   "theme_mode_auto": "تلقائي",
   "theme_mode_dark": "داكن",
+  "theme_mode_amoled": "AMOLED",
   "theme_mode_light": "فاتح",
   "theme_preset_monet": "النظام",
   "tools_danger_zone": "المنطقة الخطرة",
@@ -208,5 +210,5 @@
   "control_toggle_prop_handler_desc": "إعادة تعيين خصائص حالة الإقلاع (vbmeta، verifiedboot، flash.locked) عند الإقلاع",
   "sp_fetch": "جلب",
   "sp_fetching": "جاري جلب آخر تصليح أمان...",
-  "sp_fetched": "تم جلب آخر تصليح أمان",
+  "sp_fetched": "تم جلب آخر تصليح أمان"
 }
