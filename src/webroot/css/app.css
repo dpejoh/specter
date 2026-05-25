@@ -6,6 +6,15 @@ html, body {
 body {
   font-family: var(--md-ref-typeface-plain);
   -webkit-font-smoothing: antialiased;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+input, textarea, [contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
 }
 
 :root[data-theme-resolved="dark"]  { color-scheme: dark; }
@@ -100,29 +109,29 @@ section:not([hidden]) {
   margin-inline-end: 12px;
   font-size: 0.8125rem;
   font-weight: 500;
-  color: var(--md-sys-color-tertiary, #2e7d32);
+  color: #146c2e;
 }
 .network-chip md-icon {
   font-size: 20px;
-  color: var(--md-sys-color-tertiary, #2e7d32);
+  color: #146c2e;
 }
 [data-theme-resolved="dark"] .network-chip {
-  color: var(--md-sys-color-tertiary, #81c784);
+  color: #8fdb9e;
 }
 [data-theme-resolved="dark"] .network-chip md-icon {
-  color: var(--md-sys-color-tertiary, #81c784);
+  color: #8fdb9e;
 }
 .network-chip.offline {
-  color: var(--md-sys-color-error, #d32f2f);
+  color: #b3261e;
 }
 .network-chip.offline md-icon {
-  color: var(--md-sys-color-error, #d32f2f);
+  color: #b3261e;
 }
 [data-theme-resolved="dark"] .network-chip.offline {
-  color: var(--md-sys-color-error, #e57373);
+  color: #f2b8b5;
 }
 [data-theme-resolved="dark"] .network-chip.offline md-icon {
-  color: var(--md-sys-color-error, #e57373);
+  color: #f2b8b5;
 }
 
 .hero-card {
@@ -1467,7 +1476,7 @@ md-filled-tonal-button {
   font-size: 18px;
 }
 
-#clear-terminal {
+#clear-terminal, #copy-terminal {
   color: var(--md-sys-color-on-tertiary-container);
   --md-text-button-container-height: 24px;
   --md-text-button-icon-size: 16px;

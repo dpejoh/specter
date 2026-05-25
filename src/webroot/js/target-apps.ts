@@ -195,6 +195,8 @@ export async function openTargetAppsManager() {
 
   requestAnimationFrame(() => overlay.classList.add('ta-overlay--open'));
   document.documentElement.style.overflow = 'hidden';
+  (window as any).isOverlayOpen = true;
+  history.pushState({ overlay: 'target-apps' }, '');
   appendToOutput('[TARGET] Opened App Targeting overlay');
 
   const list = overlay.querySelector('#ta-list') as HTMLElement;
@@ -205,6 +207,8 @@ export async function openTargetAppsManager() {
   let blPkgs = new Set<string>();
 
   function closeOverlay() {
+    (window as any).isOverlayOpen = false;
+    window.removeEventListener('popstate', closeOverlay);
     overlay.classList.remove('ta-overlay--open');
     document.documentElement.style.overflow = '';
     setTimeout(() => {
@@ -212,7 +216,7 @@ export async function openTargetAppsManager() {
     }, 300);
   }
 
-  overlay.querySelector('#ta-back')!.addEventListener('click', closeOverlay);
+  overlay.querySelector('#ta-back')!.addEventListener('click', () => history.back());
 
   overlay.querySelector('#ta-menu-btn')!.addEventListener('click', () => {
     const menu = overlay.querySelector('#ta-menu') as MdMenu;

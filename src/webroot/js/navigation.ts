@@ -77,6 +77,7 @@ export function wireNavigation() {
   }
 
   window.addEventListener('popstate', () => {
+    if ((window as any).isOverlayOpen) return;
     exitStatePushed = false;
     if (getCurrentPage() === 'home-page') {
       window.close();
