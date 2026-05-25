@@ -2,6 +2,8 @@ import { escapeHtml } from './utils.js';
 import { getFriendlyNames } from './state.js';
 import { STORAGE_KEY, MAX_ENTRIES } from './constants.js';
 import { getTranslation } from './i18n.js';
+import { showToast } from './toast.js';
+import '@material/web/iconbutton/icon-button.js';
 
 interface HistoryEntry {
   script: string;
@@ -99,35 +101,42 @@ export async function openRecentActivity(devMode = false) {
           <span class="activity-card__name">${escapeHtml(friendlyName)}</span>
           <span class="activity-card__time">${formatTime(entry.time)}</span>
         </div>
-        ${devMode ? `<md-icon class="activity-card__chevron">expand_more</md-icon>` : ''}
+        <div class="activity-card__actions" style="display:flex;align-items:center;gap:4px">
+          <md-icon-button class="activity-card__header-copy-btn" aria-label="${getTranslation('history_copy') || 'Copy'}">
+            <md-icon>content_copy</md-icon>
+          </md-icon-button>
+          ${devMode ? `<md-icon class="activity-card__chevron">expand_more</md-icon>` : ''}
+        </div>
       </div>
       ${devMode ? `<div class="activity-card__body">
         <pre>${escapeHtml(entry.output)}</pre>
-        <button class="activity-card__copy-btn">${getTranslation('history_copy') || 'Copy'}</button>
       </div>` : ''}
     `;
 
     const header = card.querySelector('.activity-card__header');
+    const copyBtn = card.querySelector('.activity-card__header-copy-btn');
+
+    copyBtn!.addEventListener('click', (e) => {
+      e.stopPropagation();
+      navigator.clipboard.writeText(entry.output).then(() => {
+        showToast(getTranslation('history_copied') || 'Copied!', { icon: 'check_circle', type: 'success' as any, autoCloseDelay: 2000 });
+      }).catch(() => {
+        showToast(getTranslation('history_copy_failed') || 'Failed to copy', { icon: 'error', type: 'error' as any, autoCloseDelay: 2000 });
+      });
+    });
 
     if (devMode) {
       const body = card.querySelector('.activity-card__body');
       const chevron = card.querySelector('.activity-card__chevron');
-      const copyBtn = card.querySelector('.activity-card__copy-btn');
 
       function toggle() {
         const isOpen = body!.classList.toggle('open');
         chevron!.classList.toggle('expanded', isOpen);
       }
 
-      header!.addEventListener('click', () => toggle());
-
-      copyBtn!.addEventListener('click', () => {
-        navigator.clipboard.writeText(entry.output).then(() => {
-          copyBtn!.textContent = getTranslation('history_copied') || 'Copied!';
-          setTimeout(() => { copyBtn!.textContent = getTranslation('history_copy') || 'Copy'; }, 2000);
-        }).catch(() => {
-          copyBtn!.textContent = getTranslation('history_copy_failed') || 'Failed';
-        });
+      header!.addEventListener('click', (e) => {
+        if ((e.target as HTMLElement).closest('.activity-card__header-copy-btn')) return;
+        toggle();
       });
     }
 

@@ -6,6 +6,13 @@ html, body {
 body {
   font-family: var(--md-ref-typeface-plain);
   -webkit-font-smoothing: antialiased;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input, textarea, [contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 :root[data-theme-resolved="dark"]  { color-scheme: dark; }
@@ -1467,7 +1474,7 @@ md-filled-tonal-button {
   font-size: 18px;
 }
 
-#clear-terminal {
+#clear-terminal, #copy-terminal {
   color: var(--md-sys-color-on-tertiary-container);
   --md-text-button-container-height: 24px;
   --md-text-button-icon-size: 16px;
