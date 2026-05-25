@@ -6,6 +6,15 @@ html, body {
 body {
   font-family: var(--md-ref-typeface-plain);
   -webkit-font-smoothing: antialiased;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+input, textarea, [contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
 }
 
 :root[data-theme-resolved="dark"]  { color-scheme: dark; }
