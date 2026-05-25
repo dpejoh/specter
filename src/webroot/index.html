@@ -612,7 +612,10 @@
             <div class="output-terminal">
               <div class="output-terminal-header">
                 <md-icon aria-hidden="true">terminal</md-icon>
-                <md-text-button id="clear-terminal" data-i18n="terminal_clear">Clear</md-text-button>
+                <div style="display:flex;gap:4px">
+                  <md-text-button id="copy-terminal" data-i18n="terminal_copy">Copy</md-text-button>
+                  <md-text-button id="clear-terminal" data-i18n="terminal_clear">Clear</md-text-button>
+                </div>
               </div>
               <div class="output-terminal-content"></div>
             </div>

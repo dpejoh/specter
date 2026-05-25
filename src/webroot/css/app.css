@@ -1476,7 +1476,7 @@ md-filled-tonal-button {
   font-size: 18px;
 }
 
-#clear-terminal {
+#clear-terminal, #copy-terminal {
   color: var(--md-sys-color-on-tertiary-container);
   --md-text-button-container-height: 24px;
   --md-text-button-icon-size: 16px;
