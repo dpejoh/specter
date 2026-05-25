@@ -1,17 +1,5 @@
 import { cfgGet, cfgSet } from './cfg.js';
 import enStrings from '../lang/source/string.json';
-import zhStrings from '../lang/zh.json';
-import ruStrings from '../lang/ru.json';
-import esStrings from '../lang/es.json';
-import arStrings from '../lang/ar.json';
-
-const ALL_STRINGS: Record<string, Record<string, string>> = {
-  en: enStrings,
-  zh: zhStrings,
-  ru: ruStrings,
-  es: esStrings,
-  ar: arStrings,
-};
 
 let currentStrings: Record<string, string> = {};
 const fallbackStrings: Record<string, string> = enStrings;
@@ -26,13 +14,37 @@ export async function applyLanguage(langCode: string) {
   cfgSet('lang', langCode);
 
   let targetLang = langCode;
+  const available = ['en', 'zh', 'ru', 'es', 'ar'];
   if (langCode === 'auto') {
-    const detected = (navigator.language || '').slice(0, 2);
-    targetLang = ALL_STRINGS[detected] ? detected : 'en';
+    targetLang = (navigator.language || '').slice(0, 2);
+    if (!available.includes(targetLang)) targetLang = 'en';
   }
 
-  currentStrings = ALL_STRINGS[targetLang] || enStrings;
-  applyTranslations();
+  if (targetLang === 'en') {
+    currentStrings = enStrings;
+    applyTranslations();
+    document.documentElement.dir = 'ltr';
+    document.dispatchEvent(new CustomEvent('languageChanged', { detail: { langCode } }));
+    return;
+  }
+
+  const cached = localStorage.getItem('i18n_' + targetLang);
+  if (cached) {
+    try {
+      currentStrings = JSON.parse(cached);
+      applyTranslations();
+    } catch (_e) { /* */ }
+  }
+
+  const ts = String(Date.now());
+  try {
+    const res = await fetch('lang/' + targetLang + '.json?ts=' + ts);
+    currentStrings = await res.json();
+    applyTranslations();
+    localStorage.setItem('i18n_' + targetLang, JSON.stringify(currentStrings));
+  } catch (_e) {
+    console.warn('Failed to load language:', _e);
+  }
 
   document.documentElement.dir = targetLang === 'ar' ? 'rtl' : 'ltr';
   document.dispatchEvent(new CustomEvent('languageChanged', { detail: { langCode } }));
