@@ -51,6 +51,7 @@ export async function initThemeUI() {
 }
 
 function resolveMode(mode: string): string {
+  if (mode === 'amoled') return 'dark';
   return mode === 'auto'
     ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
     : mode;

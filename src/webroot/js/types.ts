@@ -27,7 +27,6 @@ export interface InfoJson {
   root?: string;
   root_sol?: string;
   version?: string;
-  keybox_format?: string;
   tee_status?: string;
   security_patch?: string;
   build_patch?: string;
@@ -42,6 +41,8 @@ export interface KeyboxInfoJson {
   up_to_date?: boolean;
   revoked?: boolean;
   softbanned?: boolean;
+  serial?: string;
+  is_private?: boolean;
 }
 
 export interface DevEntry {

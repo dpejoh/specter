@@ -4,22 +4,7 @@ import { shellEscape } from './utils.js';
 let MODULE: string | null = null;
 const cache: Record<string, string | undefined | null> = {};
 
-let flushTimer: ReturnType<typeof setTimeout> | null = null;
-let pendingFlush: Array<{ key: string; val: string | undefined | null }> = [];
-
 export function setModuleDir(path: string) { MODULE = path; }
-
-function flushNow() {
-  flushTimer = null;
-  const batch = pendingFlush;
-  pendingFlush = [];
-  if (!MODULE || batch.length === 0) return;
-  const cfgDir = shellEscape(MODULE + '/config');
-  const cmds = batch.map(({ key, val }) =>
-    `printf '%s' ${shellEscape(val || '')} > ${shellEscape(cfgDir + '/' + key + '.val')}`
-  );
-  bridgeExec(`mkdir -p ${cfgDir} && ${cmds.join(' && ')}`).catch(() => {});
-}
 
 export async function cfgInit() {
   if (!MODULE) return;
@@ -61,9 +46,7 @@ export async function cfgGet(key: string, defaultValue?: string): Promise<string
 
 export function cfgSet(key: string, val: string | undefined | null) {
   cache[key] = val;
-  pendingFlush.push({ key, val });
-  if (flushTimer) clearTimeout(flushTimer);
-  flushTimer = setTimeout(flushNow, 200);
+  writeConfig(key, val);
 }
 
 export function cfgInvalidate(key?: string) {
@@ -75,15 +58,7 @@ export function cfgInvalidate(key?: string) {
 }
 
 export async function cfgFlush() {
-  if (flushTimer) {
-    clearTimeout(flushTimer);
-    flushNow();
-  }
 }
-
-window.addEventListener('beforeunload', () => {
-  cfgFlush();
-});
 
 export async function migrateLocalStorage() {
   try {

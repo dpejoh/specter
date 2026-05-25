@@ -12,7 +12,7 @@ import { initTerminal } from './terminal.js';
 import { openTargetAppsManager, refreshAppCatalog } from './target-apps.js';
 import { setDevMode } from './state.js';
 import { wireTopBarScroll, wireNavigation } from './navigation.js';
-import { wireControlToggles, refreshControlToggles, wireDevMode } from './toggles.js';
+import { wireControlToggles, wireDevMode } from './toggles.js';
 import { wireActions, buildFriendlyNames } from './actions.js';
 import { wireSecurityPatch } from './security-patch-ui.js';
 import { wireKeyboxCard, wireKeyboxInstallButton, wireCustomKeybox, populateProviders } from './keybox-ui.js';
@@ -98,9 +98,11 @@ function wireRefreshButton() {
   if (!btn) return;
   btn.addEventListener('click', async () => {
     btn.disabled = true;
-    await refreshDevice();
-    await refreshKeyboxStatus();
-    await refreshAppCatalog();
+    await Promise.all([
+      refreshDevice(),
+      refreshKeyboxStatus(),
+      refreshAppCatalog()
+    ]);
     btn.disabled = false;
   });
 }

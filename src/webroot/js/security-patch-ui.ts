@@ -3,6 +3,7 @@ import { getTranslation } from './i18n.js';
 import { showToast } from './toast.js';
 import { defaultSecurityPatch } from './constants.js';
 import { getModuleDir } from './bridge.js';
+import { shellEscape } from './utils.js';
 
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
@@ -40,7 +41,7 @@ export function wireSecurityPatch() {
       }
       showToast(t('sp_fetching', 'Fetching latest security patch...'), { icon: 'info', type: 'info' as any, autoCloseDelay: 10000 });
       try {
-        const { stdout } = await exec(`sh ${moddir}/features/security_patch.sh --fetch 2>/dev/null || echo ""`);
+        const { stdout } = await exec(`sh ${shellEscape(moddir + '/features/security_patch.sh')} --fetch 2>/dev/null || echo ""`);
         const date = stdout.trim();
         if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
           input!.value = date;

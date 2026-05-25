@@ -1,5 +1,4 @@
 import { cfgGet, cfgSet } from './cfg.js';
-import { fetchJson } from './utils.js';
 import enStrings from '../lang/source/string.json';
 
 let currentStrings: Record<string, string> = {};
@@ -7,49 +6,47 @@ const fallbackStrings: Record<string, string> = enStrings;
 
 export async function initI18n() {
   const saved = await cfgGet('lang', 'auto') || 'auto';
-  let langCode: string;
-  if (saved === 'auto') {
-    const detected = (navigator.language || '').slice(0, 2);
-    const available = ['en', 'zh', 'ru', 'es', 'ar'];
-    langCode = available.includes(detected) ? detected : 'en';
-  } else {
-    langCode = saved;
-  }
-  await applyLanguage(langCode);
-  wireLanguageSelect(langCode);
+  await applyLanguage(saved);
+  wireLanguageSelect(saved);
 }
 
 export async function applyLanguage(langCode: string) {
-  if (langCode === 'en') {
+  cfgSet('lang', langCode);
+
+  let targetLang = langCode;
+  const available = ['en', 'zh', 'ru', 'es', 'ar'];
+  if (langCode === 'auto') {
+    targetLang = (navigator.language || '').slice(0, 2);
+    if (!available.includes(targetLang)) targetLang = 'en';
+  }
+
+  if (targetLang === 'en') {
     currentStrings = enStrings;
     applyTranslations();
     document.documentElement.dir = 'ltr';
-    cfgSet('lang', langCode);
     document.dispatchEvent(new CustomEvent('languageChanged', { detail: { langCode } }));
     return;
   }
 
-  const cached = localStorage.getItem('i18n_' + langCode);
+  const cached = localStorage.getItem('i18n_' + targetLang);
   if (cached) {
     try {
       currentStrings = JSON.parse(cached);
       applyTranslations();
-    } catch (e) { /* ignore corrupt cache */ }
+    } catch (_e) { /* */ }
   }
 
+  const ts = String(Date.now());
   try {
-    const res = await fetch(`lang/${langCode}.json?ts=${Date.now()}`);
-    const data = await res.json();
-    currentStrings = data;
+    const res = await fetch('lang/' + targetLang + '.json?ts=' + ts);
+    currentStrings = await res.json();
     applyTranslations();
-    localStorage.setItem('i18n_' + langCode, JSON.stringify(data));
-  } catch (e) {
-    console.warn('Failed to load language:', e);
-    if (!cached) currentStrings = {};
+    localStorage.setItem('i18n_' + targetLang, JSON.stringify(currentStrings));
+  } catch (_e) {
+    console.warn('Failed to load language:', _e);
   }
 
-  document.documentElement.dir = langCode === 'ar' ? 'rtl' : 'ltr';
-  cfgSet('lang', langCode);
+  document.documentElement.dir = targetLang === 'ar' ? 'rtl' : 'ltr';
   document.dispatchEvent(new CustomEvent('languageChanged', { detail: { langCode } }));
 }
 
@@ -98,14 +95,6 @@ function applyTranslations() {
     const val = currentStrings[key] || fallbackStrings[key];
     if (val) (el as any).placeholder = val;
   });
-
-  document.querySelectorAll('md-filter-chip[data-preset]').forEach(chip => {
-    const preset = (chip as HTMLElement).dataset.preset;
-    if (!preset) return;
-    const key = 'theme_preset_' + preset;
-    const val = currentStrings[key] || fallbackStrings[key];
-    if (val) (chip as any).label = val;
-  });
 }
 
 function setAriaLabel(el: Element, val: string) {
@@ -118,7 +107,10 @@ function wireLanguageSelect(currentLang: string) {
   const select = document.getElementById('language-select') as HTMLSelectElement | null;
   if (!select) return;
 
+  select.innerHTML = '';
+
   const LANGUAGES: [string, string, string][] = [
+    ['auto', '🌐', getTranslation('theme_mode_auto') || 'Auto'],
     ['en', '🇬🇧', 'English'],
     ['zh', '🇨🇳', '中文'],
     ['ru', '🇷🇺', 'Русский'],
@@ -140,6 +132,13 @@ function wireLanguageSelect(currentLang: string) {
       await applyLanguage(select.value);
     } catch (e) {
       console.warn('Language change failed:', e);
+    }
+  });
+
+  document.addEventListener('languageChanged', () => {
+    const autoOption = select.querySelector('option[value="auto"]');
+    if (autoOption) {
+      autoOption.textContent = `🌐 ${getTranslation('theme_mode_auto') || 'Auto'}`;
     }
   });
 }

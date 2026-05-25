@@ -1,7 +1,6 @@
 # v1.4.2
 
 ## Performance
-- Config writes batched: 200ms debounce + single shell exec per batch
 - Network check 3× faster: 1 DNS + 1 HTTP (7s max) vs 6 retries (21s)
 - One-pass keybox_info.json read in desc.sh; skip refresh if description unchanged
 - TEE readiness: retry loop (5× 500ms) instead of fixed sleep
@@ -13,13 +12,37 @@
 - `download()` hardened: User-Agent header, non-empty output validation, reliable temp cleanup
 
 ## Boot & Description
-- `keybox_info.sh` backgrounded at boot (non-blocking); network guard restored (no 30s hang)
-- Redundant `refresh_desc.sh` calls pruned from 4 feature scripts
-- `refreshKeyboxStatus(exec)` param to skip shell re-exec when data is fresh
+- `keybox_info.sh` backgrounded at boot (non-blocking)
+- Catalog + Google revocation analysis restored for boot/install-time description (keybox source, version, revocation status)
 - `security_patch.sh` runs at boot so description shows patch date without WebUI
+- Redundant `refresh_desc.sh` calls pruned from 4 feature scripts; redundant `keybox_info.sh` calls pruned from keybox.sh
+- `refreshKeyboxStatus(exec)` param to skip shell re-exec when data is fresh
+- Keybox install flow manually calls `refresh_desc.sh` + `refreshKeyboxStatus(false)` to avoid redundant re-exec
+
+## WebUI
+- Static i18n bundling: all languages imported at build time — no runtime fetch, works offline
+- AMOLED theme mode with true-black CSS overrides, segmented button, translations
+- `Promise.all` for refresh button — device, keybox, and catalog fetch in parallel
+- Catalog analysis moved to browser `fetch()` — parallel catalog + Google revocation check
+- Enriched keybox data written back to disk + description refreshed after analysis
+- Network chip: hardcoded green/red with dark variants (accessibility win)
+- `decodeURI` → `decodeURIComponent` bug fix for contributor links
+- Responsive contributors grid (`auto-fit` instead of fixed `1fr 1fr`)
+- `data-i18n` attributes on preset chips (declarative translation)
 
 ## Other
-- `target_applied` marker removed — obsolete since `target_merge.sh` handles updates intelligently
+- `target_applied` marker removed — obsolete since `target_merge.sh` handles incremental updates
+- Theme: `cfgSet('theme_preset', 'monet')` restored so switching to Monet persists across reboot
+- `zip` file removed (Windows-only PowerShell script)
+- Color mapping: low-saturation wallpaper colors resolve to `'blue'` preset instead of `'grey'`
+- `.gitignore` updated with `web/` workspace patterns
+
+## Infrastructure
+- VitePress documentation site at `web/docs/` (13 pages: getting-started, architecture, guide, reference)
+- GitHub Pages deployment workflow: triggers on `web/**` pushes to main
+
+## Contributors
+- @myst-25 — architecture review and recommendations
 
 # v1.4.1
 

@@ -46,4 +46,4 @@ Detection is file-based. If a module doesn't match the registry, no conflict act
 
 ## WebUI Browsers
 
-Any modern browser works. The WebUI is a single-page app served by the module's HTTP server on `http://localhost:8080`. Tested with Chrome, Firefox, Edge, and Kiwi Browser.
+Any modern browser works. The WebUI is a single-page app served by the root manager's WebUI server (often on `http://localhost:8080` or `http://localhost:1314`). Tested with Chrome, Firefox, Edge, and Kiwi Browser.

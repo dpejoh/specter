@@ -100,17 +100,29 @@ section:not([hidden]) {
   margin-inline-end: 12px;
   font-size: 0.8125rem;
   font-weight: 500;
-  color: var(--md-sys-color-tertiary);
+  color: var(--md-sys-color-tertiary, #2e7d32);
 }
 .network-chip md-icon {
   font-size: 20px;
-  color: var(--md-sys-color-tertiary);
+  color: var(--md-sys-color-tertiary, #2e7d32);
+}
+[data-theme-resolved="dark"] .network-chip {
+  color: var(--md-sys-color-tertiary, #81c784);
+}
+[data-theme-resolved="dark"] .network-chip md-icon {
+  color: var(--md-sys-color-tertiary, #81c784);
 }
 .network-chip.offline {
-  color: var(--md-sys-color-error);
+  color: var(--md-sys-color-error, #d32f2f);
 }
 .network-chip.offline md-icon {
-  color: var(--md-sys-color-error);
+  color: var(--md-sys-color-error, #d32f2f);
+}
+[data-theme-resolved="dark"] .network-chip.offline {
+  color: var(--md-sys-color-error, #e57373);
+}
+[data-theme-resolved="dark"] .network-chip.offline md-icon {
+  color: var(--md-sys-color-error, #e57373);
 }
 
 .hero-card {
@@ -168,8 +180,8 @@ section:not([hidden]) {
 }
 
 .keybox-chip--softbanned {
-  background: var(--md-sys-color-tertiary-fixed-dim, #FFB74D);
-  color: var(--md-sys-color-on-tertiary-fixed, #1C1B1F);
+  background: var(--md-sys-color-tertiary-container, #FFB74D);
+  color: var(--md-sys-color-on-tertiary-container, #1C1B1F);
 }
 
 .keybox-chip--active {
@@ -812,7 +824,7 @@ md-divider.settings-divider {
 
 .contributors-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 12px;
   padding-bottom: 24px;
 }
@@ -1893,4 +1905,25 @@ md-filled-tonal-button {
 [dir="rtl"] .ta-fab {
   right: auto;
   left: 16px;
+}
+
+/* AMOLED Theme Overrides */
+:root[data-theme="amoled"] {
+  --md-sys-color-background: #000000 !important;
+  --md-sys-color-surface: #000000 !important;
+  --md-sys-color-surface-container-lowest: #000000 !important;
+  --md-sys-color-surface-container-low: #09090b !important;
+  --md-sys-color-surface-container: #0f0f12 !important;
+  --md-sys-color-surface-container-high: #151518 !important;
+  --md-sys-color-surface-container-highest: #202024 !important;
+  --md-sys-color-outline-variant: #1a1a1f !important;
+}
+
+[data-theme="amoled"] md-outlined-card {
+  --md-outlined-card-container-color: var(--md-sys-color-surface-container-low) !important;
+  --md-outlined-card-outline-color: var(--md-sys-color-outline-variant) !important;
+}
+
+[data-theme="amoled"] md-dialog {
+  --md-dialog-container-color: var(--md-sys-color-surface-container) !important;
 }

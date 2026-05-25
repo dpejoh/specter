@@ -18,12 +18,14 @@ _text=""
 _up_to_date=false
 _revoked=false
 _softbanned=false
+_serial=""
+_is_private_val="false"
 
 if [ -f "$KEYBOX_FILE" ]; then
   _installed=true
 
-  _is_private=$(cat "$CONFIG_DIR/kb_private.val" 2>/dev/null || echo "false")
-  if [ "$_is_private" = "true" ]; then
+  _is_private_val=$(cat "$CONFIG_DIR/kb_private.val" 2>/dev/null || echo "false")
+  if [ "$_is_private_val" = "true" ]; then
     _source="Private"
     _text="Keybox"
     _up_to_date=true
@@ -37,59 +39,51 @@ if [ -f "$KEYBOX_FILE" ]; then
   elif _serial=$(decode_keybox_serial "$KEYBOX_FILE"); then
     log "KEYBOX_INFO" "Serial: $_serial"
 
-    # Convert hex serial to decimal for catalog matching (catalog may use either format)
     _serial_dec=$(printf '%u' "0x$_serial" 2>/dev/null || echo "")
 
-    # Check A: Google revocation (independent of catalog)
     if check_google_revocation "$_serial"; then
       _revoked=true
       log "KEYBOX_INFO" "Revoked by Google"
     fi
 
-    # Check B: Catalog identity (source/version/text/up_to_date)
-    _history_json=""
     if check_network; then
-      CATALOG_TIMEOUT="${CATALOG_TIMEOUT:-15}"
       _history_json=$(download "$CATALOG_URL" 2>/dev/null)
-      log "KEYBOX_INFO" "History response length: ${#_history_json}"
-    else
-      log "KEYBOX_INFO" "No network, skipping catalog"
-    fi
-
-    if [ -n "$_history_json" ]; then
-      _provider=$(cat "$CONFIG_DIR/kb_provider.val" 2>/dev/null || echo "auto")
-      if [ "$_provider" = "auto" ]; then
-        _provider=$(echo "$_history_json" | grep -o '"working":{[^}]*"source":"[^"]*"' | sed 's/.*"source":"\([^"]*\)".*/\1/')
-      fi
-
-      # Try matching serial in both hex and decimal formats
-      for _s in "$_serial" "$_serial_dec"; do
-        [ -z "$_s" ] && continue
-        if [ -n "$_provider" ]; then
-          _entry=$(echo "$_history_json" | grep -o '{[^}]*"source":"'"$_provider"'"[^}]*"serial":"'"$_s"'"[^}]*}')
+      if [ -n "$_history_json" ]; then
+        log "KEYBOX_INFO" "Catalog response length: ${#_history_json}"
+        _provider=$(cat "$CONFIG_DIR/kb_provider.val" 2>/dev/null || echo "auto")
+        if [ "$_provider" = "auto" ]; then
+          _provider=$(echo "$_history_json" | grep -o '"working":{[^}]*"source":"[^"]*"' | sed 's/.*"source":"\([^"]*\)".*/\1/')
         fi
-        [ -z "$_entry" ] && _entry=$(echo "$_history_json" | grep -o '{[^}]*"serial":"'"$_s"'"[^}]*}')
-        [ -n "$_entry" ] && break
-      done
-      unset _s
 
-      if [ -n "$_entry" ]; then
-        _source=$(echo "$_entry" | grep -o '"source":"[^"]*"' | head -1 | sed 's/"source":"//;s/"//')
-        _source_version=$(echo "$_entry" | grep -o '"version":"[^"]*"' | head -1 | sed 's/"version":"//;s/"//')
-        _text=$(echo "$_entry" | grep -o '"text":"[^"]*"' | head -1 | sed 's/"text":"//;s/"//')
-        [ -z "$_source" ] && _source="unknown"
-        [ -z "$_source_version" ] && _source_version="?"
-        [ -z "$_text" ] && _text=""
-        log "KEYBOX_INFO" "Found: source=$_source version=$_source_version text=$_text"
+        for _s in "$_serial" "$_serial_dec"; do
+          [ -z "$_s" ] && continue
+          if [ -n "$_provider" ]; then
+            _entry=$(echo "$_history_json" | grep -o '{[^}]*"source":"'"$_provider"'"[^}]*"serial":"'"$_s"'"[^}]*}')
+          fi
+          [ -z "$_entry" ] && _entry=$(echo "$_history_json" | grep -o '{[^}]*"serial":"'"$_s"'"[^}]*}')
+          [ -n "$_entry" ] && break
+        done
+        unset _s
 
-        _softbanned=$(echo "$_entry" | grep -o '"softbanned":true' || echo "false")
+        if [ -n "$_entry" ]; then
+          _source=$(echo "$_entry" | grep -o '"source":"[^"]*"' | head -1 | sed 's/"source":"//;s/"//')
+          _source_version=$(echo "$_entry" | grep -o '"version":"[^"]*"' | head -1 | sed 's/"version":"//;s/"//')
+          _text=$(echo "$_entry" | grep -o '"text":"[^"]*"' | head -1 | sed 's/"text":"//;s/"//')
+          [ -z "$_source" ] && _source="unknown"
+          [ -z "$_source_version" ] && _source_version="?"
+          [ -z "$_text" ] && _text=""
 
-        _latest_for_source=$(echo "$_history_json" | grep -o '"'"$_source"'":"[^"]*"' | sed 's/.*":"//;s/"//')
-        if [ -n "$_source_version" ] && [ "$_source_version" = "$_latest_for_source" ]; then
-          _up_to_date=true
+          _softbanned=$(echo "$_entry" | grep -o '"softbanned":true' || echo "false")
+
+          _latest_for_source=$(echo "$_history_json" | grep -o '"'"$_source"'":"[^"]*"' | sed 's/.*":"//;s/"//')
+          if [ -n "$_source_version" ] && [ "$_source_version" = "$_latest_for_source" ]; then
+            _up_to_date=true
+          fi
+        else
+          log "KEYBOX_INFO" "Not found in catalog"
         fi
       else
-        log "KEYBOX_INFO" "Not found in catalog"
+        log "KEYBOX_INFO" "No network, skipping catalog"
       fi
     fi
   fi
@@ -103,10 +97,12 @@ cat <<EOF > "$INFO_PATH"
   "text": "$(_escape_json "$_text")",
   "up_to_date": $_up_to_date,
   "revoked": $_revoked,
-  "softbanned": $_softbanned
+  "softbanned": $_softbanned,
+  "serial": "$(_escape_json "$_serial")",
+  "is_private": $_is_private_val
 }
 EOF
 
-unset _installed _source _source_version _text _up_to_date _revoked _softbanned _serial _serial_dec _history_json _entry _provider _latest_for_source
+unset _installed _source _source_version _text _up_to_date _revoked _softbanned _serial _serial_dec _history_json _entry _provider _latest_for_source _is_private_val
 log "KEYBOX_INFO" "Finish"
 exit 0

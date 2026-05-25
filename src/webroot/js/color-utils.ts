@@ -37,7 +37,7 @@ function argbToHsl(argb: number): [number, number, number] {
 export function presetClosestTo(hexSeed: string): string {
   const argb = parseInt(hexSeed.startsWith('#') ? hexSeed.slice(1) : hexSeed, 16) | 0xFF000000;
   const [hue, sat] = argbToHsl(argb);
-  if (sat < 10) return 'grey';
+  if (sat < 10) return 'blue';
   let closest = 'blue';
   let minDist = Infinity;
   for (const [name, pHue] of PRESET_HUES) {

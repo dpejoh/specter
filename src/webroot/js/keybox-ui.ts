@@ -1,9 +1,8 @@
-import { getModuleDir, exec, spawnScript } from './bridge.js';
-import { cfgSet, cfgGet, cfgFlush } from './cfg.js';
+import { getModuleDir, exec } from './bridge.js';
+import { cfgSet, cfgGet } from './cfg.js';
 import { getTranslation } from './i18n.js';
 import { shellEscape, fetchJson } from './utils.js';
 import { showToast } from './toast.js';
-import { appendToOutput } from './terminal.js';
 import { openFileBrowser } from './file-browser.js';
 import { openRecentActivity } from './history.js';
 import { refreshKeyboxStatus } from './device.js';
@@ -81,7 +80,6 @@ export function wireKeyboxInstallButton() {
     try {
       cfgSet('kb_custom_type', '');
       cfgSet('kb_custom_value', '');
-      await cfgFlush();
       if (isDevMode()) {
         await runDevAction('keybox.sh', btn, spinner);
       } else {
@@ -218,7 +216,6 @@ export async function openCustomKeyboxDialog() {
       cfgSet('kb_custom_type', 'path');
     }
     cfgSet('kb_custom_value', text);
-    await cfgFlush();
     const result: any = await exec(`sh ${shellEscape(moddir + '/features/keybox.sh')}`);
     if (result.code === 0) {
       showToast(t('custom_kb_installed', 'Custom keybox installed'), { icon: 'check_circle', type: 'success' as any, autoCloseDelay: 3000 });
