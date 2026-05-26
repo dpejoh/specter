@@ -13,6 +13,7 @@ import { openTargetAppsManager, refreshAppCatalog } from './target-apps.js';
 import { setDevMode } from './state.js';
 import { wireTopBarScroll, wireNavigation } from './navigation.js';
 import { wireControlToggles, wireDevMode } from './toggles.js';
+import { openAutoTargetDialog } from './auto-target-ui.js';
 import { wireActions, buildFriendlyNames } from './actions.js';
 import { wireSecurityPatch } from './security-patch-ui.js';
 import { wireKeyboxCard, wireKeyboxInstallButton, wireCustomKeybox, populateProviders } from './keybox-ui.js';
@@ -57,6 +58,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   wireCustomKeybox();
   wireKeyboxInstallButton();
   wireTargetApps();
+  wireAutoTarget();
   wireSecurityPatch();
   wireControlToggles();
   wireDevMode();
@@ -92,6 +94,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   /* Phase 5: Lazy per-tab data */
   wireConflictToggles().catch(() => {});
 });
+
+function wireAutoTarget() {
+  const btn = document.getElementById('auto-target-btn');
+  if (!btn) return;
+  btn.addEventListener('click', openAutoTargetDialog);
+}
 
 function wireRefreshButton() {
   const btn = document.getElementById('refresh-btn') as HTMLButtonElement | null;

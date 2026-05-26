@@ -60,4 +60,9 @@ if [ "$(cfg_get toggle_suspicious_props 1)" != "0" ]; then
   ) &
 fi
 
+# Auto-targeting daemon — watches for new app installs and adds them to target.txt
+if [ "$(cfg_get toggle_auto_target 0)" = "1" ]; then
+  sh "$MODDIR/features/auto_target.sh" >/dev/null 2>&1 &
+fi
+
 log "BOOT" "Unified boot core done"

@@ -38,6 +38,7 @@
 - `.gitignore` updated with `web/` workspace patterns
 - `keybox_format` field removed from device info; `serial`/`is_private` added to KeyboxInfoJson
 - Dead code removed: 4 unused i18n keys from all languages, dead imports (spawnScript, cfgFlush, appendToOutput), APP_CATALOG constant, refreshControlToggles import
+- OEM unlock toggle no longer suppressed — `ro.oem_unlock_supported`, `sys.oem_unlock_allowed`, and `settings put global oem_unlock_allowed` removed from hardening (zero detection impact, only hides the UI toggle)
 
 ## Infrastructure
 - VitePress documentation site at `web/docs/` (13 pages: getting-started, architecture, guide, reference)

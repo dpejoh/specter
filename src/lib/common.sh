@@ -190,8 +190,6 @@ apply_prop_hardening() {
     check_prop "ro.build.tags" "release-keys"
     check_prop "ro.system.build.tags" "release-keys"
     check_prop "ro.vendor.build.tags" "release-keys"
-    check_prop "sys.oem_unlock_allowed" "0"
-    check_prop "ro.oem_unlock_supported" "0"
     check_prop "ro.kernel.qemu" "0"
     check_prop "ro.boot.qemu" "0"
     check_prop "ro.hardware.virtual_device" "0"
@@ -222,8 +220,6 @@ PROPS
 }
 
 apply_boot_hardening() {
-  settings put global oem_unlock_allowed 0
-
   if [ "$(toybox cat /sys/fs/selinux/enforce 2>/dev/null)" = "0" ]; then
     chmod 640 /sys/fs/selinux/enforce 2>/dev/null || true
     chmod 440 /sys/fs/selinux/policy 2>/dev/null || true
@@ -271,8 +267,6 @@ ro.warranty_bit|0
 ro.vendor.warranty_bit|0
 ro.is_ever_orange|0
 ro.secureboot.lockstate|locked
-sys.oem_unlock_allowed|0
-ro.oem_unlock_supported|0
 ro.boot.vbmeta.device_state|locked
 ro.boot.verifiedbootstate|green
 ro.boot.flash.locked|1

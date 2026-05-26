@@ -1927,3 +1927,64 @@ md-filled-tonal-button {
 [data-theme="amoled"] md-dialog {
   --md-dialog-container-color: var(--md-sys-color-surface-container) !important;
 }
+
+/* ===== Auto Targeting Dialog ===== */
+
+#auto-target-dialog [slot="headline"] {
+  padding: 0;
+}
+
+.at-dialog-headline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px 0;
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+
+.at-dialog-headline md-icon {
+  font-size: 24px;
+  color: var(--md-sys-color-primary);
+}
+
+.at-dialog-desc {
+  margin: 0 0 16px;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.at-dialog-list {
+  margin: 0;
+  max-width: 100%;
+}
+
+.at-interval-field {
+  width: 200px;
+  --md-outlined-text-field-container-shape: 12px;
+  text-align: center;
+}
+
+/* Hide spinners on number input */
+.at-interval-field input::-webkit-outer-spin-button,
+.at-interval-field input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.at-interval-field input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+#auto-target-dialog [slot="content"] {
+  padding: 8px 24px 16px;
+}
+
+#at-interval-row {
+  margin-top: 2px;
+}
+
+#at-interval-row .spacer {
+  min-width: 4px;
+}
