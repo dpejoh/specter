@@ -19,7 +19,7 @@ let currentMappedPreset: string = 'blue';
 
 export async function initTheme(savedMode: string) {
   currentPreset = await cfgGet('theme_preset', 'monet') || 'monet';
-  const mode = savedMode || 'dark';
+  const mode = savedMode || 'auto';
 
   if (currentPreset === 'monet') {
     await applyMonetPreset(mode);
@@ -40,7 +40,7 @@ export async function initThemeUI() {
   }
 
   if (customElements.get('md-outlined-segmented-button')) {
-    const mode = await cfgGet('theme', 'dark') || 'dark';
+    const mode = await cfgGet('theme', 'auto') || 'auto';
     const group = document.getElementById('theme-mode-group');
     if (group) {
       group.querySelectorAll('md-outlined-segmented-button').forEach(btn => {

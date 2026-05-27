@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /* Phase 1: Render frame */
   wireTopBarScroll();
-  const savedTheme = await cfgGet('theme', 'dark') || 'dark';
+  const savedTheme = await cfgGet('theme', 'auto') || 'auto';
   initTheme(savedTheme);
   wireNavigation();
   initRedirect();
