@@ -116,4 +116,8 @@ export function openAutoTargetDialog() {
   });
 }
 
-
+export function wireAutoTarget() {
+  const btn = document.getElementById('auto-target-btn');
+  if (!btn) return;
+  btn.addEventListener('click', openAutoTargetDialog);
+}

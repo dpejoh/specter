@@ -128,74 +128,85 @@
 
         <section id="home-page">
 
-          <md-filled-card id="keybox-card" class="hero-card">
-            <div class="hero-card__body">
-              <md-icon id="keybox-icon" style="font-size:28px;font-family:'Material Icons'" aria-hidden="true">key</md-icon>
-              <div style="flex:1;display:flex;flex-direction:column;gap:4px">
-                <p class="md-typescale-title-medium" id="keybox-label" style="margin:0" data-i18n="home_keybox_status">Keybox Status</p>
-                <div class="keybox-badges">
-                  <span id="keybox-source" class="keybox-chip">—</span>
-                  <span id="keybox-status" class="keybox-chip">—</span>
+          <div class="hero-grid">
+            <md-filled-card id="keybox-card" class="kb-hero-card">
+              <div class="kb-hero-provider">
+                <span class="kb-hero-provider-label" data-i18n="menu_keybox">Keybox</span>
+                <div class="kb-hero-name-row">
+                  <span class="kb-hero-provider-name" id="keybox-source">—</span>
+                  <span class="kb-hero-provider-version kb-hero-provider-version--neutral" id="keybox-version"></span>
+                  <span class="kb-version-badge" id="kb-version-badge"></span>
                 </div>
               </div>
-              <md-icon class="hero-card__action-icon" aria-label="History" data-i18n-aria="home_history">history</md-icon>
-            </div>
-          </md-filled-card>
-
-          <md-filled-tonal-button id="refresh-btn">
-            <span slot="icon" style="display:inline-flex;align-items:center;width:18px;height:18px">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M17.65 6.35A7.96 7.96 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
-            </span>
-            <span data-i18n="home_refresh">Refresh Info</span>
-          </md-filled-tonal-button>
-
-          <div class="info-grid">
-
-            <md-filled-card id="version-info-card" class="info-card">
-              <md-icon class="info-card__icon" aria-hidden="true">info</md-icon>
-              <p class="md-typescale-title-small info-card__label" data-i18n="home_version">Module Version</p>
-              <p class="md-typescale-title-medium info-card__value" id="version-info-value">—</p>
+              <div class="kb-hero-footer">
+                <div>
+                  <span class="kb-hero-status-label" data-i18n="home_status">Status</span>
+                  <span class="kb-hero-status-text" id="keybox-status">—</span>
+                </div>
+              </div>
             </md-filled-card>
 
-            <md-filled-card class="info-card">
-              <md-icon class="info-card__icon" aria-hidden="true">android</md-icon>
-              <p class="md-typescale-title-small info-card__label" data-i18n="home_android">Android</p>
-              <p class="md-typescale-title-medium info-card__value" id="android-value">—</p>
+            <md-filled-card id="sp-card" class="sp-hero-card">
+              <div class="sp-hero-provider">
+                <span class="kb-hero-provider-label" data-i18n="home_security_patch">Security Patch</span>
+                <div class="kb-hero-name-row">
+                  <span class="sp-hero-date" id="sp-date">—</span>
+                </div>
+              </div>
+              <div class="sp-hero-footer">
+                <div>
+                  <span class="kb-hero-status-label" data-i18n="home_tee">TEE</span>
+                  <span class="sp-hero-tee" id="sp-tee">—</span>
+                </div>
+                <div>
+                  <span class="kb-hero-status-label" data-i18n="home_spoofed_device">Spoofed Device</span>
+                  <span class="sp-hero-pif" id="sp-pif">—</span>
+                </div>
+              </div>
             </md-filled-card>
-
-            <md-filled-card class="info-card">
-              <md-icon class="info-card__icon" aria-hidden="true">memory</md-icon>
-              <p class="md-typescale-title-small info-card__label" data-i18n="home_kernel">Kernel</p>
-              <p class="md-typescale-title-medium info-card__value" id="kernel-value">—</p>
-            </md-filled-card>
-
-            <md-filled-card class="info-card">
-              <md-icon class="info-card__icon" aria-hidden="true">vpn_key</md-icon>
-              <p class="md-typescale-title-small info-card__label" data-i18n="home_root">Root</p>
-              <p class="md-typescale-title-medium info-card__value" id="root-value">—</p>
-            </md-filled-card>
-
-            <md-filled-card class="info-card">
-              <md-icon class="info-card__icon" aria-hidden="true">security_update_good</md-icon>
-              <p class="md-typescale-title-small info-card__label" data-i18n="home_security_patch">Security Patch</p>
-              <p class="md-typescale-title-medium info-card__value" id="patch-value">—</p>
-            </md-filled-card>
-
-
-            <md-filled-card class="info-card" id="tee-status-card">
-              <md-icon class="info-card__icon" aria-hidden="true">security</md-icon>
-              <p class="md-typescale-title-small info-card__label" data-i18n="home_tee">TEE</p>
-              <p class="md-typescale-title-medium info-card__value" id="tee-value">—</p>
-            </md-filled-card>
-
           </div>
+
+
+
+          <div class="info-grid--compact" hidden>
+            <md-filled-card class="info-card-mini" id="version-info-card">
+              <md-icon class="info-card-mini__icon" aria-hidden="true">info</md-icon>
+              <p class="info-card-mini__label" data-i18n="home_version">Module Version</p>
+              <p class="info-card-mini__value" id="version-info-value">—</p>
+            </md-filled-card>
+
+            <md-filled-card class="info-card-mini">
+              <md-icon class="info-card-mini__icon" aria-hidden="true">verified_user</md-icon>
+              <p class="info-card-mini__label" data-i18n="home_root">Root</p>
+              <p class="info-card-mini__value" id="root-value">—</p>
+            </md-filled-card>
+
+            <md-filled-card class="info-card-mini" id="tee-status-card">
+              <md-icon class="info-card-mini__icon" aria-hidden="true">security</md-icon>
+              <p class="info-card-mini__label" data-i18n="home_tee">TEE</p>
+              <p class="info-card-mini__value" id="tee-value">—</p>
+            </md-filled-card>
+          </div>
+
+          <md-filled-card id="recent-activity-card" class="recent-activity-card">
+            <div class="recent-activity-header">
+              <span class="recent-activity-title" data-i18n="history_title">Recent activity</span>
+              <div style="display:flex;align-items:center;gap:2px">
+                <span class="recent-activity-count" id="activity-count">0 events</span>
+                <md-icon-button id="clear-history-btn" aria-label="Clear history">
+                  <md-icon>delete</md-icon>
+                </md-icon-button>
+              </div>
+            </div>
+            <div class="recent-activity-list" id="activity-list"></div>
+          </md-filled-card>
 
         </section>
 
         <section id="tools-page" hidden>
 
           <h2 class="list-title" data-i18n="menu_keybox">Keybox</h2>
-          <md-filled-card class="keybox-install-card">
+          <md-filled-card class="keybox-install-card" data-script="keybox.sh">
             <div class="kic-header">
               <div class="kic-icon-container"><md-icon aria-hidden="true">key</md-icon></div>
               <div class="kic-header-text">
@@ -337,16 +348,6 @@
               <md-ripple></md-ripple>
             </div>
 
-            <div class="list-item" data-script="rka.sh">
-              <div class="li-icon"><md-icon aria-hidden="true">cloud_sync</md-icon></div>
-              <div class="list-item-content">
-                <div class="toggle-text" data-i18n="advance_upd_rka">Update RKA Config</div>
-                <span class="supporting-text" data-i18n="advance_upd_rka_desc">Provisions Remote Key Attestation config</span>
-              </div>
-              <div class="spacer"></div>
-              <md-circular-progress indeterminate class="action-spinner hidden"></md-circular-progress>
-              <md-ripple></md-ripple>
-            </div>
           </div>
 
           <h2 class="list-title danger-zone-title" data-i18n="tools_danger_zone">Danger Zone</h2>

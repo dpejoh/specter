@@ -40,6 +40,37 @@ if [ -f "$TEE_STATUS" ]; then
   unset _tee_val
 fi
 
+# PIF spoofed device — read from PIF config (support both .prop and .json)
+_pif_model=""
+for _pif_path in \
+  "/data/adb/pif.prop" \
+  "/data/adb/modules/playintegrityfix/custom.pif.prop" \
+  "/data/adb/pif.json" \
+  "/data/adb/modules/playintegrityfix/pif.json" \
+  "/data/adb/modules/playintegrityfix/autopif.json" \
+  "/data/adb/modules/playintegrityfix/custom.pif.json"
+do
+  [ -f "$_pif_path" ] || continue
+  case "$_pif_path" in
+    *.prop)
+      _pif_manu=$(grep '^MANUFACTURER=' "$_pif_path" 2>/dev/null | cut -d= -f2)
+      _pif_modl=$(grep '^MODEL=' "$_pif_path" 2>/dev/null | cut -d= -f2)
+      ;;
+    *.json)
+      _pif_manu=$(grep -o '"MANUFACTURER"[[:space:]]*:[[:space:]]*"[^"]*"' "$_pif_path" 2>/dev/null | sed 's/.*"MANUFACTURER"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+      _pif_modl=$(grep -o '"MODEL"[[:space:]]*:[[:space:]]*"[^"]*"' "$_pif_path" 2>/dev/null | sed 's/.*"MODEL"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+      ;;
+  esac
+  if [ -n "$_pif_manu" ] || [ -n "$_pif_modl" ]; then break; fi
+done
+unset _pif_path
+if [ -n "$_pif_manu" ] && [ -n "$_pif_modl" ]; then
+  _pif_model="${_pif_manu} ${_pif_modl}"
+elif [ -n "$_pif_modl" ]; then
+  _pif_model="$_pif_modl"
+fi
+unset _pif_manu _pif_modl
+
 # Output JSON
 cat <<EOF > "$INFO_PATH"
 {
@@ -51,6 +82,7 @@ cat <<EOF > "$INFO_PATH"
   "tee_status": "$_tee_status",
   "security_patch": "$_patch_date",
   "build_patch": "$_build_patch",
+  "pif_model": "$(_escape_json "$_pif_model")",
   "flags": {
     "twrp": $_twrp,
     "blacklist": $_blacklist,
@@ -58,4 +90,4 @@ cat <<EOF > "$INFO_PATH"
   }
 }
 EOF
-unset _android_ver _kernel_ver _root_type _version _tee_status _build_patch _patch_date _twrp _blacklist _recovery_detected _rd
+unset _android_ver _kernel_ver _root_type _version _tee_status _build_patch _patch_date _pif_model _twrp _blacklist _recovery_detected _rd

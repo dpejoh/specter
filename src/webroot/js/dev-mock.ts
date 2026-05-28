@@ -171,7 +171,30 @@ if (typeof window.ksu === 'undefined') {
 
     if (u.includes('/json/info.json')) {
       return Promise.resolve(new Response(JSON.stringify({
-        android: '14', kernel: '6.1.0', root: 'KernelSU',
+        android: '15',
+        kernel: '6.1.57-android14-8',
+        root: 'KernelSU',
+        root_sol: 'KernelSU',
+        version: 'v1.7.3',
+        tee_status: 'normal',
+        security_patch: '2026-04-05',
+        build_patch: '2026-04-05',
+        pif_model: 'Google Pixel 8 Pro XL Super Max Ultra Edition',
+        flags: { twrp: false, blacklist: false, recovery_detected: false },
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    }
+
+    if (u.includes('/json/keybox_info.json')) {
+      return Promise.resolve(new Response(JSON.stringify({
+        installed: true,
+        source: 'this-is-a-very-long-provider-name-that-should-definitely-truncate',
+        source_version: '52',
+        text: 'v52',
+        up_to_date: true,
+        revoked: false,
+        softbanned: false,
+        serial: 'abcd1234',
+        is_private: false,
       }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
     }
 
@@ -201,6 +224,18 @@ if (typeof window.ksu === 'undefined') {
 
     return origFetch(u, ...rest);
   };
+}
+
+const MOCK_HISTORY = [
+  { script: 'keybox.sh', output: 'Keybox rotated from Yuri v51 to v52\nDone', time: new Date(Date.now() - 120000).toISOString() },
+  { script: 'pif.sh', output: 'Fingerprint updated successfully\nSTRONG', time: new Date(Date.now() - 840000).toISOString() },
+  { script: 'gms.sh', output: 'Play Store force-stopped and cleared\nDone', time: new Date(Date.now() - 3600000).toISOString() },
+  { script: 'target.sh', output: 'target.txt regenerated with 28 apps', time: new Date(Date.now() - 7200000).toISOString() },
+  { script: 'cleanup.sh', output: 'All detection traces cleared', time: new Date(Date.now() - 14400000).toISOString() },
+  { script: 'keybox.sh', output: 'Keybox checked — no update needed', time: new Date(Date.now() - 28800000).toISOString() },
+];
+if (!localStorage.getItem('specter_script_history')) {
+  localStorage.setItem('specter_script_history', JSON.stringify(MOCK_HISTORY));
 }
 
 export {};

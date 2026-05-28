@@ -1,6 +1,6 @@
 import { initBridge, getModuleDir, exec } from './bridge.js';
 import { shellEscape } from './utils.js';
-import { setModuleDir, migrateLocalStorage, cfgInit, cfgGet, cfgSet, cfgInvalidate } from './cfg.js';
+import { setModuleDir, migrateLocalStorage, cfgInit, cfgGet } from './cfg.js';
 import { initDevice, refreshDevice, refreshKeyboxStatus, refreshConflictStatus } from './device.js';
 import { initNetwork } from './network.js';
 import { initTheme } from './theme.js';
@@ -9,14 +9,15 @@ import { loadContributors } from './contributors.js';
 import { initRedirect } from './redirect.js';
 import { showToast } from './toast.js';
 import { initTerminal } from './terminal.js';
-import { openTargetAppsManager, refreshAppCatalog } from './target-apps.js';
+import { wireTargetApps } from './target-apps.js';
 import { setDevMode } from './state.js';
-import { wireTopBarScroll, wireNavigation } from './navigation.js';
+import { renderActivityPreview } from './history.js';
+import { wireTopBarScroll, wireNavigation, onHomeShow } from './navigation.js';
 import { wireControlToggles, wireDevMode } from './toggles.js';
-import { openAutoTargetDialog } from './auto-target-ui.js';
+import { wireAutoTarget } from './auto-target-ui.js';
 import { wireActions, buildFriendlyNames } from './actions.js';
 import { wireSecurityPatch } from './security-patch-ui.js';
-import { wireKeyboxCard, wireKeyboxInstallButton, wireCustomKeybox, populateProviders } from './keybox-ui.js';
+import { wireKeyboxInstallButton, wireCustomKeybox, populateProviders } from './keybox-ui.js';
 
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
@@ -30,6 +31,8 @@ const t = (key: string, fallback: string): string => getTranslation(key) || fall
  *   4 — Background tasks (fire-and-forget async)
  *   5 — Lazy per-tab data (fire-and-forget async)
  */
+let _homeInitialized = false;
+
 document.addEventListener('DOMContentLoaded', async () => {
   /* Phase 0: Critical path — start MWC load in parallel with bridge/cfg */
   const coreMWC = import('./material-core.js');
@@ -53,8 +56,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /* Phase 2: Wire event handlers */
   wireActions();
-  wireKeyboxCard();
-  wireRefreshButton();
   wireCustomKeybox();
   wireKeyboxInstallButton();
   wireTargetApps();
@@ -82,6 +83,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   /* Phase 3: Load text + data */
   initI18n().catch(() => {});
   initDevice().catch(() => {});
+  renderActivityPreview();
+  onHomeShow(() => {
+    renderActivityPreview();
+    if (!_homeInitialized) { _homeInitialized = true; return; }
+    refreshDevice().catch(() => {});
+    refreshKeyboxStatus().catch(() => {});
+  });
 
   /* Phase 4: Preload page MWC + background tasks */
   import('./material-tools.js').catch(() => {});
@@ -94,32 +102,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   /* Phase 5: Lazy per-tab data */
   wireConflictToggles().catch(() => {});
 });
-
-function wireAutoTarget() {
-  const btn = document.getElementById('auto-target-btn');
-  if (!btn) return;
-  btn.addEventListener('click', openAutoTargetDialog);
-}
-
-function wireRefreshButton() {
-  const btn = document.getElementById('refresh-btn') as HTMLButtonElement | null;
-  if (!btn) return;
-  btn.addEventListener('click', async () => {
-    btn.disabled = true;
-    await Promise.all([
-      refreshDevice(),
-      refreshKeyboxStatus(),
-      refreshAppCatalog()
-    ]);
-    btn.disabled = false;
-  });
-}
-
-function wireTargetApps() {
-  const btn = document.getElementById('target-apps-btn');
-  if (!btn) return;
-  btn.addEventListener('click', openTargetAppsManager);
-}
 
 async function wireConflictToggles() {
   const moddir = getModuleDir();

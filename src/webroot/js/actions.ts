@@ -166,12 +166,15 @@ export function wireActions() {
 
 export function buildFriendlyNames() {
   const names: Record<string, string> = {};
-  document.querySelectorAll('.list-item[data-script]').forEach(item => {
+  document.querySelectorAll('[data-script]').forEach(item => {
     const el = item as HTMLElement;
     const scriptName = el.dataset.script;
     if (!scriptName) return;
-    const headline = item.querySelector('.toggle-text[data-i18n]') as HTMLElement | null;
-    if (headline) names[scriptName] = headline.dataset.i18n || '';
+    const i18nEls = item.querySelectorAll('[data-i18n]');
+    const titleEl = i18nEls[0] as HTMLElement | null;
+    const descEl = i18nEls[1] as HTMLElement | null;
+    if (titleEl) names[scriptName] = titleEl.dataset.i18n || '';
+    if (descEl) names[scriptName + '_desc'] = descEl.dataset.i18n || '';
   });
   setFriendlyNames(names);
 }

@@ -26,6 +26,7 @@ _action_feature_enabled toggle_action_keybox && sh "$MODDIR/features/keybox.sh" 
 _action_feature_enabled toggle_action_pif 0 && sh "$MODDIR/features/pif.sh" 2>/dev/null || true
 
 run_device_info "$MODDIR"
+sh "$MODDIR/features/keybox_info.sh" >/dev/null 2>&1 || true
 
 # Refresh module description for manager apps
 [ -f "$MODDIR/module.prop.bak" ] && cp "$MODDIR/module.prop.bak" "$MODDIR/module.prop"

@@ -19,7 +19,7 @@ export async function fetchJson<T>(url: string, ttlMs = 0): Promise<T | null> {
     if (cached && cached.expiry > Date.now()) return cached.data as T;
   }
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, { cache: 'no-cache' });
     if (!res.ok) return null;
     const data = await res.json();
     if (ttlMs > 0) fetchCache.set(url, { data, expiry: Date.now() + ttlMs });

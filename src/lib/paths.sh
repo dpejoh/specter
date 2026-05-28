@@ -14,7 +14,6 @@ TEE_HASH="$SPECTER_DIR/tee_hash"
 SPECTER_DIR="/data/adb/Specter"
 HMA_DIR="/data/user/0/org.frknkrc44.hma_oss/files"
 HMA_FILE="$HMA_DIR/config.json"
-IDFILE="/data/local/tmp/.rka_id"
 GMS_PROPS_FILE="/data/system/gms_certified_props.json"
 
 # Module-local paths - derived from MODDIR (set by caller before sourcing)

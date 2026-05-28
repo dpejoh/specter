@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && node inline-css.cjs && npm run build:module && rm -f Module/webroot/*.map && rm -f Module/webroot/lang/source/string.json && npm run build:zip",
-    "build:module": "mkdir -p Module && cp -r src/META-INF src/module.prop src/lib src/features src/pipelines src/rka src/config Module/ && cp src/*.sh Module/ && find Module/ -name '*.sh' -exec chmod +x {} + && cp -r src/webroot/assets Module/webroot/ && cp -r src/webroot/lang Module/webroot/ && cp -r src/webroot/json Module/webroot/ && cp -r src/webroot/common Module/webroot/ && cp src/webroot/config.json Module/webroot/ && mkdir -p Module/apk && [ ! -d src/apk ] || cp src/apk/* Module/apk/",
+    "build:module": "mkdir -p Module && cp -r src/META-INF src/module.prop src/lib src/features src/pipelines src/config Module/ && cp src/*.sh Module/ && find Module/ -name '*.sh' -exec chmod +x {} + && cp -r src/webroot/assets Module/webroot/ && cp -r src/webroot/lang Module/webroot/ && cp -r src/webroot/json Module/webroot/ && cp -r src/webroot/common Module/webroot/ && cp src/webroot/config.json Module/webroot/ && mkdir -p Module/apk && [ ! -d src/apk ] || cp src/apk/* Module/apk/",
     "build:zip": "cd Module && rm -f ../module.zip && zip -r ../module.zip . && cd .."
   },
   "devDependencies": {

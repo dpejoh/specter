@@ -6,6 +6,12 @@ export function wireTopBarScroll() {
   });
 }
 
+const homeCallbacks: (() => void)[] = [];
+
+export function onHomeShow(cb: () => void) {
+  homeCallbacks.push(cb);
+}
+
 export function wireNavigation() {
   const navTabs = document.querySelectorAll('.nav-tab');
   const indicator = document.getElementById('nav-indicator')!;
@@ -61,6 +67,10 @@ export function wireNavigation() {
     reposition(tab);
     pages.forEach((el) => { el.hidden = el.id !== pageId; });
 
+    if (pageId === 'home-page') {
+      homeCallbacks.forEach(cb => cb());
+    }
+
     if (pageId !== 'home-page' && !exitStatePushed) {
       history.pushState(null, '');
       exitStatePushed = true;
@@ -114,5 +124,8 @@ export function wireNavigation() {
     navigateHome();
     const active = document.querySelector('.nav-tab--active') as HTMLElement | null;
     if (active) reposition(active);
+    if (getCurrentPage() === 'home-page') {
+      homeCallbacks.forEach(cb => cb());
+    }
   });
 }

@@ -25,14 +25,6 @@ if [ -f "$MIGRATION_MARKER" ]; then
     log "UNINSTALL" "Removed migration marker"
 fi
 
-# Remove RKA config files
-  RKA_CFG="/data/user/0/io.github.mhmrdd.libxposed.ps.passit/files/rka_configs.json"
-  if [ -f "$RKA_CFG" ]; then
-      rm -f "$RKA_CFG" 2>/dev/null
-      log "UNINSTALL" "Removed RKA config"
-  fi
-  unset RKA_CFG
-
 # Restore persisted props — format: restore|prop_name|prop_value
 if [ -f "$SPECTER_DIR/persist_backup.txt" ]; then
   while IFS='|' read -r _pr_cmd _pr_name _pr_val; do

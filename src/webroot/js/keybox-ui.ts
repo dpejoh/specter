@@ -4,7 +4,6 @@ import { getTranslation } from './i18n.js';
 import { shellEscape, fetchJson } from './utils.js';
 import { showToast } from './toast.js';
 import { openFileBrowser } from './file-browser.js';
-import { openRecentActivity } from './history.js';
 import { refreshKeyboxStatus } from './device.js';
 import { API_URLS } from './constants.js';
 import { runDevAction, runSimpleAction } from './actions.js';
@@ -12,15 +11,6 @@ import { isDevMode } from './state.js';
 import type { CatalogJson } from './types.js';
 
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
-
-export function wireKeyboxCard() {
-  const card = document.getElementById('keybox-card');
-  if (!card) return;
-  card.addEventListener('click', () => {
-    const sw = document.getElementById('dev-mode-switch') as MdSwitch | null;
-    openRecentActivity(sw ? sw.selected : false);
-  });
-}
 
 function renderProviderOptions(select: HTMLSelectElement, sources: string[]) {
   while (select.options.length > 1) select.remove(1);
@@ -86,8 +76,11 @@ export function wireKeyboxInstallButton() {
         await runSimpleAction('keybox.sh', btn, spinner);
       }
       const moddir = getModuleDir();
-      if (moddir) await exec(`sh ${shellEscape(moddir + '/refresh_desc.sh')}`);
-      await refreshKeyboxStatus(false);
+      if (moddir) {
+        await exec(`sh ${shellEscape(moddir + '/features/keybox_info.sh')}`).catch(() => {});
+        await exec(`sh ${shellEscape(moddir + '/refresh_desc.sh')}`).catch(() => {});
+      }
+      await refreshKeyboxStatus();
     } catch (_e) {
       console.warn('Install error:', _e);
     } finally {
@@ -219,8 +212,9 @@ export async function openCustomKeyboxDialog() {
     const result: any = await exec(`sh ${shellEscape(moddir + '/features/keybox.sh')}`);
     if (result.code === 0) {
       showToast(t('custom_kb_installed', 'Custom keybox installed'), { icon: 'check_circle', type: 'success' as any, autoCloseDelay: 3000 });
-      await exec(`sh ${shellEscape(moddir + '/refresh_desc.sh')}`);
-      refreshKeyboxStatus(false);
+      await exec(`sh ${shellEscape(moddir + '/features/keybox_info.sh')}`).catch(() => {});
+      await exec(`sh ${shellEscape(moddir + '/refresh_desc.sh')}`).catch(() => {});
+      await refreshKeyboxStatus();
     } else {
       showToast(t('custom_kb_install_failed', 'Install failed'), { icon: 'error', type: 'error' as any, autoCloseDelay: 5000 });
     }

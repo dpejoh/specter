@@ -147,8 +147,6 @@
   "advance_set_pif_desc": "运行 Play Integrity Fix 自动更新脚本",
   "advance_set_zygisk_desc": "配置 enforce-denylist、memory-type、linker 设置",
   "advance_set_zygisk_next_configs": "设置 Zygisk Next 配置",
-  "advance_upd_rka": "更新 RKA 配置",
-  "advance_upd_rka_desc": "配置远程密钥认证 (Remote Key Attestation)",
   "advance_scan_clean_props": "扫描并清理可疑属性",
   "advance_scan_clean_props_desc": "扫描并移除来自修改工具、Xposed 或调试状态的残留持久属性",
   "advance_wdevinel1": "修复 Widevine L1",

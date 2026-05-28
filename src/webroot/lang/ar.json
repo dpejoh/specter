@@ -147,8 +147,6 @@
   "advance_set_pif_desc": "تشغيل برامج تحديث Play Integrity Fix التلقائية",
   "advance_set_zygisk_desc": "تكوين إعدادات enforce-denylist و memory-type و linker",
   "advance_set_zygisk_next_configs": "إعداد تكوينات Zygisk Next",
-  "advance_upd_rka": "تحديث تكوين RKA",
-  "advance_upd_rka_desc": "توفير تكوين Remote Key Attestation",
   "advance_scan_clean_props": "فحص وتنظيف الخصائص المشبوهة",
   "advance_scan_clean_props_desc": "فحص وإزالة الخصائص الدائمة المتبقية من أدوات التعديل و Xposed وحالة التصحيح",
   "advance_wdevinel1": "إصلاح Widevine L1",

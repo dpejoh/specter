@@ -67,4 +67,14 @@ if [ "$(cfg_get toggle_auto_target 0)" = "1" ]; then
   sh "$MODDIR/features/auto_target.sh" >/dev/null 2>&1 &
 fi
 
+# Periodic keybox info refresh — keeps cache fresh, updates module description
+(
+  while true; do
+    sleep 43200
+    sh "$MODDIR/features/keybox_info.sh" >/dev/null 2>&1 || true
+    . "$MODDIR/lib/desc.sh"
+    refresh_module_description
+  done
+) &
+
 log "BOOT" "Unified boot core done"

@@ -30,6 +30,7 @@ export interface InfoJson {
   tee_status?: string;
   security_patch?: string;
   build_patch?: string;
+  pif_model?: string;
   flags?: { twrp?: boolean; blacklist?: boolean; recovery_detected?: boolean };
 }
 

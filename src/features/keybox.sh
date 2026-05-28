@@ -37,7 +37,6 @@ if [ -n "$_custom_type" ] && [ -n "$_custom_value" ]; then
         cp "$_custom_value" "$TARGET_FILE" || die "Failed to copy custom keybox"
         log "KEYBOX" "Custom keybox installed from $_custom_value"
         _clear_custom
-        sh "$MODDIR/keybox_info.sh" >/dev/null 2>&1 || true
         exit 0
       fi
       log "KEYBOX" "Error: Custom keybox file not found: $_custom_value"
@@ -56,7 +55,6 @@ if [ -n "$_custom_type" ] && [ -n "$_custom_value" ]; then
         mv "$DECODE_FILE" "$TARGET_FILE" || die "Failed to move decoded keybox"
         log "KEYBOX" "Custom keybox installed from URL"
         _clear_custom
-        sh "$MODDIR/keybox_info.sh" >/dev/null 2>&1 || true
         exit 0
       fi
       log "KEYBOX" "Error: Custom keybox decode failed — not a valid base64 blob"

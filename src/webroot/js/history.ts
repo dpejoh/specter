@@ -5,16 +5,47 @@ import { getTranslation } from './i18n.js';
 import { showToast } from './toast.js';
 import '@material/web/iconbutton/icon-button.js';
 
+const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
+
+function copyToClipboard(text: string): Promise<void> {
+  if (navigator.clipboard) {
+    return navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+  }
+  return fallbackCopy(text);
+}
+
+function fallbackCopy(text: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      resolve();
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
 interface HistoryEntry {
   script: string;
   output: string;
   time: string;
 }
 
-function getHistory(): HistoryEntry[] {
+export function getHistory(): HistoryEntry[] {
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
   } catch (e) { console.warn('Failed to parse history:', e); return []; }
+}
+
+export function getRecentEntries(count: number): HistoryEntry[] {
+  return getHistory().slice(0, count);
 }
 
 export function addEntry(scriptName: string, output: string) {
@@ -118,7 +149,7 @@ export async function openRecentActivity(devMode = false) {
 
     copyBtn!.addEventListener('click', (e) => {
       e.stopPropagation();
-      navigator.clipboard.writeText(entry.output).then(() => {
+      copyToClipboard(entry.output).then(() => {
         showToast(getTranslation('history_copied') || 'Copied!', { icon: 'check_circle', type: 'success' as any, autoCloseDelay: 2000 });
       }).catch(() => {
         showToast(getTranslation('history_copy_failed') || 'Failed to copy', { icon: 'error', type: 'error' as any, autoCloseDelay: 2000 });
@@ -163,4 +194,133 @@ export async function openRecentActivity(devMode = false) {
   dialog.querySelector('.dialog-action-close')!.addEventListener('click', () => dialog.close());
   dialog.addEventListener('close', () => document.body.removeChild(dialog));
   dialog.show();
+}
+
+export function formatRelativeTime(isoString: string): string {
+  try {
+    const date = new Date(isoString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return t('home_just_now', 'Just now');
+    if (diffMins < 60) return `${diffMins}${t('home_min_ago', 'm ago')}`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}${t('home_hour_ago', 'h ago')}`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}${t('home_day_ago', 'd ago')}`;
+  } catch (e) { return ''; }
+}
+
+export function renderActivityPreview() {
+  const container = document.getElementById('activity-list');
+  const countEl = document.getElementById('activity-count');
+  if (!container) return;
+
+  const clearBtn = document.getElementById('clear-history-btn');
+  if (clearBtn) {
+    clearBtn.onclick = () => {
+      clearHistory();
+      renderActivityPreview();
+    };
+  }
+
+  const VISIBLE_COUNT = 4;
+  const allEntries = getRecentEntries(240);
+  const count = allEntries.length;
+  if (countEl) countEl.textContent = `${count} ${t('home_events', 'events')}`;
+
+  if (count === 0) {
+    container.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = '';
+
+  function pickDescription(output: string): string {
+    const lines = output.split('\n');
+    let candidate = '';
+    let errorLine = '';
+    for (const raw of lines) {
+      const line = raw.trim();
+      if (!line) continue;
+      const cleaned = line.replace(/^\[[A-Z_]+\]\s*/, '');
+      if (!cleaned) continue;
+      const oneWord = /^(Start|Finish|Done|OK|Success|Failed|Error|Exit)/i.test(cleaned);
+      if (oneWord) continue;
+      if ((line.includes('[!]') && !line.includes('note:')) || line.toLowerCase().includes('error')) {
+        errorLine = cleaned;
+        continue;
+      }
+      candidate = cleaned;
+    }
+    return (candidate || errorLine || '').slice(0, 40);
+  }
+
+  function createItem(entry: { script: string; output: string; time: string }): HTMLElement {
+    const isError = (entry.output.includes('[!]') && !entry.output.includes('note:')) || entry.output.toLowerCase().includes('error');
+    const i18nKey = getFriendlyNames()[entry.script];
+    const friendlyName = (i18nKey && t(i18nKey, '')) || entry.script;
+    const desc = pickDescription(entry.output);
+    const timeAgo = formatRelativeTime(entry.time);
+    const statusIcon = isError ? 'error' : 'check_circle';
+    const iconType = isError ? 'error' : 'success';
+
+    const item = document.createElement('div');
+    item.className = 'recent-activity-item';
+    item.innerHTML = `
+      <div class="recent-activity-item-icon recent-activity-item-icon--${iconType}">
+        <md-icon aria-hidden="true">${statusIcon}</md-icon>
+      </div>
+      <div class="recent-activity-item-content">
+        <p class="recent-activity-item-title">${escapeHtml(friendlyName)}</p>
+        <p class="recent-activity-item-desc">${escapeHtml(desc)}</p>
+      </div>
+      <span class="recent-activity-item-time">${timeAgo}</span>
+      <md-icon-button class="recent-activity-copy-btn" aria-label="${t('history_copy', 'Copy')}">
+        <md-icon>content_copy</md-icon>
+      </md-icon-button>
+    `;
+    item.querySelector('.recent-activity-copy-btn')!.addEventListener('click', (e) => {
+      e.stopPropagation();
+      copyToClipboard(entry.output).then(() => {
+        showToast(t('history_copied', 'Copied!'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2000 });
+      }).catch(() => {
+        showToast(t('history_copy_failed', 'Failed to copy'), { icon: 'error', type: 'error', autoCloseDelay: 2000 });
+      });
+    });
+    return item;
+  }
+
+  const visible = Math.min(count, VISIBLE_COUNT);
+  for (let i = 0; i < visible; i++) {
+    container.appendChild(createItem(allEntries[i]));
+  }
+
+  if (count > VISIBLE_COUNT) {
+    const toggle = document.createElement('div');
+    toggle.className = 'recent-activity-toggle';
+    let expanded = false;
+    let hiddenCreated = false;
+
+    toggle.textContent = t('home_show_all', 'Show all') + ` (${count})`;
+
+    toggle.addEventListener('click', () => {
+      expanded = !expanded;
+      if (expanded && !hiddenCreated) {
+        for (let i = VISIBLE_COUNT; i < count; i++) {
+          container.insertBefore(createItem(allEntries[i]), toggle);
+        }
+        hiddenCreated = true;
+      }
+      const hiddenEls = container.querySelectorAll('.recent-activity-item');
+      hiddenEls.forEach((el, idx) => {
+        (el as HTMLElement).style.display = idx >= VISIBLE_COUNT ? (expanded ? '' : 'none') : '';
+      });
+      toggle.textContent = expanded
+        ? t('home_show_less', 'Show less')
+        : (t('home_show_all', 'Show all') + ` (${count})`);
+    });
+
+    container.appendChild(toggle);
+  }
 }

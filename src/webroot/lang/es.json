@@ -147,8 +147,6 @@
   "advance_set_pif_desc": "Ejecutar scripts de actualización automática de Play Integrity Fix",
   "advance_set_zygisk_desc": "Configura enforce-denylist, memory-type y ajustes de linker",
   "advance_set_zygisk_next_configs": "Establecer configuraciones de Zygisk Next",
-  "advance_upd_rka": "Actualizar configuración de RKA",
-  "advance_upd_rka_desc": "Aprovisiona la configuración de Remote Key Attestation",
   "advance_scan_clean_props": "Escanear y limpiar propiedades sospechosas",
   "advance_scan_clean_props_desc": "Escanea y elimina propiedades persistentes residuales de herramientas de modding, Xposed o estado de depuración",
   "advance_wdevinel1": "Reparar Widevine L1",
