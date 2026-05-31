@@ -8,7 +8,7 @@ MODDIR="$MODPATH"
 
 _vol() {
     _vt="${1:-5}" _vw=0
-    while [ $_vw -lt $_vt ]; do
+    while [ "$_vw" -lt "$_vt" ]; do
         _vk=$(timeout 1 getevent -qlc 1 2>/dev/null)
         if [ -n "$_vk" ]; then
             case "$_vk" in
@@ -50,7 +50,7 @@ _pif_name=$(_pif_prop)
 [ -n "$_pif_name" ] && ui_print "- $_pif_name found"
 unset _pif_name
 
-# TEE status check — read from cache only
+# TEE status check, read from cache only
 _tee=
 if [ -f "$TEE_STATUS" ]; then
   _tee_val=$(grep -E '^(teeBroken|tee_broken)=' "$TEE_STATUS" 2>/dev/null | cut -d= -f2)
@@ -159,7 +159,7 @@ mkdir -p "$SPECTER_DIR"
 echo "1" > "$SPECTER_DIR/tee_reported"
 echo "1" > "$SPECTER_DIR/rom_spoof_reported"
 
-# Conflicts are resolved automatically at boot — no interactive prompts needed
+# Conflicts are resolved automatically at boot, no interactive prompts needed
 
 # Generate fresh keybox info for description
 if [ -d "/data/adb/modules/tricky_store" ] || [ -d "/data/adb/modules_update/tricky_store" ]; then

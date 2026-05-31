@@ -17,7 +17,7 @@ _version=$(_escape_json "$(grep '^version=' "$MODULE_ROOT/module.prop" | cut -d'
 detect_root_solution
 _root_type="$ROOT_TYPE"
 
-# Security patch date — real system value + optional spoofed value
+# Security patch date, real system value + optional spoofed value
 _build_patch=$(getprop ro.build.version.security_patch 2>/dev/null || echo "")
 _patch_date=$(grep '^boot=' /data/adb/tricky_store/security_patch.txt 2>/dev/null | cut -d= -f2 || echo "")
 
@@ -29,7 +29,7 @@ for _rd in TWRP OrangeFox FOX PBRP PitchBlack Recovery; do
   [ -d "/sdcard/$_rd" ] && { _recovery_detected="true"; break; }
 done
 
-# TEE status — read cached result from Specter dir
+# TEE status, read cached result from Specter dir
 _tee_status="unknown"
 if [ -f "$TEE_STATUS" ]; then
   _tee_val=$(grep -E '^tee(broken|_broken)=' "$TEE_STATUS" | cut -d= -f2 2>/dev/null || echo "")
@@ -40,7 +40,7 @@ if [ -f "$TEE_STATUS" ]; then
   unset _tee_val
 fi
 
-# PIF spoofed device — read from PIF config (support both .prop and .json)
+# PIF spoofed device, read from PIF config (support both .prop and .json)
 _pif_model=""
 for _pif_path in \
   "/data/adb/pif.prop" \

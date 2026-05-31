@@ -1,3 +1,43 @@
+# v1.4.3
+
+## Home Page Redesign
+- **Hero-grid layout**: keybox card + security patch card side by side; compact mini-info row (version, root, TEE) hidden by default
+- **Inline recent activity**: lazy DOM — 4 items on load, "Show all" builds remaining on click; copy-to-clipboard on each entry; clear button
+- **Security patch card**: shows spoofed patch date, TEE status (Normal/Broken), and PIF spoofed device name — no "Current"/"Outdated" pill
+- **Keybox card**: provider name + version + Latest/outdated badge + Active/Revoked/Softbanned status in a single card
+- **Auto-refresh on home tab**: data refreshes on every home tab visit (rAF + `onHomeShow` callback); full rewrite of app.ts phase pipeline
+- **localStorage cache removed** for device/keybox info — JSON on disk is always the source of truth; `fetch()` uses `{ cache: 'no-cache' }` to prevent WebView HTTP caching
+
+## Keybox Status Decoupled
+- **Shell-daemon approach**: `keybox_info.sh` runs at boot, periodically every 6h (via `boot_core.sh`), and after every install; revocation checking (catalog + Google) happens entirely in the shell
+- **WebUI reads pre-computed JSON only**: no more catalog download, no Google revocation text fetch, no `cfgGet` — the WebUI just reads `keybox_info.json` from disk
+- **`action.sh` calls `keybox_info.sh`**: after the action pipeline, so keybox status stays fresh without a separate trigger
+- **Removed `exec` parameter** from `refreshKeyboxStatus()` — always reads disk, never re-runs the script
+
+## RKA Feature Removed
+- **Full deletion**: `src/features/rka.sh`, `src/rka/jsonarray.sh`, `IDFILE` path, `RKA_HOST`/`RKA_TCP`/`RKA_TOKEN` vars in `urls.sh`
+- **Uninstall cleanup removed**: RKA config file no longer wiped on uninstall
+- **UI entry removed**: "Update RKA Config" list item removed from tools page
+- **i18n keys removed**: `advance_upd_rka` and `advance_upd_rka_desc` from all 5 languages
+- **Build updated**: `src/rka` removed from `build:module` cp paths in `package.json`
+- **README updated**: RKA removed from feature list
+
+## PIF .prop Support & Diagnostics
+- **PIF model detection**: `device-info.sh` reads 6 paths — 2 `.prop` files first (`/data/adb/pif.prop`, `/data/adb/modules/playintegrityfix/custom.pif.prop`), then 4 legacy `.json` files
+- **New `pif_model` field** in `InfoJson` type; displayed on security patch card as "Spoofed Device"
+- **PIF preflight checks**: `pif.sh` probes reachability of `developer.android.com` and `flash.android.com` via `busybox wget`; if unreachable, reports ping/v6/curl diagnostics
+- **Enhanced `autopif.sh` failure message**: suggests installing curl if `busybox wget` fails on IPv6-only hosts
+
+## Typography & CSS Polish
+- **Typography tuning**: keybox provider name and spoofed device text truncate at 120px; security patch date uses normal font (no monospace)
+- **Top bar**: taller (64px), surface-container background on scroll, heavier shadow
+- **Button/card shapes**: filled buttons use 9999px pill shape; card corners reduced from large to medium
+- **Refresh button removed**: replaced by auto-refresh on home entry + per-card refresh icon on keybox card footer
+- **Secondary container colors** for tonal buttons, filter chips, segmented buttons (was primary)
+
+## Infrastructure
+- `package.json` build:module updated: `src/rka` removed from cp paths
+
 # v1.4.2
 
 ## Performance

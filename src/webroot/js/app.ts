@@ -9,26 +9,22 @@ import { loadContributors } from './contributors.js';
 import { initRedirect } from './redirect.js';
 import { showToast } from './toast.js';
 import { initTerminal } from './terminal.js';
-import { wireTargetApps } from './target-apps.js';
 import { setDevMode } from './state.js';
 import { renderActivityPreview } from './history.js';
 import { wireTopBarScroll, wireNavigation, onHomeShow } from './navigation.js';
 import { wireControlToggles, wireDevMode } from './toggles.js';
-import { wireAutoTarget } from './auto-target-ui.js';
 import { wireActions, buildFriendlyNames } from './actions.js';
-import { wireSecurityPatch } from './security-patch-ui.js';
-import { wireKeyboxInstallButton, wireCustomKeybox, populateProviders } from './keybox-ui.js';
 
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
 /*
  * Init phases (in order):
- *   0 — Critical path (bridge + config), must complete
- *   0b — Core MWC registration (material-core)
+ *   0 — Critical path (bridge + config + core MWC), must complete
  *   1 — Render frame (theme, navigation, redirect)
  *   2 — Wire event handlers (all addEventListener, zero I/O)
+ *   2b — Page-specific wiring (lazy imports)
  *   3 — Load text + data (fire-and-forget async)
- *   4 — Background tasks (fire-and-forget async)
+ *   4 — Preload page MWC + background tasks
  *   5 — Lazy per-tab data (fire-and-forget async)
  */
 let _homeInitialized = false;
@@ -56,15 +52,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /* Phase 2: Wire event handlers */
   wireActions();
-  wireCustomKeybox();
-  wireKeyboxInstallButton();
-  wireTargetApps();
-  wireAutoTarget();
-  wireSecurityPatch();
   wireControlToggles();
   wireDevMode();
   buildFriendlyNames();
   initTerminal();
+
+  /* Phase 2b: Page-specific wiring (lazy imports) */
+  import('./keybox-ui.js').then(m => {
+    m.wireCustomKeybox();
+    m.wireKeyboxInstallButton();
+  }).catch(() => {});
+  import('./target-apps.js').then(m => m.wireTargetApps()).catch(() => {});
+  import('./auto-target-ui.js').then(m => m.wireAutoTarget()).catch(() => {});
+  import('./rom-fingerprint-ui.js').then(m => m.wireRomFingerprint()).catch(() => {});
+  import('./adb-disabler-ui.js').then(m => {
+    m.wireAdbDisabler();
+  }).catch(() => {});
+  import('./boot-harden-ui.js').then(m => m.wireBootHarden()).catch(() => {});
+  import('./prop-handler-ui.js').then(m => m.wirePropHandler()).catch(() => {});
+  import('./gms-ui.js').then(m => m.wireGms()).catch(() => {});
+  import('./security-patch-ui.js').then(m => m.wireSecurityPatch()).catch(() => {});
 
   const savedDevMode = await cfgGet('dev_mode', 'false') || 'false';
   setDevMode(savedDevMode === 'true');
@@ -96,7 +103,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   import('./material-control.js').catch(() => {});
   import('./material-settings.js').catch(() => {});
   initNetwork();
-  populateProviders().catch(() => {});
+  import('./keybox-ui.js').then(m => m.populateProviders()).catch(() => {});
   loadContributors().catch(() => {});
 
   /* Phase 5: Lazy per-tab data */

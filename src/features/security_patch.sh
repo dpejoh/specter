@@ -20,22 +20,33 @@ esac
 
 log "SECURITY_PATCH" "Start"
 
-current_year=$(date +%Y 2>/dev/null) || current_year=$(getprop ro.build.version.release 2>/dev/null | cut -d. -f1) || current_year="2026"
-current_month=$(date +%m 2>/dev/null) || current_month="01"
+# Try to fetch the real security patch date from source.android.com first.
+# Network may not be available yet at boot, so fall back to date computation.
+_patch=$(sh "$0" --fetch 2>/dev/null) || true
 
-# Use last day of previous month as security patch
-if [ "$current_month" -eq 1 ]; then
-  target_month=12
-  target_year=$((current_year - 1))
+if [ -z "$_patch" ]; then
+  current_year=$(date +%Y 2>/dev/null) || current_year=$(getprop ro.build.version.release 2>/dev/null | cut -d. -f1) || current_year="2026"
+  current_month=$(date +%m 2>/dev/null) || current_month="01"
+
+  # Use last day of previous month as security patch
+  if [ "$current_month" -eq 1 ]; then
+    target_month=12
+    target_year=$((current_year - 1))
+  else
+    target_month=$(( ${current_month#0} - 1 ))
+    target_year=$current_year
+  fi
+
+  formatted_month=$(printf "%02d" "$target_month")
+  # Last day of month: for most months it's 28/30/31
+  # Use 05 as a common convention
+  patch_date="${target_year}-${formatted_month}-05"
+  log "SECURITY_PATCH" "Network unavailable, using computed date: $patch_date"
 else
-  target_month=$(( ${current_month#0} - 1 ))
-  target_year=$current_year
+  patch_date="$_patch"
+  log "SECURITY_PATCH" "Fetched security patch date: $patch_date"
 fi
-
-formatted_month=$(printf "%02d" "$target_month")
-# Last day of month: for most months it's 28/30/31
-# Use 05 as a common convention
-patch_date="${target_year}-${formatted_month}-05"
+unset _patch
 
 log "SECURITY_PATCH" "Writing $patch_date to $SECURITY_PATCH_FILE"
 

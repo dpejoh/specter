@@ -94,7 +94,7 @@ input, textarea, [contenteditable="true"] {
 section:not([hidden]) {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   animation: page-enter 250ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
@@ -543,8 +543,10 @@ section:not([hidden]) {
   overflow: clip;
 }
 
-.list-container--compact {
-  margin-top: -10px;
+.kic-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .list-item {
@@ -776,6 +778,7 @@ md-divider.settings-divider {
 .preset-chip {
   cursor: pointer;
 }
+
 
 .preset-dot {
   display: inline-block;
@@ -1958,7 +1961,6 @@ md-filled-tonal-button {
 .kb-hero-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
 }
 
@@ -1969,7 +1971,6 @@ md-filled-tonal-button {
   font-weight: 500;
   text-transform: uppercase;
   display: block;
-  margin-bottom: 6px;
 }
 
 .kb-hero-status-text {
@@ -1990,6 +1991,28 @@ md-filled-tonal-button {
 }
 
 .kb-hero-status-text--neutral {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.kb-hero-status-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kb-hero-status-inner {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+#kb-refresh-btn {
+  --md-icon-button-icon-size: 18px;
+  width: 28px;
+  height: 28px;
+}
+#kb-refresh-btn md-icon {
+  font-size: 18px;
   color: var(--md-sys-color-on-surface-variant);
 }
 

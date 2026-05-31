@@ -1,5 +1,5 @@
 # shellcheck shell=sh
-# Module description — compute and apply rich status line.
+# Module description, compute and apply rich status line.
 # Provides refresh_module_description() for boot-time and on-demand use.
 
 refresh_module_description() {
@@ -24,7 +24,7 @@ CF_EOF
     if [ -n "$_cf" ]; then
       _new_desc="🚨 Conflict: $_cf"
     else
-      # Read keybox info — single pass with sed
+      # Read keybox info, single pass with sed
       _kb_info=$(head -c 512 "$MODDIR/webroot/json/keybox_info.json" 2>/dev/null || echo "")
       _kb_src=$(echo "$_kb_info" | grep -o '"source": *"[^"]*"' | cut -d'"' -f4) || true
       _kb_ver=$(echo "$_kb_info" | grep -o '"text": *"[^"]*"' | cut -d'"' -f4) || true

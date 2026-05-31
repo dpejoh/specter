@@ -25,6 +25,7 @@ if [ -f "$KEYBOX_FILE" ]; then
   _installed=true
 
   _is_private_val=$(cat "$CONFIG_DIR/kb_private.val" 2>/dev/null || echo "false")
+  [ -z "$_is_private_val" ] && _is_private_val="false"
   if [ "$_is_private_val" = "true" ]; then
     _source="Private"
     _text="Keybox"
@@ -73,7 +74,8 @@ if [ -f "$KEYBOX_FILE" ]; then
           [ -z "$_source_version" ] && _source_version="?"
           [ -z "$_text" ] && _text=""
 
-          _softbanned=$(echo "$_entry" | grep -o '"softbanned":true' || echo "false")
+          _softbanned=false
+          echo "$_entry" | grep -q '"softbanned":true' 2>/dev/null && _softbanned=true
 
           _latest_for_source=$(echo "$_history_json" | grep -o '"'"$_source"'":"[^"]*"' | sed 's/.*":"//;s/"//')
           if [ -n "$_source_version" ] && [ "$_source_version" = "$_latest_for_source" ]; then
