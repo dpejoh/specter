@@ -2,7 +2,7 @@
 # Mock environment for Specter boot script tests.
 # Usage: . ./mock_env.sh  (from tests/ dir)
 
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+REPO_ROOT="${SPECTER_REPO_ROOT:-$(cd "$(dirname "$0")/.." && pwd 2>/dev/null || pwd)}"
 TEST_ROOT="${SPECTER_TEST_ROOT:-$(mktemp -d /tmp/specter_test_XXXX)}"
 
 export TEST_ROOT REPO_ROOT
@@ -262,10 +262,16 @@ MOCK
   unset _dir
 }
 
-# Source the real module libraries
+# Source the real module libraries (bypass common.sh shim for MODDIR-independent sourcing)
 source_libs() {
   PATH="$BIN_DIR:/usr/bin:/bin"
-  . "$REPO_ROOT/src/lib/common.sh" 2>/dev/null
+  . "$REPO_ROOT/src/lib/log.sh" 2>/dev/null
+  . "$REPO_ROOT/src/lib/util.sh" 2>/dev/null
+  . "$REPO_ROOT/src/lib/network.sh" 2>/dev/null
+  . "$REPO_ROOT/src/lib/detect.sh" 2>/dev/null
+  . "$REPO_ROOT/src/lib/props.sh" 2>/dev/null
+  . "$REPO_ROOT/src/lib/keybox.sh" 2>/dev/null
+  . "$REPO_ROOT/src/lib/conflicts.sh" 2>/dev/null
   . "$REPO_ROOT/src/lib/paths.sh" 2>/dev/null
   . "$REPO_ROOT/src/lib/config_env.sh" 2>/dev/null
   . "$REPO_ROOT/src/lib/package_list.sh" 2>/dev/null

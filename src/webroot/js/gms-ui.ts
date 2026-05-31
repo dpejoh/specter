@@ -23,7 +23,7 @@ export function openGmsDialog() {
               <div class="li-icon"><md-icon aria-hidden="true">stop</md-icon></div>
               <div class="list-item-content">
                 <div class="toggle-text">${t('gms_force_stop', 'Force-stop GMS Processes')}</div>
-                <span class="supporting-text">${t('gms_force_stop_desc', 'Kill droidguard and force-stop Play Store, GMS, GSF, Chrome, and Wallet')}</span>
+                <span class="supporting-text">${t('gms_force_stop_desc', 'Kill droidguard and force-stop Play Store, GMS, GSF, Chrome, SafetyCore, and related GMS processes')}</span>
               </div>
               <div class="spacer"></div>
               <md-switch icons id="gms-force-stop" ${forceStop === '1' ? 'selected' : ''}></md-switch>

@@ -8,16 +8,7 @@ MODDIR=${0%/*}
 detect_root_solution
 export ROOT_SOL
 
-log "SERVICE" "Setting early boot properties"
-
-# Early boot props (immediate, no wait, re-applied by boot_core.sh after boot completed)
-if [ "$(cfg_get toggle_prop_handler 1)" != "0" ]; then
-  [ "$(cfg_get boot_state_props 1)" != "0" ] && apply_boot_props
-  [ "$(cfg_get spoof_build_props 1)" != "0" ] && spoof_build_props
-fi
-[ "$(cfg_get toggle_vbmeta 1)" != "0" ] && apply_vbmeta_props
-
-log "SERVICE" "Early boot properties set"
+# Early boot props now set in post-fs-data.sh (runs before service.sh for all root solutions)
 
 # KernelSU / APatch: boot-completed.sh handles the rest
 [ "$KSU" = "true" ] && {

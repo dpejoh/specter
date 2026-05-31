@@ -65,7 +65,6 @@ _parse_customize() {
 _read_tee_status() {
   teeBroken="false"
   [ -f "$TEE_STATUS" ] && teeBroken=$(grep -E '^(teeBroken|tee_broken)=' "$TEE_STATUS" 2>/dev/null | cut -d= -f2 || echo "false")
-  log "TARGET" "TEE status: teeBroken=$teeBroken"
 }
 
 # Compute suffix for a given package based on customize.txt and TEE status

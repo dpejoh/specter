@@ -1,7 +1,8 @@
 #!/system/bin/sh
-set -e
 MODDIR=${0%/*}
 . "$MODDIR/lib/common.sh"
+. "$MODDIR/lib/paths.sh"
+. "$MODDIR/lib/config_env.sh"
 
 PIPELINE="$1"
 PIPELINE_FILE="$MODDIR/pipelines/$PIPELINE"
@@ -13,7 +14,24 @@ while IFS= read -r line; do
     [ -z "$line" ] && continue
     [ "${line#\#}" != "$line" ] && continue
 
-    feature="$line"
+    # Parse toggle gating: toggle:config_key feature args...
+    _toggle=""
+    case "$line" in
+      toggle:*)
+        _toggle="${line#toggle:}"
+        line="${_toggle#* }"
+        _toggle="${_toggle%% *}"
+        ;;
+    esac
+
+    [ -z "$_toggle" ] || [ "$(cfg_get "$_toggle" 1)" != "0" ] || continue
+    unset _toggle
+
+    # Parse feature name and optional args
+    set -- $line
+    feature="$1"; shift
+    _args="$*"
+
     optional=false
     [ "${feature%\?}" != "$feature" ] && optional=true && feature="${feature%\?}"
 
@@ -24,8 +42,8 @@ while IFS= read -r line; do
         continue
     fi
 
-    log "ORCH" "Running: $feature"
-    if ! sh "$FEATURE_PATH"; then
+    log "ORCH" "Running: $feature $_args"
+    if ! sh "$FEATURE_PATH" $_args; then
         die "Pipeline aborted: $feature failed"
     fi
 done < "$PIPELINE_FILE"

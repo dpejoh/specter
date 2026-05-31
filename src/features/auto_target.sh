@@ -45,7 +45,6 @@ while true; do
     sleep "$CURRENT_INTERVAL"
     continue
   }
-
   echo "$pkgs" | cut -d ":" -f 2 | sort -u > "$TEMP_LIST"
   [ ! -s "$TEMP_LIST" ] && { sleep "$CURRENT_INTERVAL"; continue; }
 

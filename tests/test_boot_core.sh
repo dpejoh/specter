@@ -53,18 +53,6 @@ set_cfg "toggle_auto_target" "1"
 [ "$(cfg_get toggle_auto_target 0)" = "1" ] && _at_would_run=true || _at_would_run=false
 assert_eq "dispatch: auto_target on" true "$_at_would_run"
 
-# ---- scenario: delayed spoofing guard ----
-bootstrap
-source_libs
-set_cfg "toggle_prop_handler" "1"
-set_cfg "boot_state_props" "1"
-[ "$(cfg_get toggle_prop_handler 1)" != "0" ] && [ "$(cfg_get boot_state_props 1)" != "0" ] && _delayed_would_run=true || _delayed_would_run=false
-assert_eq "dispatch: delayed spoofing enabled" true "$_delayed_would_run"
-
-set_cfg "boot_state_props" "0"
-[ "$(cfg_get toggle_prop_handler 1)" != "0" ] && [ "$(cfg_get boot_state_props 1)" != "0" ] && _delayed_would_run2=true || _delayed_would_run2=false
-assert_eq "dispatch: delayed spoofing off when boot_state_props=0" false "$_delayed_would_run2"
-
 # ---- scenario: periodic props cleaning guard ----
 bootstrap
 source_libs

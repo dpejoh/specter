@@ -10,7 +10,8 @@ log "BOOT" "Running unified boot core"
 
 
 
-# Boot props handled by service.sh at early boot (Magisk only, same as v1.3.2)
+# Critical boot props are set in post-fs-data.sh (before framework starts, all root solutions).
+# boot_state_props.sh below re-applies as a safety net at boot_completed.
 
 # Boot-time features, single authoritative list, all dispatched as scripts
 for _bf in recovery boot_hardening lsposed security_patch adb_disabler rom_fingerprint vbmeta; do
@@ -23,7 +24,7 @@ unset _bf
 # Boot state props + suspicious props clean (gated by toggle_prop_handler master)
 _feature_should_run "prop_handler" && sh "$MODDIR/features/boot_state_props.sh" >/dev/null 2>&1 || true
 
-log "BOOT" "Boot-time features done"
+log "BOOT" "Boot-time features done (critical props set in post-fs-data.sh)"
 
 # TEE: run only on first boot after install (marker set by customize.sh)
 if [ -f "$SPECTER_DIR/tee_reported" ]; then
@@ -42,14 +43,10 @@ sh "$MODDIR/features/keybox_info.sh" >/dev/null 2>&1 &
 . "$MODDIR/lib/desc.sh"
 refresh_module_description
 
-# Delayed spoofing, 120s delay to re-apply props that system may have overridden
-(
-  sleep 120
-  log "BOOT" "Delayed spoofing, reapplying critical props"
-  [ "$(cfg_get toggle_prop_handler 1)" != "0" ] && [ "$(cfg_get boot_state_props 1)" != "0" ] && apply_boot_props
-) &
-
-# Periodic suspicious props cleaning, re-run every hour
+# Periodic suspicious props cleaning, re-run every hour.
+# No delayed re-apply needed: props are set in post-fs-data.sh (before framework)
+# and re-applied above in boot_state_props.sh (right at boot_completed).
+# The hourly loop below catches any runtime changes.
 if [ "$(cfg_get toggle_prop_handler 1)" != "0" ]; then
   (
     while true; do

@@ -1,7 +1,6 @@
 #!/system/bin/sh
-set -e
 MODDIR=${0%/*}
-. "$MODDIR/../lib/common.sh"
+. "$MODDIR/../lib/common.sh" || { echo "[GMS] FATAL: common.sh" >&2; exit 1; }
 . "$MODDIR/../lib/config_env.sh"
 . "$MODDIR/../lib/package_list.sh"
 
