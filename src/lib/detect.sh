@@ -5,8 +5,10 @@ detect_root_solution() {
     ROOT_TYPE="Unknown"; export ROOT_TYPE
     if [ -d "/data/adb/ap" ]; then
         ROOT_SOL="apatch"; ROOT_TYPE="APatch"
+        PATH="/data/adb/ap/bin:$PATH"
     elif [ -d "/data/adb/ksu" ]; then
         ROOT_SOL="kernelsu"
+        PATH="/data/adb/ksu/bin:$PATH"
         if [ -f "/data/adb/ksu/.dynamic_sign" ]; then
             ROOT_TYPE="SukiSU-Ultra"
         elif [ -f "/sys/module/kernelsu/parameters/expected_manager_size" ]; then
@@ -16,15 +18,19 @@ detect_root_solution() {
         fi
     elif [ -f "/data/adb/magisk" ] || [ -f "/data/adb/magisk.db" ]; then
         ROOT_SOL="magisk"; ROOT_TYPE="Magisk"
+        PATH="/data/adb/magisk:$PATH"
     elif [ -f "/data/adb/ksud" ]; then
         ROOT_SOL="kernelsu"; ROOT_TYPE="KernelSU"
+        PATH="/data/adb/ksu/bin:$PATH"
     elif [ -f "/data/adb/apd" ]; then
         ROOT_SOL="apatch"; ROOT_TYPE="APatch"
+        PATH="/data/adb/ap/bin:$PATH"
     elif command -v resetprop >/dev/null 2>&1; then
         ROOT_SOL="magisk"; ROOT_TYPE="Magisk"
     else
-        ROOT_SOL="legacy"; ROOT_TYPE="Legacy"
+        ROOT_SOL="magisk"; ROOT_TYPE="Unknown"
     fi
+    export PATH
 }
 
 _pif_prop() {

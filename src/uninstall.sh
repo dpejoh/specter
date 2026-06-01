@@ -67,4 +67,15 @@ if [ -f "$SPECTER_DIR/conflict_backups.txt" ]; then
   log "UNINSTALL" "All conflict backups restored"
 fi
 
+# Clean up background loop PID files (so they self-terminate)
+for _pid_key in loop_prop_handler.pid loop_keybox_info.pid auto_target.pid; do
+  _pid_path="$SPECTER_DIR/$_pid_key"
+  if [ -f "$_pid_path" ]; then
+    _old_pid=$(cat "$_pid_path" 2>/dev/null || echo "")
+    [ -n "$_old_pid" ] && kill "$_old_pid" 2>/dev/null || true
+    rm -f "$_pid_path"
+  fi
+done
+unset _pid_key _pid_path _old_pid
+
 return 0

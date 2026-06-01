@@ -1,6 +1,4 @@
 # shellcheck shell=sh
-SPECTER_DIR="/data/adb/Specter"
-GMS_PROPS_FILE="/data/system/gms_certified_props.json"
 GOOGLE_REVOCATION_URL="${GOOGLE_REVOCATION_URL:-https://android.googleapis.com/attestation/status?encrypted=0}"
 PERSIST_RESTORE_FILE="$SPECTER_DIR/persist_backup.txt"
 
@@ -18,10 +16,7 @@ sp_try() {
   else
     return 1
   fi
-  case "$ROOT_SOL" in
-    legacy) setprop "$_st_name" "$_st_expected" 2>/dev/null || true ;;
-    *) resetprop -n "$_st_name" "$_st_expected" 2>/dev/null || true ;;
-  esac
+  resetprop -n "$_st_name" "$_st_expected" 2>/dev/null || true
   unset _st_name _st_expected _st_current _st_needle _st_value
   return 0
 }
@@ -29,10 +24,7 @@ sp_try() {
 sp_persist() {
   _sp_name="$1" _sp_value="$2"
   _sp_original=$(resetprop "$_sp_name" 2>/dev/null || echo "")
-  case "$ROOT_SOL" in
-    legacy) setprop "$_sp_name" "$_sp_value" 2>/dev/null || true ;;
-    *) resetprop -n -p "$_sp_name" "$_sp_value" 2>/dev/null || true ;;
-  esac
+  resetprop -n -p "$_sp_name" "$_sp_value" 2>/dev/null || true
   if [ -n "$_sp_original" ]; then
     ensure_dir "$SPECTER_DIR"
     if ! grep -qsF "|$_sp_name|" "$PERSIST_RESTORE_FILE" 2>/dev/null; then
@@ -91,58 +83,33 @@ apply_vbmeta_props() {
 }
 
 apply_boot_props() {
-  while IFS='|' read -r _abp_prop _abp_val; do
-    [ -z "$_abp_prop" ] && continue
-    case "$_abp_prop" in
-      ro.*.build.type)
-        while IFS= read -r _abp_match; do
-          [ -z "$_abp_match" ] && continue
-          sp_try "$_abp_match" "user"
-        done <<MATCHES
-$(resetprop 2>/dev/null | grep -oE 'ro.*\.build\.type' | grep -v 'ro.build.type' || true)
-MATCHES
-        ;;
-      ro.*.build.tags)
-        while IFS= read -r _abp_match; do
-          [ -z "$_abp_match" ] && continue
-          sp_try "$_abp_match" "release-keys"
-        done <<MATCHES
-$(resetprop 2>/dev/null | grep -oE 'ro.*\.build\.tags' | grep -v 'ro.build.tags' || true)
-MATCHES
-        ;;
-      *)
-        sp_try "$_abp_prop" "$_abp_val"
-        ;;
-    esac
-  done << PROPS
-ro.build.selinux|1
-ro.secure|1
-ro.crypto.state|encrypted
-ro.hardware.virtual_device|0
-ro.build.type|user
-ro.build.tags|release-keys
-ro.*.build.type|user
-ro.*.build.tags|release-keys
-ro.warranty_bit|0
-ro.vendor.warranty_bit|0
-ro.is_ever_orange|0
-ro.secureboot.lockstate|locked
-ro.boot.vbmeta.device_state|locked
-ro.boot.verifiedbootstate|green
-ro.boot.flash.locked|1
-ro.boot.veritymode|enforcing
-vendor.boot.verifiedbootstate|green
-vendor.boot.vbmeta.device_state|locked
-ro.vendor.boot.warranty_bit|0
-ro.boot.realmebootstate|green
-ro.boot.realme.lockstate|1
-ro.boot.veritymode.managed|yes
-ro.system.build.tags|release-keys
-ro.vendor.build.tags|release-keys
-ro.kernel.qemu|0
-ro.boot.qemu|0
-ro.boot.selinux|enforcing
-PROPS
+  for _abp_prop in \
+    ro.build.selinux:1 ro.secure:1 ro.crypto.state:encrypted \
+    ro.hardware.virtual_device:0 ro.build.type:user ro.build.tags:release-keys \
+    ro.warranty_bit:0 ro.vendor.warranty_bit:0 ro.vendor.boot.warranty_bit:0 \
+    ro.is_ever_orange:0 ro.secureboot.lockstate:locked \
+    ro.boot.vbmeta.device_state:locked ro.boot.verifiedbootstate:green \
+    ro.boot.flash.locked:1 ro.boot.veritymode:enforcing \
+    ro.boot.veritymode.managed:yes ro.boot.selinux:enforcing \
+    vendor.boot.verifiedbootstate:green vendor.boot.vbmeta.device_state:locked \
+    ro.boot.realmebootstate:green ro.boot.realme.lockstate:1 \
+    ro.kernel.qemu:0 ro.boot.qemu:0 \
+    ro.system.build.tags:release-keys ro.vendor.build.tags:release-keys; do
+    sp_try "${_abp_prop%%:*}" "${_abp_prop#*:}"
+  done
+  for _abp_prop in ro.product.build.type ro.system.build.type ro.vendor.build.type \
+    ro.odm.build.type ro.product.vendor.build.type ro.product.odm.build.type; do
+    sp_try "$_abp_prop" "user"
+  done
+  for _abp_prop in ro.product.build.tags ro.system.build.tags ro.vendor.build.tags \
+    ro.odm.build.tags ro.product.vendor.build.tags ro.product.odm.build.tags; do
+    sp_try "$_abp_prop" "release-keys"
+  done
+  for _abp_prop in partition.system.verified partition.vendor.verified \
+    partition.product.verified partition.system_ext.verified partition.odm.verified; do
+    sp_try "$_abp_prop" "1"
+  done
+  unset _abp_prop
 }
 
 spoof_build_props() {
@@ -222,7 +189,10 @@ hexpatch_deleteprop() {
     _hd_search_len=$(printf '%s' "$_hd_prop" | wc -c)
     _hd_replacement=$(head /dev/urandom 2>/dev/null | tr -dc '0-9a-f' | head -c "$_hd_search_len" 2>/dev/null || printf '%s' "$_hd_prop" | od -A n -t x1 | tr -d ' \n' | head -c "$((_hd_search_len * 2))")
     _hd_replacement_hex=$(printf '%s' "$_hd_replacement" | od -A n -t x1 | tr -d ' \n' | tr '[:lower:]' '[:upper:]')
-    "$_hd_magiskboot" hexpatch "$_hd_path" "$_hd_search_hex" "$_hd_replacement_hex" >/dev/null 2>&1 || resetprop -p --delete "$_hd_prop" 2>/dev/null || true
+    "$_hd_magiskboot" hexpatch "$_hd_path" "$_hd_search_hex" "$_hd_replacement_hex" >/dev/null 2>&1 || {
+      log "PROPS" "hexpatch failed for $_hd_prop, fell back to resetprop -p --delete"
+      resetprop -p --delete "$_hd_prop" 2>/dev/null || true
+    }
   else
     resetprop -p --delete "$_hd_prop" 2>/dev/null || true
   fi

@@ -23,7 +23,6 @@ for _i in 1 2 3 4 5; do
 done
 _hash=$(content query --uri content://$PACKAGE/hash 2>/dev/null \
   | grep -oE '[a-f0-9]{64}|unavailable') || true
-# Reject all-zeros hash (TEE returns zeros when boot state is unverified/failed)
 case "$_hash" in
   0000000000000000000000000000000000000000000000000000000000000000) _hash="unavailable" ;;
 esac
@@ -31,11 +30,13 @@ unset _i
 
 pm uninstall $PACKAGE 2>/dev/null || true
 
-_partition_hash=$(vbmeta_digest "/dev/block/by-name/vbmeta" || true)
+_tee_slot=$(getprop ro.boot.slot_suffix 2>/dev/null || echo "")
+_tee_vbmeta_dev="/dev/block/by-name/vbmeta${_tee_slot}"
+[ -b "$_tee_vbmeta_dev" ] || _tee_vbmeta_dev="/dev/block/by-name/vbmeta"
+_partition_hash=$(vbmeta_digest "$_tee_vbmeta_dev" || true)
+unset _tee_slot _tee_vbmeta_dev
 
-# --- Save to cache + set boot prop ---
 _publish_hash() {
-  # shellcheck disable=SC3043
   local _h="$1" _s="$2"
   echo "$_h" > "$TEE_HASH"
   echo "$_h" > "$VBMETA_DIGEST"
@@ -51,7 +52,6 @@ case "$_tee" in
 esac
 
 if [ "$_hash" != "unavailable" ] && [ -n "$_hash" ]; then
-  # TEE hash available, authoritative
   _publish_hash "$_hash" "tee"
   if [ "$_partition_hash" = "$_hash" ]; then
     log "TEE" "Digest OK: partition matches TEE attestation"
@@ -59,7 +59,6 @@ if [ "$_hash" != "unavailable" ] && [ -n "$_hash" ]; then
     log "WARN" "Digest MISMATCH: partition=$_partition_hash TEE=$_hash"
   fi
 elif [ -n "$_partition_hash" ]; then
-  # Fallback: TEE hash unavailable, use partition hash
   _publish_hash "$_partition_hash" "fallback"
   echo "tee_fallback=true" >> "$TEE_STATUS"
   log "TEE" "Status: fallback (TEE unavailable, using partition hash)"

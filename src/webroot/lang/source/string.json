@@ -210,6 +210,8 @@
   "adb_disabler_dev_options_desc": "Disables developer options toggle in Settings",
   "adb_disabler_usb_debug": "Disable USB Debugging",
   "adb_disabler_usb_debug_desc": "Disables ADB, strips adb from USB config, locks OEM unlock",
+  "adb_disabler_oem_unlock": "Hide OEM Unlock Support",
+  "adb_disabler_oem_unlock_desc": "Sets ro.oem_unlock_supported=0 to hide OEM unlock capability from apps",
   "boot_harden_selinux": "SELinux & Proc Protection",
   "boot_harden_selinux_desc": "Protect SELinux enforce, /proc/cmdline, /proc/net/unix, install-recovery.sh, /system/addon.d",
   "boot_harden_bootmode": "Hide Recovery Bootmode",

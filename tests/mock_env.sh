@@ -2,7 +2,9 @@
 # Mock environment for Specter boot script tests.
 # Usage: . ./mock_env.sh  (from tests/ dir)
 
-REPO_ROOT="${SPECTER_REPO_ROOT:-$(cd "$(dirname "$0")/.." && pwd 2>/dev/null || pwd)}"
+_self="${BASH_SOURCE[0]:-$0}"
+REPO_ROOT="${SPECTER_REPO_ROOT:-$(cd "$(dirname "$_self")/.." && pwd 2>/dev/null || pwd)}"
+unset _self
 TEST_ROOT="${SPECTER_TEST_ROOT:-$(mktemp -d /tmp/specter_test_XXXX)}"
 
 export TEST_ROOT REPO_ROOT

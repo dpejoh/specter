@@ -9,6 +9,7 @@ log "ADB" "Disabling USB debugging and developer options"
 
 _dev_opt=$(cfg_get toggle_adb_disabler_dev_options 1)
 _usb_dbg=$(cfg_get toggle_adb_disabler_usb_debug 1)
+_oem_unlock=$(cfg_get toggle_adb_disabler_oem_unlock 1)
 
 if [ "$_dev_opt" != "0" ]; then
   settings put global development_settings_enabled 0
@@ -25,7 +26,9 @@ if [ "$_usb_dbg" != "0" ]; then
       local VAL="$(resetprop "$PROP")"
       if [ -n "$VAL" ]; then
           local NEWVAL="$(echo "$VAL" | sed 's/,adb//g; s/adb,//g; s/^adb$//; s/^adb,//')"
-          if [ "$NEWVAL" != "$VAL" ]; then
+          if [ -z "$NEWVAL" ]; then
+              resetprop -n "$PROP" "mtp"
+          elif [ "$NEWVAL" != "$VAL" ]; then
               resetprop -n "$PROP" "$NEWVAL"
           fi
       fi
@@ -35,8 +38,14 @@ if [ "$_usb_dbg" != "0" ]; then
   strip_adb_from_usb_config sys.usb.config
 
   resetprop -n sys.oem_unlock_allowed 0
+  resetprop -n service.adb.root 0
   settings put global adb_enabled 0
   log "ADB" "USB debugging disabled"
+fi
+
+if [ "$_oem_unlock" != "0" ]; then
+  resetprop -n ro.oem_unlock_supported 0
+  log "ADB" "OEM unlock support hidden"
 fi
 
 log "ADB" "Done"

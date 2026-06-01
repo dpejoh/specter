@@ -9,12 +9,15 @@ MODDIR=${0%/*}
 
 if [ ! -f "$VBMETA_DIGEST" ]; then
   . "$MODDIR/../lib/vbmeta.sh"
-  _hash=$(vbmeta_digest "/dev/block/by-name/vbmeta" 2>/dev/null || true)
+  _vbmeta_slot=$(getprop ro.boot.slot_suffix 2>/dev/null || echo "")
+  _vbmeta_dev="/dev/block/by-name/vbmeta${_vbmeta_slot}"
+  [ -b "$_vbmeta_dev" ] || _vbmeta_dev="/dev/block/by-name/vbmeta"
+  _hash=$(vbmeta_digest "$_vbmeta_dev" 2>/dev/null || true)
   if [ -n "$_hash" ]; then
     ensure_dir "$SPECTER_DIR"
     echo "$_hash" > "$VBMETA_DIGEST"
   fi
-  unset _hash
+  unset _hash _vbmeta_slot _vbmeta_dev
 fi
 
 apply_vbmeta_props

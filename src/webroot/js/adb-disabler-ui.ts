@@ -7,8 +7,11 @@ const t = (key: string, fallback: string): string => getTranslation(key) || fall
 export function openAdbDisablerDialog() {
   const dialog = document.createElement('md-dialog');
 
-  cfgGet('toggle_adb_disabler_dev_options', '1').then(devOpt => {
-    cfgGet('toggle_adb_disabler_usb_debug', '1').then(usbDbg => {
+  Promise.all([
+    cfgGet('toggle_adb_disabler_dev_options', '1'),
+    cfgGet('toggle_adb_disabler_usb_debug', '1'),
+    cfgGet('toggle_adb_disabler_oem_unlock', '1'),
+  ]).then(([devOpt, usbDbg, oemUnlock]) => {
       dialog.innerHTML = `
         <div slot="headline">
           <div class="at-dialog-headline">
@@ -39,6 +42,16 @@ export function openAdbDisablerDialog() {
               <div class="spacer"></div>
               <md-switch icons id="adb-usb-debug" ${usbDbg === '1' ? 'selected' : ''}></md-switch>
             </div>
+
+            <div class="list-item list-item--toggle">
+              <div class="li-icon"><md-icon aria-hidden="true">lock_outline</md-icon></div>
+              <div class="list-item-content">
+                <div class="toggle-text">${t('adb_disabler_oem_unlock', 'Hide OEM Unlock Support')}</div>
+                <span class="supporting-text">${t('adb_disabler_oem_unlock_desc', 'Sets ro.oem_unlock_supported=0 to hide OEM unlock capability from apps')}</span>
+              </div>
+              <div class="spacer"></div>
+              <md-switch icons id="adb-oem-unlock" ${oemUnlock === '1' ? 'selected' : ''}></md-switch>
+            </div>
           </div>
         </div>
         <div slot="actions">
@@ -52,6 +65,7 @@ export function openAdbDisablerDialog() {
 
       const devToggle = dialog.querySelector('#adb-dev-options') as MdSwitch;
       const usbToggle = dialog.querySelector('#adb-usb-debug') as MdSwitch;
+      const oemToggle = dialog.querySelector('#adb-oem-unlock') as MdSwitch;
       const saveBtn = dialog.querySelector('#adb-save') as HTMLButtonElement;
       const cancelBtn = dialog.querySelector('#adb-cancel') as HTMLButtonElement;
 
@@ -63,8 +77,10 @@ export function openAdbDisablerDialog() {
         try {
           cfgSet('toggle_adb_disabler_dev_options', devToggle.selected ? '1' : '0');
           cfgSet('toggle_adb_disabler_usb_debug', usbToggle.selected ? '1' : '0');
+          cfgSet('toggle_adb_disabler_oem_unlock', oemToggle.selected ? '1' : '0');
           cfgInvalidate('toggle_adb_disabler_dev_options');
           cfgInvalidate('toggle_adb_disabler_usb_debug');
+          cfgInvalidate('toggle_adb_disabler_oem_unlock');
 
           showToast(t('toast_success', 'Done'), { icon: 'check_circle', type: 'success' as any, autoCloseDelay: 2500 });
           dialog.close();
@@ -77,7 +93,6 @@ export function openAdbDisablerDialog() {
 
       dialog.show();
     });
-  });
 }
 
 export function wireAdbDisabler() {

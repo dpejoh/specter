@@ -84,8 +84,7 @@ resolve_conflicts() {
 
   migrate_conflict_config
 
-  disable_bootloader_spoofer
-
+  # Moved to boot_core.sh (needs PM service)
   while IFS='|' read -r _rc_id _rc_name _rc_scripts _rc_features _rc_type; do
     [ -z "$_rc_id" ] && continue
     _conflict_detect "$_rc_id" || continue
@@ -117,16 +116,8 @@ _conflict_claimed() {
       *",$_cc_feature,"*) ;;
       *) continue ;;
     esac
-    case "$_cc_type" in
-      passive)
-        [ "$(_conflict_choice "$_cc_id")" = "priority_module" ] || continue
-        _cc_claimed=0; break
-        ;;
-      aggressive)
-        [ "$(_conflict_choice "$_cc_id")" = "priority_module" ] || continue
-        _cc_claimed=0; break
-        ;;
-    esac
+    [ "$(_conflict_choice "$_cc_id")" = "priority_module" ] || continue
+    _cc_claimed=0; break
   done <<EOF
 $(_conflict_registry)
 EOF

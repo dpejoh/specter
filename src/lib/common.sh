@@ -28,8 +28,14 @@ fi
 . "$_root/lib/util.sh"
 . "$_root/lib/network.sh"
 . "$_root/lib/detect.sh"
+. "$_root/lib/paths.sh"
 . "$_root/lib/props.sh"
 . "$_root/lib/keybox.sh"
 . "$_root/lib/conflicts.sh"
+
+# Module-local paths (was in paths.sh, consolidated here)
+BBIN="$_root/bin"
+: "${CONFIG_DIR:="$_root/config"}"
+MIGRATION_MARKER="$_root/.migrated"
 
 unset _root

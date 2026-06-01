@@ -8,21 +8,9 @@ MODDIR=${0%/*}
 
 [ "$(cfg_get toggle_prop_handler 1)" = "0" ] && exit 0
 
-_boot_state=$(cfg_get boot_state_props 1)
-_spoof_build=$(cfg_get spoof_build_props 1)
 _sp=$(cfg_get suspicious_props 1)
 
-[ "$_boot_state$_spoof_build$_sp" = "000" ] && exit 0
-
-if [ "$_boot_state" != "0" ]; then
-  log "PROPS" "Applying boot state props"
-  apply_boot_props
-fi
-
-if [ "$_spoof_build" != "0" ]; then
-  log "PROPS" "Spoofing build props"
-  spoof_build_props
-fi
+[ "$_sp" = "0" ] && exit 0
 
 if [ "$_sp" != "0" ]; then
   log "PROPS" "Cleaning suspicious props"

@@ -32,6 +32,7 @@ INTERVAL=$(cfg_get auto_target_interval "$DEFAULT_INTERVAL")
 log "AUTO_TARGET" "Daemon started (PID $$, interval: ${INTERVAL}s)"
 
 while true; do
+  [ -d "$MODDIR" ] || exit 0
   ENABLED=$(cfg_get toggle_auto_target 0)
   if [ "$ENABLED" != "1" ]; then
     log "AUTO_TARGET" "Disabled via config, exiting"

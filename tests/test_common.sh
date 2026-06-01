@@ -28,36 +28,25 @@ set_prop "ro.build.flavor" "lineage_user"
 sp_try "ro.build.flavor" "userdebug" "user"
 assert_prop_eq "sp_try(3) skips if needle not found" "ro.build.flavor" "lineage_user"
 
-# ---- apply_boot_props: pre-seed with wrong values to verify fix ----
+# ---- apply_boot_props: partition-specific wildcard props + dm-verity ----
+# Static boot props (build.type, warranty bits, vbmeta state, etc.)
+# were moved to system.prop. apply_boot_props() now only handles
+# partition-specific wildcard entries (ro.*.build.type, ro.*.build.tags)
+# and dm-verity partition status (partition.*.verified).
 bootstrap
 source_libs
-# Most props don't exist in test env, but we pre-seed a few wrong ones
-set_prop "ro.build.type" "eng"
-set_prop "ro.build.tags" "dev-keys"
-set_prop "ro.warranty_bit" "1"
-set_prop "ro.boot.vbmeta.device_state" "unlocked"
-set_prop "ro.boot.verifiedbootstate" "orange"
-set_prop "ro.boot.flash.locked" "0"
-set_prop "ro.secure" "0"
-set_prop "ro.build.selinux" "0"
-set_prop "ro.kernel.qemu" "1"
-set_prop "ro.boot.qemu" "1"
-set_prop "ro.boot.selinux" "permissive"
 set_prop "ro.vendor.build.type" "eng"
+set_prop "ro.product.build.type" "eng"
+set_prop "ro.system.build.tags" "dev-keys"
+set_prop "partition.system.verified" "0"
+set_prop "partition.vendor.verified" "0"
 
 apply_boot_props
-assert_prop_eq "boot: build.type eng->user"                "ro.build.type" "user"
-assert_prop_eq "boot: build.tags dev-keys->release-keys"   "ro.build.tags" "release-keys"
-assert_prop_eq "boot: warranty_bit 1->0"                   "ro.warranty_bit" "0"
-assert_prop_eq "boot: vbmeta unlocked->locked"             "ro.boot.vbmeta.device_state" "locked"
-assert_prop_eq "boot: verifiedbootstate orange->green"     "ro.boot.verifiedbootstate" "green"
-assert_prop_eq "boot: flash.locked 0->1"                   "ro.boot.flash.locked" "1"
-assert_prop_eq "boot: secure 0->1"                         "ro.secure" "1"
-assert_prop_eq "boot: build.selinux 0->1"                  "ro.build.selinux" "1"
-assert_prop_eq "boot: kernel.qemu 1->0"                    "ro.kernel.qemu" "0"
-assert_prop_eq "boot: boot.qemu 1->0"                      "ro.boot.qemu" "0"
-assert_prop_eq "boot: boot.selinux permissive->enforcing"  "ro.boot.selinux" "enforcing"
-assert_prop_eq "boot: vendor.build.type eng->user"         "ro.vendor.build.type" "user"
+assert_prop_eq "boot: vendor.build.type eng->user"     "ro.vendor.build.type" "user"
+assert_prop_eq "boot: product.build.type eng->user"    "ro.product.build.type" "user"
+assert_prop_eq "boot: system.build.tags dev-keys->rel" "ro.system.build.tags" "release-keys"
+assert_prop_eq "boot: system.verified 0->1"            "partition.system.verified" "1"
+assert_prop_eq "boot: vendor.verified 0->1"            "partition.vendor.verified" "1"
 
 
 # ---- apply_boot_hardening: no crash when selinux enforced ----
