@@ -8,6 +8,10 @@ MODDIR=${0%/*}
 
 log "CLEANUP" "Start"
 
+# Safety watchdog: self-terminate if we run too long
+(sleep 30 && kill "$$" 2>/dev/null) &
+_watchdog_pid="$!"
+
 log "CLEANUP" "Waiting for boot completion..."
 while [ "$(getprop sys.boot_completed)" != "1" ]; do
   sleep 1
@@ -63,21 +67,9 @@ _rm "/data/local/tmp/resetprop"
 log "CLEANUP" "Temp files cleaned"
 
 log "CLEANUP" "Clearing log buffers..."
-logcat -c 2>/dev/null || true
-dmesg -c 2>/dev/null || true
+timeout 3 logcat -c >/dev/null 2>/dev/null || true
+timeout 3 dmesg -c >/dev/null 2>/dev/null || true
 log "CLEANUP" "Log buffers cleared"
-
-log "CLEANUP" "Cleaning ANR traces..."
-_rm "/data/anr"
-log "CLEANUP" "ANR traces cleaned"
-
-log "CLEANUP" "Cleaning device logs..."
-_rm "/dev/log"
-log "CLEANUP" "Device logs cleaned"
-
-log "CLEANUP" "Cleaning kernel debug traces..."
-_rm "/sys/kernel/debug"
-log "CLEANUP" "Kernel debug traces cleaned"
 
 log "CLEANUP" "Cleaning system data..."
 _rm "/data/system/graphicsstats"
@@ -86,6 +78,9 @@ _rm "/data/system/NoActive"
 _rm "/data/system/Freezer"
 _rm "/data/system/junge"
 log "CLEANUP" "System data cleaned"
+
+kill "$_watchdog_pid" 2>/dev/null || true
+unset _watchdog_pid
 
 log "CLEANUP" "Cleanup completed"
 log "CLEANUP" "Finish"

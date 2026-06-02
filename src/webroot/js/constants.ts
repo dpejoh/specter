@@ -1,4 +1,4 @@
-export const EXEC_TIMEOUT_MS: number = 15000;
+export const EXEC_TIMEOUT_MS: number = 60000;
 export const ONLINE_ENDPOINTS: string[] = [
   'https://clients3.google.com/generate_204',
   'https://www.gstatic.com/generate_204',

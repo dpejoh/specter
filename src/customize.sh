@@ -8,48 +8,28 @@ MODDIR="$MODPATH"
 _vol() {
     _vt="${1:-5}"
     _start=$(date +%s)
-    _counting=1
-    _current=0
     _printed=-1
 
     ui_print ">> Yes [$_vt]"
-    _printed=$_vt
 
     while true; do
         _now=$(date +%s)
         _elapsed=$((_now - _start))
-
-        if [ "$_counting" -eq 1 ] && [ "$_elapsed" -ge "$_vt" ]; then
-            unset _vt _start _counting _current _printed _now _elapsed _vk _remaining
-            return 0
-        fi
+        [ "$_elapsed" -ge "$_vt" ] && return 0
 
         _vk=$(timeout 1 getevent -qlc 1 2>/dev/null) 2>/dev/null
         if [ -n "$_vk" ]; then
             case "$_vk" in
-                *KEY_VOLUMEUP*)
-                    unset _vt _start _counting _current _printed _now _elapsed _vk _remaining
-                    return $_current
-                    ;;
-                *KEY_VOLUMEDOWN*)
-                    _counting=0
-                    _current=$((1 - _current))
-                    if [ "$_current" -eq 0 ]; then
-                        ui_print ">> Yes"
-                    else
-                        ui_print ">> No"
-                    fi
-                    ;;
+                *KEY_VOLUMEUP*)   return 0 ;;
+                *KEY_VOLUMEDOWN*) ui_print ">> No"; return 1 ;;
             esac
         fi
 
-        if [ "$_counting" -eq 1 ]; then
-            _remaining=$((_vt - _elapsed))
-            [ "$_remaining" -lt 0 ] && _remaining=0
-            if [ "$_remaining" -ne "$_printed" ] 2>/dev/null; then
-                ui_print ">> Yes [$_remaining]"
-                _printed=$_remaining
-            fi
+        _remaining=$((_vt - _elapsed))
+        [ "$_remaining" -le 0 ] && _remaining=0
+        if [ "$_remaining" -ne "$_printed" ] 2>/dev/null; then
+            ui_print ">> Yes [$_remaining]"
+            _printed=$_remaining
         fi
 
         sleep 0.3

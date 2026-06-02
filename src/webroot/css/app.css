@@ -2358,3 +2358,7 @@ md-filled-tonal-button {
 #at-interval-row .spacer {
   min-width: 4px;
 }
+
+.at-interval-field {
+  max-width: 80px;
+}

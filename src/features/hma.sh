@@ -2,7 +2,7 @@
 MODDIR=${0%/*}
 
 # Re-exec into init mount namespace to escape APatch/KSU ksu.exec sandbox
-if [ -z "$_NS_INIT" ] && [ -x /system/bin/nsenter ]; then
+if [ -z "$_NS_INIT" ] && [ -x /system/bin/nsenter ] && [ -e /proc/1/ns/mnt ]; then
   export _NS_INIT=1
   exec /system/bin/nsenter -t 1 -m -- /system/bin/sh "$0" "$@"
 fi
