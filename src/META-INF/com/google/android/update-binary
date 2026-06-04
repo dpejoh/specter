@@ -65,7 +65,7 @@ print_modname() {
   ui_print "*******************"
 }
 
-# Preperation for flashable zips
+# Preparation for flashable zips
 setup_flashable
 
 # Mount partitions
