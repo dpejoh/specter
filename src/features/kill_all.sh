@@ -9,7 +9,7 @@ MODDIR=${0%/*}
 log "KILL_ALL" "Start"
 
 _count=0
-ALL_PKGS="$GMS_APPS $REMOTE_CONTROL_APPS $TOOL_APPS"
+ALL_PKGS="$GMS_APPS $TOOL_APPS"
 _installed_pkgs=$(pm list packages 2>/dev/null) || log "KILL_ALL" "Warning: Failed to list installed packages"
 
 for pkg in $ALL_PKGS; do
