@@ -9,12 +9,6 @@ exec >>"$BOOT_LOG" 2>&1
 
 log "BOOT" "Running unified boot core"
 
-if [ "$(cfg_get toggle_prop_handler 1)" != "0" ]; then
-  [ "$(cfg_get boot_state_props 1)" != "0" ] && apply_boot_props
-  [ "$(cfg_get spoof_build_props 1)" != "0" ] && spoof_build_props
-  [ "$(cfg_get region_props 1)" != "0" ] && apply_region_props
-fi
-
 for _bf in boot_hardening lsposed adb_disabler rom_fingerprint vbmeta; do
   case "$_bf" in *[!a-zA-Z0-9_-]*) log "BOOT" "Skipping invalid feature: $_bf"; continue ;; esac
   _bf_default=1
@@ -25,6 +19,9 @@ done
 unset _bf _bf_default
 
 if _feature_should_run "prop_handler"; then
+  [ "$(cfg_get boot_state_props 1)" != "0" ] && ! _conflict_claimed "boot_state_props" && apply_boot_props
+  [ "$(cfg_get spoof_build_props 1)" != "0" ] && ! _conflict_claimed "spoof_build_props" && spoof_build_props
+  [ "$(cfg_get region_props 1)" != "0" ] && ! _conflict_claimed "region_props" && apply_region_props
   sh "$MODDIR/features/boot_state_props.sh" >"$SPECTER_DIR/log/boot_state_props.log" 2>&1
 else
   log "BOOT" "Skipping boot_state_props (disabled by config)"
@@ -32,7 +29,8 @@ fi
 
 log "BOOT" "Boot-time features done"
 
-if [ "$ROOT_SOL" = "magisk" ] && [ "$(cfg_get toggle_denylist_merge 1)" != "0" ]; then
+# Skip on first boot — first_boot_setup already handles target.txt
+if [ ! -f "$MODDIR/.first_boot_pending" ] && [ "$ROOT_SOL" = "magisk" ] && [ "$(cfg_get toggle_denylist_merge 1)" != "0" ]; then
   sh "$MODDIR/features/target.sh" --merge-denylist >"$SPECTER_DIR/log/boot_denylist.log" 2>&1 || log "BOOT" "Denylist merge failed"
 fi
 

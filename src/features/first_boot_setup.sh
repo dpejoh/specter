@@ -34,8 +34,6 @@ fi
 log "FIRST_BOOT" "Installing keybox"
 sh "$MODDIR/../features/keybox.sh" || log "FIRST_BOOT" "Keybox installation failed (exit $?)"
 
-log "FIRST_BOOT" "Generating target.txt"
-sh "$MODDIR/../features/target.sh" || log "FIRST_BOOT" "target.txt generation failed (exit $?)"
 
 log "FIRST_BOOT" "Refreshing keybox info cache"
 sh "$MODDIR/../features/keybox_info.sh" || log "FIRST_BOOT" "keybox_info.sh failed (exit $?)"

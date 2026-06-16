@@ -61,7 +61,6 @@ describe('required files', () => {
     'customize.sh',
     'action.sh',
     'service.sh',
-    'boot-completed.sh',
     'post-fs-data.sh',
     'uninstall.sh',
     'orchestrator.sh',
