@@ -35,7 +35,7 @@ export async function loadContributors() {
   `).join('');
 
   grid.querySelectorAll('.contributor-avatar').forEach(img => {
-    img.addEventListener('error', () => { (img as HTMLImageElement).src = 'assets/icon.png'; }, { once: true });
+    img.addEventListener('error', () => { (img as HTMLImageElement).style.display = 'none'; }, { once: true });
   });
 
   grid.querySelectorAll('[data-url]').forEach(card => {

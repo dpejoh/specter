@@ -9,19 +9,9 @@ if [ -f "$BACKUP_FILE" ]; then
     log "UNINSTALL" "Restored original keybox from backup"
 fi
 
-if [ -d "$BBIN" ]; then
-    rm -rf "$BBIN" 2>/dev/null
-    log "UNINSTALL" "Removed $BBIN"
-fi
-
 if [ -d "$CONFIG_DIR" ]; then
     rm -rf "$CONFIG_DIR" 2>/dev/null
     log "UNINSTALL" "Removed $CONFIG_DIR"
-fi
-
-if [ -f "$MIGRATION_MARKER" ]; then
-    rm -f "$MIGRATION_MARKER" 2>/dev/null
-    log "UNINSTALL" "Removed migration marker"
 fi
 
 # Restore persisted props, format: restore|prop_name|prop_value

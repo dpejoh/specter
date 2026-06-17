@@ -91,13 +91,6 @@ assert_exit_code "feature: disabled when toggle=0" 1 $_rc
 _feature_should_run "opt_in_feature" 0; _rc=$?
 assert_exit_code "feature: opt-in defaults to disabled" 1 $_rc
 
-# ---- hexpatch_deleteprop ----
-bootstrap
-source_libs
-set_prop "ro.test.prop" "bad_value"
-hexpatch_deleteprop "ro.test.prop"
-assert_prop_not_set "hexpatch: prop deleted" "ro.test.prop"
-
 # ---- version_ge ----
 source_libs  # re-sourcing ok since idempotent
 version_ge "1.0" "1.0";   assert_exit_code "ver: 1.0 >= 1.0" 0 $?

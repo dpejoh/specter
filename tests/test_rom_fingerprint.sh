@@ -22,7 +22,7 @@ if [ "$_rf_hexpatch" != "0" ]; then
     _rf_props=$(resetprop 2>/dev/null | grep -i "$_rf_pattern" | cut -d'[' -f2 | cut -d']' -f1 || true)
     for _rf_prop in $_rf_props; do
       [ -z "$_rf_prop" ] && continue
-      hexpatch_deleteprop "$_rf_prop"
+      resetprop --delete "$_rf_prop" 2>/dev/null || true
     done
   done
 fi
@@ -124,7 +124,7 @@ if [ "$_rf_hexpatch" != "0" ]; then
     _rf_props=$(resetprop 2>/dev/null | grep -i "$_rf_pattern" | cut -d'[' -f2 | cut -d']' -f1 || true)
     for _rf_prop in $_rf_props; do
       [ -z "$_rf_prop" ] && continue
-      hexpatch_deleteprop "$_rf_prop"
+      resetprop --delete "$_rf_prop" 2>/dev/null || true
     done
   done
 fi
