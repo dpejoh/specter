@@ -35,10 +35,7 @@ fi
 
 log "SERVICE" "Boot-time features done"
 
-[ -f "$SPECTER_DIR/tee_reported" ] && {
-  sh "$MODDIR/features/tee.sh" >"$SPECTER_DIR/log/boot_tee.log" 2>&1
-  [ -f "$TEE_STATUS" ] && rm -f "$SPECTER_DIR/tee_reported" || log "SERVICE" "TEE check failed, will retry on next boot"
-}
+sh "$MODDIR/features/tee.sh" >"$SPECTER_DIR/log/boot_tee.log" 2>&1 || true
 
 [ -f "$SPECTER_DIR/rom_spoof_reported" ] && {
   sh "$MODDIR/features/rom_spoof_cleanup.sh" >/dev/null 2>&1 || true
@@ -60,5 +57,65 @@ refresh_module_description
   sh "$MODDIR/lib/scheduler.sh" >"$SPECTER_DIR/log/scheduler.log" 2>&1 &
   log "SERVICE" "Scheduler launched (PID $!)"
 }
+
+# Delayed TEE check — runs after phone is fully on so PM is available
+(
+  sleep 60
+  [ -f "$SPECTER_DIR/tee_reported" ] || exit 0
+
+  _pkg="com.dpejoh.specter"
+  _apk="$MODDIR/apk/specter.apk"
+  . "$MODDIR/lib/vbmeta.sh"
+
+  # Query TEE status
+  for _i in 1 2 3 4 5; do
+    _t=$(content query --uri content://$_pkg/check 2>/dev/null \
+      | grep -o 'status=[a-z]*' | cut -d= -f2) || true
+    [ -n "$_t" ] && break
+    sleep 0.5
+  done
+
+  # Query TEE hash
+  _h=$(content query --uri content://$_pkg/hash 2>/dev/null \
+    | grep -oE '[a-f0-9]{64}|unavailable') || true
+  [ "$_h" = "0000000000000000000000000000000000000000000000000000000000000000" ] && _h="unavailable"
+  unset _i
+
+  # Cache results
+  case "$_t" in
+    normal) echo "tee_broken=false" > "$TEE_STATUS"; log "TEE" "Status: normal" ;;
+    broken) echo "tee_broken=true"  > "$TEE_STATUS"; log "TEE" "Status: broken" ;;
+    *)      echo "tee_broken=unknown" > "$TEE_STATUS"; log "TEE" "Status: unavailable ($_t)" ;;
+  esac
+  unset _t
+
+  if [ "$_h" != "unavailable" ] && [ -n "$_h" ]; then
+    echo "$_h" > "$TEE_HASH"
+    [ -z "$(cfg_get custom_boot_hash "")" ] && echo "$_h" > "$VBMETA_DIGEST"
+    log "TEE" "Hash: $_h (tee)"
+  else
+    _slot=$(getprop ro.boot.slot_suffix 2>/dev/null || echo "")
+    _dev="/dev/block/by-name/vbmeta${_slot}"
+    [ -b "$_dev" ] || _dev="/dev/block/by-name/vbmeta"
+    _ph=$(vbmeta_digest "$_dev" || true)
+    unset _slot _dev
+    if [ -n "$_ph" ]; then
+      echo "$_ph" > "$TEE_HASH"
+      [ -z "$(cfg_get custom_boot_hash "")" ] && echo "$_ph" > "$VBMETA_DIGEST"
+      echo "tee_fallback=true" >> "$TEE_STATUS"
+      log "TEE" "Hash: $_ph (fallback)"
+    else
+      log "TEE" "Hash: unavailable"
+    fi
+    unset _ph
+  fi
+  unset _h
+
+  # Uninstall APK and clean up
+  pm uninstall "$_pkg" >/dev/null 2>&1 || true
+  rm -f "$SPECTER_DIR/tee_reported" "$_apk"
+  log "TEE" "Done"
+  unset _pkg _apk
+) &
 
 log "SERVICE" "Specter boot tasks complete"
