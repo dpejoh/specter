@@ -1579,7 +1579,7 @@ md-filled-tonal-button {
 .ta-list {
   flex: 1;
   overflow-y: auto;
-  padding: 0 20px 140px;
+  padding: 0 15px 140px;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
@@ -2412,4 +2412,52 @@ md-filled-tonal-button {
 
 .at-interval-field {
   max-width: 80px;
+}
+
+/* ===== App Targeting Icons ===== */
+
+.sp-icn-w {
+  flex-shrink: 0;
+  position: relative;
+  width: 40px;
+  height: 40px;
+  margin-right: 12px;
+}
+
+.sp-icn {
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  display: block;
+}
+
+[dir="rtl"] .sp-icn-w {
+  margin-right: unset;
+  margin-left: 12px;
+}
+
+.sp-icn-spin {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--md-sys-color-surface-container-highest);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sp-icn-spin::after {
+  content: '';
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--md-sys-color-outline);
+  border-top-color: var(--md-sys-color-primary);
+  border-radius: 50%;
+  animation: sp-icn-pulse 0.8s linear infinite;
+}
+
+@keyframes sp-icn-pulse {
+  to { transform: rotate(360deg); }
 }

@@ -13,6 +13,8 @@ export const API_URLS: Record<string, string> = {
   TELEGRAM: 'https://t.me/dpejoh',
 };
 
+
+
 export interface ToggleDef {
   id: string;
   key: string;

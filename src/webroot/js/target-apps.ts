@@ -1,5 +1,5 @@
 import { exec, getModuleDir, getDataDir } from './bridge.js';
-import { shellEscape, fetchJson } from './utils.js';
+import { shellEscape } from './utils.js';
 import { showToast } from './toast.js';
 import { getTranslation } from './i18n.js';
 import { appendToOutput } from './terminal.js';
@@ -15,6 +15,8 @@ interface TargetApp {
   appName: string;
   state: AppState;
 }
+
+const FALLBACK_ICON = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24"><path fill="%23999" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>');
 
 const TARGET_MODE_ORDER: TargetState[] = ['bare', 'conditional', 'force'];
 const BLACKLIST_STATE_ORDER: BlacklistState[] = ['unchecked', 'blacklisted'];
@@ -41,8 +43,6 @@ const BLACKLIST_LABEL_KEYS: Record<string, string> = {
 };
 
 const specterDir = () => getDataDir() || '/data/adb/specter';
-const TARGET_CACHE_FILE = () => `${specterDir()}/app_labels.json`;
-const APP_CATALOG_API = 'https://rawbin.dpejoh.com/apps';
 
 function t(key: string, fallback: string): string {
   return getTranslation(key) || fallback;
@@ -64,6 +64,47 @@ function stateText(state: AppState, mode: Mode): string {
 function stateLabelKey(state: AppState, mode: Mode): string {
   if (mode === 'blacklist') return BLACKLIST_LABEL_KEYS[state] || 'unchecked';
   return TARGET_LABEL_KEYS[state] || 'unchecked';
+}
+
+function bufToB64(buf: ArrayBuffer): string {
+  const bytes = new Uint8Array(buf);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]!);
+  return btoa(bin);
+}
+
+function ksuGlobal(): any {
+  return (globalThis as any).ksu;
+}
+
+async function shellExec(cmd: string): Promise<{ stdout: string }> {
+  try { return await exec(cmd); } catch { return { stdout: '' }; }
+}
+
+async function fetchUserPackages(): Promise<string[]> {
+  const ksu = ksuGlobal();
+  if (typeof ksu?.listPackages === 'function') {
+    try { return JSON.parse(ksu.listPackages('user')) as string[]; } catch {}
+  }
+  const r = await shellExec('pm list packages -3 2>/dev/null | cut -d: -f2');
+  return r.stdout.split('\n').map(s => s.trim()).filter(Boolean);
+}
+
+async function resolvePackageNames(packages: string[]): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  const ksu = ksuGlobal();
+  if (typeof ksu?.getPackagesInfo === 'function') {
+    try {
+      const raw = ksu.getPackagesInfo(JSON.stringify(packages));
+      const list = JSON.parse(raw) as Array<{ packageName: string; appLabel?: string }>;
+      for (let i = 0; i < packages.length; i++) {
+        map.set(packages[i]!, list[i]?.appLabel || packages[i]!);
+      }
+      return map;
+    } catch {}
+  }
+  for (const pkg of packages) map.set(pkg, pkg);
+  return map;
 }
 
 function buildOverlayHTML(): string {
@@ -126,52 +167,78 @@ function buildOverlayHTML(): string {
   `;
 }
 
-async function loadAppLabels(installedPkgs: string[]): Promise<Map<string, string>> {
-  const labels = new Map<string, string>();
-  let cached: Record<string, string> = {};
+class AppIconManager {
+  private observer: IntersectionObserver | null = null;
 
-  const { stdout: mtimeRaw } = await exec(`stat --format %Y ${TARGET_CACHE_FILE()} 2>/dev/null || echo "0"`);
-  const mtime = parseInt(mtimeRaw.trim(), 10) || 0;
-  const age = Date.now() / 1000 - mtime;
-  const needsRefresh = mtime === 0 || age >= 86400;
-
-  if (!needsRefresh) {
-    const { stdout: cachedRaw } = await exec(`cat ${TARGET_CACHE_FILE()} 2>/dev/null || echo "{}"`);
-    try { cached = JSON.parse(cachedRaw || '{}'); } catch { cached = {}; }
-  }
-
-  if (needsRefresh || Object.keys(cached).length === 0) {
-    try {
-      const catalog = await fetchJson<Record<string, string>>(APP_CATALOG_API);
-      if (catalog) {
-        const content = JSON.stringify(catalog);
-        await exec(`mkdir -p ${specterDir()} && cat > ${TARGET_CACHE_FILE()} << 'CEOF'\n${content}\nCEOF`);
-        cached = catalog;
-      }
-    } catch (e) {
-      console.warn('App catalog fetch failed, using cached/fallback', e);
-      if (Object.keys(cached).length === 0) {
-        const { stdout: cachedRaw } = await exec(`cat ${TARGET_CACHE_FILE()} 2>/dev/null || echo "{}"`);
-        try { cached = JSON.parse(cachedRaw || '{}'); } catch { cached = {}; }
-      }
+  watchAll(): void {
+    if (!this.observer) {
+      this.observer = new IntersectionObserver((entries) => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          const el = e.target as HTMLElement;
+          const img = el.querySelector('.sp-icn') as HTMLImageElement | null;
+          const spin = el.querySelector('.sp-icn-spin') as HTMLElement | null;
+          const pkg = img?.dataset.package;
+          if (pkg && img && spin) {
+            this.fetch(pkg, img, spin);
+            this.observer?.unobserve(el);
+          }
+        }
+      }, { rootMargin: '100px', threshold: 0.1 });
+    }
+    document.querySelectorAll('.sp-icn-w').forEach(el => this.observer!.observe(el));
+    const ksu = ksuGlobal();
+    if (typeof ksu?.listPackages === 'function') {
+      document.querySelectorAll('.sp-icn-w').forEach(el => {
+        (el as HTMLElement).style.display = 'flex';
+      });
     }
   }
 
-  for (const pkg of installedPkgs) {
-    labels.set(pkg, cached[pkg] || pkg);
+  createElements(pkg: string): { wrap: HTMLDivElement; img: HTMLImageElement; spin: HTMLDivElement } {
+    const wrap = document.createElement('div');
+    wrap.className = 'sp-icn-w';
+    const spin = document.createElement('div');
+    spin.className = 'sp-icn-spin';
+    spin.dataset.package = pkg;
+    const img = document.createElement('img');
+    img.className = 'sp-icn';
+    img.dataset.package = pkg;
+    img.alt = '';
+    img.loading = 'lazy';
+    wrap.appendChild(spin);
+    wrap.appendChild(img);
+    return { wrap, img, spin };
   }
-  return labels;
-}
 
-export async function refreshAppCatalog(): Promise<void> {
-  try {
-    const catalog = await fetchJson<Record<string, string>>(APP_CATALOG_API);
-    if (catalog) {
-      const content = JSON.stringify(catalog);
-      await exec(`mkdir -p ${specterDir()} && cat > ${TARGET_CACHE_FILE()} << 'CEOF'\n${content}\nCEOF`);
+  private fetch(pkg: string, img: HTMLImageElement, spin: HTMLElement): void {
+    const done = () => { spin.style.display = 'none'; img.style.opacity = '1'; };
+    const fail = () => { img.src = FALLBACK_ICON; done(); };
+    img.onload = done;
+    img.onerror = fail;
+
+    const pm = (globalThis as any).$packageManager;
+    if (typeof pm?.getApplicationIcon === 'function') {
+      try {
+        const uri = pm.getApplicationIcon(pkg, 0, 0) as string;
+        if (uri) {
+          fetch(uri).then(r => r.arrayBuffer()).then(b => {
+            img.src = 'data:image/png;base64,' + bufToB64(b);
+          }).catch(fail);
+          return;
+        }
+      } catch {}
     }
-  } catch (e) {
-    console.warn('App catalog force refresh failed', e);
+    if (typeof ksuGlobal()?.getPackagesInfo === 'function') {
+      img.src = 'ksu://icon/' + pkg;
+      return;
+    }
+    fail();
+  }
+
+  destroy(): void {
+    this.observer?.disconnect();
+    this.observer = null;
   }
 }
 
@@ -187,6 +254,8 @@ export async function openTargetAppsManager() {
   let showSystemApps = false;
   let sysPkgs: string[] = [];
   let mode: Mode = 'target';
+
+  const iconMgr = new AppIconManager();
 
   document.body.appendChild(overlay);
 
@@ -204,6 +273,7 @@ export async function openTargetAppsManager() {
   let blPkgs = new Set<string>();
 
   function closeOverlay() {
+    iconMgr.destroy();
     window.isOverlayOpen = false;
     window.removeEventListener('popstate', closeOverlay);
     overlay.classList.remove('ta-overlay--open');
@@ -302,7 +372,7 @@ export async function openTargetAppsManager() {
   });
 
   overlay.querySelector('#ta-import-denylist')!.addEventListener('click', async () => {
-    const { stdout } = await exec('magisk --denylist ls 2>/dev/null | awk -F\'|\' \'{print $1}\' | grep -v "isolated" | sort -u || echo ""');
+    const { stdout } = await shellExec('magisk --denylist ls 2>/dev/null | awk -F\'|\' \'{print $1}\' | grep -v "isolated" | sort -u || echo ""');
     const pkgs = stdout.split('\n').map(s => s.trim()).filter(Boolean);
     if (pkgs.length === 0) {
       showToast(t('ta_prompt_denylist_failed', 'Failed to read DenyList'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
@@ -329,15 +399,15 @@ export async function openTargetAppsManager() {
     const headline = menuItem.querySelector('[slot="headline"]')!;
     if (showSystemApps) {
       if (sysPkgs.length === 0) {
-        const { stdout } = await exec('pm list packages -s 2>/dev/null | cut -d: -f2');
+        const { stdout } = await shellExec('pm list packages -s 2>/dev/null | cut -d: -f2');
         sysPkgs = stdout.split('\n').map(s => s.trim()).filter(Boolean);
       }
       const existingPkgs = new Set(apps.map(a => a.packageName));
-      const labelMap = await loadAppLabels(sysPkgs);
+      const labelMap = await resolvePackageNames(sysPkgs);
 
       let blSet = new Set<string>();
       if (mode === 'blacklist') {
-        const { stdout } = await exec(`cat ${specterDir()}/blacklist.txt 2>/dev/null || echo ""`);
+        const { stdout } = await shellExec(`cat ${specterDir()}/blacklist.txt 2>/dev/null || echo ""`);
         blSet = new Set(stdout.split('\n').map(s => s.trim()).filter(Boolean));
       }
 
@@ -362,12 +432,12 @@ export async function openTargetAppsManager() {
 
   async function loadData() {
     try {
-      const [{ stdout: targetRaw }, { stdout: userRaw }] = await Promise.all([
+      const [targetResult, pkgs] = await Promise.all([
         exec(`cat ${TRICKY_DIR}/target.txt 2>/dev/null || echo ""`),
-        exec('pm list packages -3 2>/dev/null | cut -d: -f2'),
+        fetchUserPackages(),
       ]);
 
-      const targetLines = targetRaw.split('\n').map(s => s.trim()).filter(Boolean);
+      const targetLines = targetResult.stdout.split('\n').map(s => s.trim()).filter(Boolean);
       targetMap.clear();
       for (const line of targetLines) {
         if (line.endsWith('!')) targetMap.set(line.slice(0, -1), 'force');
@@ -375,13 +445,9 @@ export async function openTargetAppsManager() {
         else targetMap.set(line, 'bare');
       }
 
-      const allPkgs = new Set<string>();
-      for (const line of userRaw.split('\n').map(s => s.trim()).filter(Boolean)) allPkgs.add(line);
+      const labelMap = await resolvePackageNames(pkgs);
 
-      const installedPkgs = Array.from(allPkgs).sort();
-      const labelMap = await loadAppLabels(installedPkgs);
-
-      apps = installedPkgs.map(pkg => ({
+      apps = pkgs.map(pkg => ({
         packageName: pkg,
         appName: labelMap.get(pkg) || pkg,
         state: targetMap.get(pkg) || 'unchecked',
@@ -407,6 +473,8 @@ export async function openTargetAppsManager() {
       item.dataset.package = app.packageName;
       item.dataset.state = app.state;
 
+      const { wrap: iconContainer } = iconMgr.createElements(app.packageName);
+
       const label = document.createElement('div');
       label.className = 'ta-item-content';
 
@@ -426,12 +494,12 @@ export async function openTargetAppsManager() {
       circle.setAttribute('data-state', app.state);
       circle.setAttribute('aria-label', t(stateLabelKey(app.state, mode), app.state));
 
-      const icon = stateIcons(app.state, mode);
-      const text = stateText(app.state, mode);
-      circle.innerHTML = icon
-        ? `<md-icon class="ta-state-icon">${icon}</md-icon>`
-        : text
-          ? `<span class="ta-state-icon ta-state-text">${text}</span>`
+      const stateIcon = stateIcons(app.state, mode);
+      const stateTextVal = stateText(app.state, mode);
+      circle.innerHTML = stateIcon
+        ? `<md-icon class="ta-state-icon">${stateIcon}</md-icon>`
+        : stateTextVal
+          ? `<span class="ta-state-icon ta-state-text">${stateTextVal}</span>`
           : '';
 
       function applyAppState(newState: AppState) {
@@ -482,6 +550,7 @@ export async function openTargetAppsManager() {
       });
 
       const ripple = document.createElement('md-ripple');
+      item.appendChild(iconContainer);
       item.appendChild(label);
       item.appendChild(circle);
       item.appendChild(ripple);
@@ -496,6 +565,8 @@ export async function openTargetAppsManager() {
       empty.textContent = t('ta_no_results', 'No apps match your filter');
       list.appendChild(empty);
     }
+
+    iconMgr.watchAll();
   }
 
   function applyFilters() {

@@ -1,6 +1,12 @@
+export interface PackageInfo {
+  packageName: string;
+  appLabel: string;
+}
+
 export interface KsuBridge {
   exec(command: string, options: string, callback: string): void;
   spawn?(program: string, args: string, options: string, name: string): void;
+  getPackagesInfo?(packagesJson: string): string;
 }
 
 export type ChildEventCallback = (...args: unknown[]) => void;

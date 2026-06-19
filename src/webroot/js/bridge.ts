@@ -1,6 +1,6 @@
 import { shellEscape } from './utils.js';
 import { EXEC_TIMEOUT_MS } from './constants.js';
-import type { ModulePaths, ScriptResult, ExecResult, ChildProcess } from './types.js';
+import type { ModulePaths, ScriptResult, ExecResult, ChildProcess, PackageInfo } from './types.js';
 import { setGlobal, deleteGlobal } from './window-global.js';
 import { BridgeError, ScriptError, TimeoutError } from './errors.js';
 
@@ -53,6 +53,19 @@ function scriptDir(type: string): string {
 function getExecutor(): string | null {
   if (typeof window.ksu?.exec === 'function') return 'ksu';
   return null;
+}
+
+/** Resolve app labels for the given packages via the KernelSU native API.
+ *  Returns null when the API is unavailable. */
+export function getPackagesInfo(packages: string[]): PackageInfo[] | null {
+  const fn = (globalThis as any).ksu?.getPackagesInfo;
+  if (typeof fn !== 'function') return null;
+  try {
+    const raw = fn(JSON.stringify(packages));
+    return JSON.parse(raw) as PackageInfo[];
+  } catch {
+    return null;
+  }
 }
 
 function genCallbackName(): string {
