@@ -6,5 +6,6 @@ export default defineConfig({
   build: {
     outDir: '../../Module/webroot',
     emptyOutDir: true,
+    target: 'es2019',
   },
 })

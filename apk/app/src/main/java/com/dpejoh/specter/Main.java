@@ -24,15 +24,20 @@ public class Main {
     private static final String ALIAS = "specter_tee_check";
     private static final String ATTESTATION_OID = "1.3.6.1.4.1.11129.2.1.17";
 
+    // ASN.1 tag constants matching TEESimulator's AttestationConstants
+    private static final int KEY_DESCRIPTION_TEE_ENFORCED_INDEX = 7;
+    private static final int ROOT_OF_TRUST_VERIFIED_BOOT_HASH_INDEX = 3;
+    private static final int TAG_ROOT_OF_TRUST = 704;
+
     public static void main(String[] args) {
         String specterDir = "/data/adb/specter";
         if (args.length > 0) specterDir = args[0];
 
         prepareEnvironment();
 
-        boolean teeFunctional = checkTeeFunctional();
-        String hash = extractBootHash();
+        String hash = runAttestationCheck();
 
+        boolean teeFunctional = hash != null;
         Log.i(TAG, "TEE status: " + (teeFunctional ? "normal" : "broken"));
         if (hash != null) Log.i(TAG, "Boot hash: " + hash);
 
@@ -61,40 +66,41 @@ public class Main {
         }
     }
 
-    private static boolean checkTeeFunctional() {
+    private static String runAttestationCheck() {
         try {
             KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
             keyStore.load(null);
             if (keyStore.containsAlias(ALIAS)) keyStore.deleteEntry(ALIAS);
 
-            KeyPairGenerator kpg = KeyPairGenerator.getInstance(
-                    KeyProperties.KEY_ALGORITHM_EC, "AndroidKeyStore");
             byte[] challenge = new byte[16];
             new SecureRandom().nextBytes(challenge);
-            kpg.initialize(new KeyGenParameterSpec.Builder(ALIAS, KeyProperties.PURPOSE_SIGN)
+            KeyGenParameterSpec spec = new KeyGenParameterSpec.Builder(
+                    ALIAS, KeyProperties.PURPOSE_SIGN)
                     .setAlgorithmParameterSpec(new ECGenParameterSpec("secp256r1"))
                     .setDigests(KeyProperties.DIGEST_SHA256)
                     .setAttestationChallenge(challenge)
-                    .build());
+                    .build();
+            KeyPairGenerator kpg = KeyPairGenerator.getInstance(
+                    KeyProperties.KEY_ALGORITHM_EC, "AndroidKeyStore");
+            kpg.initialize(spec);
             kpg.generateKeyPair();
-            return true;
-        } catch (Exception e) {
-            Log.w(TAG, "TEE check failed", e);
-            return false;
-        }
-    }
 
-    private static String extractBootHash() {
-        try {
-            KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
-            keyStore.load(null);
             Certificate[] chain = keyStore.getCertificateChain(ALIAS);
             keyStore.deleteEntry(ALIAS);
-            if (chain == null || chain.length == 0) return null;
+            if (chain == null || chain.length == 0) {
+                Log.w(TAG, "Empty certificate chain");
+                return null;
+            }
+
             byte[] ext = ((X509Certificate) chain[0]).getExtensionValue(ATTESTATION_OID);
-            if (ext == null) return null;
+            if (ext == null) {
+                Log.w(TAG, "No attestation extension");
+                return null;
+            }
+
             return parseBootHash(ext);
         } catch (Exception e) {
+            Log.w(TAG, "Full attestation failed", e);
             return null;
         }
     }
@@ -102,32 +108,33 @@ public class Main {
     private static String parseBootHash(byte[] ext) {
         try {
             DerReader r = new DerReader(ext);
-            r = new DerReader(r.read().value);
-            DerReader fields = new DerReader(r.read().value);
-            int fieldCount = 0;
+            byte[] keyDesc = r.read().value;            // unwrap OCTET STRING
+            byte[] fields = r.read(keyDesc).value;       // KeyDescription SEQUENCE
+
+            r = new DerReader(fields);
+            int idx = 0;
             while (true) {
-                DerTlv f = fields.read();
+                DerTlv f = r.read();
                 if (f == null) break;
-                if (fieldCount == 7) {
-                    DerReader teeFields = new DerReader(f.value);
+                if (idx == KEY_DESCRIPTION_TEE_ENFORCED_INDEX) {
+                    DerReader tee = new DerReader(f.value);
                     while (true) {
-                        DerTlv t = teeFields.read();
+                        DerTlv t = tee.read();
                         if (t == null) break;
-                        if (t.tag == 704) {
-                            DerReader inner = new DerReader(t.value);
-                            DerTlv rotSeq = inner.read();
-                            DerReader rotFields = new DerReader(rotSeq.value);
-                            int rotCount = 0;
-                            while (true) {
-                                DerTlv rf = rotFields.read();
-                                if (rf == null) break;
-                                if (rotCount == 3) return bytesToHex(rf.value);
-                                rotCount++;
+                        if (t.tag == TAG_ROOT_OF_TRUST) {
+                            byte[] rotSeq = tee.read(t.value).value;
+                            DerReader rot = new DerReader(rotSeq);
+                            for (int i = 0; i <= ROOT_OF_TRUST_VERIFIED_BOOT_HASH_INDEX; i++) {
+                                DerTlv rf = rot.read();
+                                if (rf == null) return null;
+                                if (i == ROOT_OF_TRUST_VERIFIED_BOOT_HASH_INDEX) {
+                                    return bytesToHex(rf.value);
+                                }
                             }
                         }
                     }
                 }
-                fieldCount++;
+                idx++;
             }
         } catch (Exception e) {
             Log.w(TAG, "Failed to parse boot hash", e);
@@ -157,7 +164,6 @@ public class Main {
 
         DerTlv read() {
             if (pos >= data.length) return null;
-            int start = pos;
             int tag = data[pos++] & 0xFF;
             int tagNum = tag & 0x1F;
             if (tagNum == 0x1F) tagNum = readTagNumber();
@@ -168,6 +174,8 @@ public class Main {
             pos += len;
             return new DerTlv(tagNum, val);
         }
+
+        DerTlv read(byte[] value) { return new DerReader(value).read(); }
 
         private int readTagNumber() {
             int num = 0;
