@@ -1,11 +1,13 @@
 # shellcheck shell=sh
-STD_ALPHABET="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-SHUFFLED_ALPHABET="1dgWnocayqxU3r6vA5lCIPYfHmkV08b4tz+KMsp2NQ9LRXihODwSj7BEFJ/ZuGTe"
+# Alphabet variables are defined in decode.sh (sourced via common.sh)
 
 decode_keybox_blob() {
   _dkb_in="$1" _dkb_out="$2"
-  tr "$SHUFFLED_ALPHABET" "$STD_ALPHABET" < "$_dkb_in" | base64 -d > "$_dkb_out"
-  unset _dkb_in _dkb_out
+  _dkb_tmp="/data/local/tmp/_dkb_$$.tmp"
+  decode_substitution "$_dkb_in" "$_dkb_tmp" 2>/dev/null || { rm -f "$_dkb_tmp"; return 1; }
+  base64 -d < "$_dkb_tmp" > "$_dkb_out" 2>/dev/null || { rm -f "$_dkb_tmp"; return 1; }
+  rm -f "$_dkb_tmp"
+  unset _dkb_in _dkb_out _dkb_tmp
 }
 
 # shellcheck disable=SC3057,SC3052

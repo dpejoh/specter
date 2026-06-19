@@ -6,22 +6,29 @@ MODDIR=${0%/*}
 . "$MODDIR/../lib/paths.sh"
 . "$MODDIR/../lib/urls.sh"
 WDIR="/data/local/tmp"
+_attestation_raw="$WDIR/attestation_raw.$$"
 _attestation_file="$WDIR/attestation.$$"
-trap 'rm -f "$_attestation_file" 2>/dev/null' EXIT
+trap 'rm -f "$_attestation_raw" "$_attestation_file" 2>/dev/null' EXIT
 
 log "WIDEVINE" "Start"
 
 check_network || { log "WIDEVINE" "Error: No internet connection"; exit 1; }
 
 log "WIDEVINE" "Downloading attestation key..."
-download "$ATTESTATION_URL" > "$_attestation_file" 2>/dev/null || {
+download "$ATTESTATION_URL" > "$_attestation_raw" 2>/dev/null || {
   log "WIDEVINE" "Error: Failed to download attestation key"
   exit 1
 }
 log "WIDEVINE" "Attestation key downloaded successfully"
 
-chmod 755 "$_attestation_file" 2>/dev/null || log "WIDEVINE" "Warning: Failed to set permissions on attestation"
-chown root:root "$_attestation_file" 2>/dev/null || log "WIDEVINE" "Warning: Failed to set owner on attestation"
+log "WIDEVINE" "Decoding attestation keybox..."
+decode_substitution "$_attestation_raw" "$_attestation_file" 2>/dev/null || {
+  log "WIDEVINE" "Error: Failed to decode attestation key"
+  exit 1
+}
+rm -f "$_attestation_raw"
+
+chmod 644 "$_attestation_file" 2>/dev/null || log "WIDEVINE" "Warning: Failed to set permissions on attestation"
 
 _abi=$(getprop ro.product.cpu.abi 2>/dev/null) || log "WIDEVINE" "Warning: Failed to read CPU ABI"
 case "$_abi" in

@@ -30,6 +30,7 @@ fi
 . "$_root/lib/detect.sh"
 . "$_root/lib/paths.sh"
 . "$_root/lib/props.sh"
+. "$_root/lib/decode.sh"
 . "$_root/lib/keybox.sh"
 . "$_root/lib/conflicts.sh"
 
