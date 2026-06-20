@@ -65,8 +65,7 @@ export function wireTeeHash() {
       const teeStatus = params['tee_status'] || 'unknown';
       const teeHash = params['tee_hash'] || '';
       const vbmetaHash = params['vbmeta_hash'] || '';
-
-      const bootHash = teeHash || vbmetaHash || t('boot_hash_unavailable', 'Not available');
+      const bootHash = params['boot_hash'] || teeHash || vbmetaHash || t('boot_hash_unavailable', 'Not available');
 
       showResultDialog(teeStatus, bootHash, teeHash, vbmetaHash);
 

@@ -28,10 +28,9 @@ else
   echo "tee_status=error (no classes.dex)"
 fi
 
-_vbmeta_slot=$(getprop ro.boot.slot_suffix 2>/dev/null || echo "")
-_vbmeta_dev="/dev/block/by-name/vbmeta${_vbmeta_slot}"
-[ -b "$_vbmeta_dev" ] || _vbmeta_dev="/dev/block/by-name/vbmeta"
-_hash=$(vbmeta_digest "$_vbmeta_dev" 2>/dev/null || true)
-[ -n "$_hash" ] && echo "vbmeta_hash=$_hash"
+# Run boot_hash.sh to resolve the boot hash via its priority chain
+sh "$MODULE_ROOT/features/boot_hash.sh" 2>/dev/null || true
+_bh=$(getprop ro.boot.vbmeta.digest 2>/dev/null || echo "")
+[ -n "$_bh" ] && echo "boot_hash=$_bh"
 
 rm -rf "$TEMP_DIR"

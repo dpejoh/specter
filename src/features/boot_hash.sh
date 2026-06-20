@@ -6,18 +6,33 @@ MODDIR=${0%/*}
 
 log "BOOT_HASH" "Start"
 
+# BRENE cooperation: if BRENE is installed and has priority,
+# compute boot hash and write it to BRENE's config instead of setting the prop directly
+if [ -d "/data/adb/modules/brene" ] && [ "$(cfg_get conflict_brene priority_module)" = "priority_module" ]; then
+  _set_hash() {
+    _sh="$1"
+    ensure_dir "$SPECTER_DIR"
+    echo "$_sh" > "$VBMETA_DIGEST"
+    if [ -f "/data/adb/brene/config.sh" ]; then
+      sed -i "s/^config_verified_boot_hash=.*/config_verified_boot_hash='$_sh'/" /data/adb/brene/config.sh
+    fi
+    log "BOOT_HASH" "Wrote $_sh to BRENE config"
+  }
+  apply_vbmeta_props() { :; }
+else
+  _set_hash() {
+    resetprop -n ro.boot.vbmeta.digest "$1"
+    ensure_dir "$SPECTER_DIR"
+    echo "$1" > "$VBMETA_DIGEST"
+    log "BOOT_HASH" "Set: $1"
+  }
+fi
+
 _is_zero() {
   case "$1" in
     0000000000000000000000000000000000000000000000000000000000000000|0*0|"") return 0 ;;
     *) return 1 ;;
   esac
-}
-
-_set_hash() {
-  resetprop -n ro.boot.vbmeta.digest "$1"
-  ensure_dir "$SPECTER_DIR"
-  echo "$1" > "$VBMETA_DIGEST"
-  log "BOOT_HASH" "Set: $1"
 }
 
 # Priority 1: TEESimulator-RS boot_hash.bin (if present)

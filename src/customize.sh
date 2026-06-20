@@ -32,10 +32,6 @@ case "$_ts_name" in
 esac
 unset _ts_name
 
-_pif_name=$(_pif_prop)
-[ -n "$_pif_name" ] && ui_print "- $_pif_name found"
-unset _pif_name
-
 # TEE status check, read from cache only
 _tee=
 if [ -f "$TEE_STATUS" ]; then
@@ -58,37 +54,32 @@ if [ "$_ts_found" = true ]; then
   ui_print " >> First-boot setup: backup, target, security patch, keybox, PIF (next reboot)"
 else
   ui_print ""
-  ui_print "- Tricky Store not found, checking for TEESimulator-RS..."
-  check_network 2>/dev/null || { ui_print "- No network, skipping download"; true; }
-  _gh_json=$(download "https://api.github.com/repos/Enginex0/TEESimulator-RS/releases/latest" "" 2>/dev/null) || _gh_json=""
-  _dl_url=$(echo "$_gh_json" | grep '"browser_download_url":' | sed 's/.*"browser_download_url": *"\([^"]*\)".*/\1/')
-  if [ -n "$_dl_url" ]; then
-    _ts_zip="$MODPATH/teesimulator-rs.zip"
-    case "$_dl_url" in
-      *Debug*) ui_print "- Latest release is Debug-only, skipping" ;;
-      *)
-        ui_print "- Downloading TEESimulator-RS..."
-        download "$_dl_url" "$_ts_zip" 2>/dev/null && {
-          ui_print "- Installing TEESimulator-RS..."
-          _ts_ok=1
-          case "$ROOT_SOL" in
-            magisk)  magisk --install-module "$_ts_zip" >/dev/null 2>&1 && _ts_ok=0 ;;
-            kernelsu) ksud module install "$_ts_zip" >/dev/null 2>&1 && _ts_ok=0 ;;
-            apatch)  apd module install "$_ts_zip" >/dev/null 2>&1 && _ts_ok=0 ;;
-            *)       ui_print "- Unknown root ($ROOT_SOL), zip saved to $_ts_zip"; _ts_ok=0 ;;
-          esac
-          [ "$_ts_ok" = 0 ] && ui_print "- TEESimulator-RS installed" || ui_print "- Install failed"
-          unset _ts_ok
-        } || ui_print "- Download failed"
-        rm -f "$_ts_zip"
-        ;;
-    esac
+  ui_print "- Tricky Store or TEESimulator not found"
+  ui_print "- Installing TEESimulator-RS.."
+  if install_module_from_github "Enginex0/TEESimulator-RS" "TEESimulator-RS"; then
+    ui_print "- TEESimulator-RS installed"
   else
-    ui_print "- Could not fetch TEESimulator-RS release info"
+    ui_print "- TEESimulator-RS not available"
   fi
-  unset _gh_json _dl_url _ts_zip
 fi
 unset _ts_found
+
+# PIF detection and install
+_pif_name=$(_pif_prop) || _pif_name=""
+if [ -z "$_pif_name" ]; then
+  ui_print ""
+  ui_print "- Play Integrity Fix not found"
+  ui_print "- Installing PlayIntegrityFix by KOWX712.."
+  if install_module_from_github "KOWX712/PlayIntegrityFix" "Play Integrity Fix"; then
+    ui_print "- Play Integrity Fix installed"
+  else
+    ui_print "- Play Integrity Fix not available"
+  fi
+else
+  ui_print ""
+  ui_print "- $_pif_name found"
+fi
+unset _pif_name
 
 # Mark first-boot setup as pending (runs once after reboot in service.sh)
 touch "$MODPATH/.first_boot_pending"

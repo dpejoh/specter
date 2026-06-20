@@ -34,9 +34,7 @@ detect_root_solution() {
 }
 
 _pif_prop() {
-  [ ! -d "/data/adb/Box-Brain" ] || return 1
-  [ -f "$MODULES_BASE/playintegrityfix/module.prop" ] || return 1
-  grep "^name=" "$MODULES_BASE/playintegrityfix/module.prop" 2>/dev/null | cut -d= -f2
+  module_detect "playintegrityfix"
 }
 
 _ts_prop() {

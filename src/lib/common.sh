@@ -27,6 +27,7 @@ fi
 . "$_root/lib/log.sh"
 . "$_root/lib/util.sh"
 . "$_root/lib/network.sh"
+. "$_root/lib/modules.sh"
 . "$_root/lib/detect.sh"
 . "$_root/lib/paths.sh"
 . "$_root/lib/props.sh"

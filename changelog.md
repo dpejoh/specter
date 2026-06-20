@@ -1,3 +1,21 @@
+# v1.4.4.12
+
+**New**
+- BRENE conflict resolution (passive, boot_hardening/prop_handler/boot_hash)
+- boot_hash.sh writes computed hash to BRENE's config when BRENE has priority
+- `install_module_from_github()` + `module_detect()` in new `lib/modules.sh` — shared module download, install & detection
+- PIF auto-install in action.sh & customize.sh (KOWX712/PlayIntegrityFix)
+
+**Changed**
+- customize.sh uses shared functions for TEESimulator-RS & PIF detection/install
+- `module_install.sh` renamed to `modules.sh`
+- common.sh sources modules.sh
+
+**Fixed**
+- `vbmeta_digest()` in `vbmeta.sh` — fixed variable pollution, footer size, and shell syntax bugs
+- `boot_hash.sh` now called from `service.sh`; redundant digest set removed from `props.sh`
+- TEE & Boot Hash popup uses `boot_hash.sh` priority chain instead of raw TEE hash
+
 # v1.4.4.11
 
 **New**
