@@ -302,5 +302,8 @@
   "tee_tier_unknown": "Unknown",
   "boot_hash_tee": "BHash (TEE)",
   "boot_hash_prop": "BHash (Prop)",
-  "boot_hash_calc": "BHash (Calc)"
+  "boot_hash_calc": "BHash (Calc)",
+  "export_logs_title": "Export Logs",
+  "export_logs_desc": "Save all Specter debug logs to /sdcard/Download/",
+  "support_section": "Support"
 }
