@@ -23,22 +23,23 @@ _append_section() {
 }
 
 log "EXPORT" "Collecting files from $SPECTER_DIR"
-for _f in "$SPECTER_DIR"/* "$SPECTER_DIR"/log/*; do
+
+for _f in "$SPECTER_DIR"/*; do
   [ -f "$_f" ] || continue
   _basename=$(basename "$_f")
-  case "$_basename" in
-    *.log)
-      log "EXPORT" "Adding $_basename (log)"
-      _append_section "===" "$_basename" "$_f"
-      ;;
-    *.json|*.txt|*.pid|*.state|*.flags|*.cfg|*.conf)
-      log "EXPORT" "Adding $_basename (status)"
-      _append_section "---" "$_basename" "$_f"
-      ;;
-  esac
+  log "EXPORT" "Adding $_basename"
+  _append_section "---" "$_basename" "$_f"
+done
+
+for _f in "$SPECTER_DIR"/log/*; do
+  [ -f "$_f" ] || continue
+  _basename=$(basename "$_f")
+  log "EXPORT" "Adding $_basename (log)"
+  _append_section "===" "$_basename" "$_f"
 done
 
 log "EXPORT" "Export complete"
 echo ""
 echo "Logs exported to: $OUTPUT_FILE"
+log "EXPORT" "Finish"
 exit 0

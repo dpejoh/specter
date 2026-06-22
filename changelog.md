@@ -1,4 +1,4 @@
-# v1.4.4.15
+# v1.4.4
 
 **New**
 - Pull-to-refresh on App Targeting page

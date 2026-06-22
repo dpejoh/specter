@@ -34,24 +34,26 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit
 
-      - name: Extract version from module.prop
+      - name: Extract version and generate build info
         id: version
         run: |
-          VERSION=$(grep '^version=' src/module.prop | cut -d= -f2)
-          VERSION_CODE=$(grep '^versionCode=' src/module.prop | cut -d= -f2)
-          if [ -z "$VERSION" ] || [ -z "$VERSION_CODE" ]; then
-            echo "Version not found in src/module.prop"
-            exit 1
-          fi
+          BASE_VER=$(grep '^version=' src/module.prop | cut -d= -f2)
+          BUILD=$(grep '^versionCode=' src/module.prop | cut -d= -f2)
           TAG="${GITHUB_REF#refs/tags/}"
-          TAG="${TAG#v}"
-          if [ "$TAG" != "$VERSION" ]; then
-            echo "Tag ($TAG) does not match module.prop version ($VERSION)"
+          if [ "${TAG#v}" != "$BASE_VER" ]; then
+            echo "Tag ($TAG) does not match module.prop version ($BASE_VER)"
             exit 1
           fi
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "raw_version=$(echo $VERSION | sed 's/v//')" >> $GITHUB_OUTPUT
+          HASH=$(git rev-parse --short=7 HEAD)
+          FULL_VERSION="${BASE_VER}-${BUILD}-g${HASH}"
+          MAJOR=$(echo "$BASE_VER" | cut -d. -f1)
+          MINOR=$(echo "$BASE_VER" | cut -d. -f2)
+          PATCH=$(echo "$BASE_VER" | cut -d. -f3)
+          VERSION_CODE=$((MAJOR * 10000 + MINOR * 1000 + PATCH * 100 + BUILD))
+          echo "version=$FULL_VERSION" >> $GITHUB_OUTPUT
+          echo "base_version=$BASE_VER" >> $GITHUB_OUTPUT
           echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
 
       - name: Build
         run: npm run build
@@ -185,15 +187,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${{ steps.version.outputs.version }}" \
+          gh release create "${{ steps.version.outputs.tag }}" \
             --title "Specter ${{ steps.version.outputs.version }}" \
             --notes-file release-notes.md \
             "Specter-${{ steps.version.outputs.version }}.zip"
 
       - name: Update update.json
         run: |
-          ZIP_URL="https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.version }}/Specter-${{ steps.version.outputs.version }}.zip"
-          jq --arg v "${{ steps.version.outputs.raw_version }}" \
+          ZIP_URL="https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/Specter-${{ steps.version.outputs.version }}.zip"
+          jq --arg v "${{ steps.version.outputs.base_version }}" \
              --argjson vc "${{ steps.version.outputs.version_code }}" \
              --arg url "$ZIP_URL" \
              '.version = $v | .versionCode = $vc | .zipUrl = $url' \
@@ -207,6 +209,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "chore: bump update.json to ${{ steps.version.outputs.version }} [skip ci]"
+            git commit -m "chore: bump update.json to v${{ steps.version.outputs.base_version }} [skip ci]"
             git push origin HEAD:main
           fi

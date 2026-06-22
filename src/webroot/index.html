@@ -253,17 +253,6 @@
               <md-ripple></md-ripple>
             </div>
 
-            <div class="list-item" data-script="target.sh">
-              <div class="li-icon"><md-icon aria-hidden="true">playlist_add_check</md-icon></div>
-              <div class="list-item-content">
-                <div class="toggle-text" data-i18n="menu_target">Set target.txt</div>
-                <span class="supporting-text" data-i18n="menu_target_desc">Fully regenerates Tricky Store target.txt with all installed apps</span>
-              </div>
-              <div class="spacer"></div>
-              <md-circular-progress indeterminate class="action-spinner hidden"></md-circular-progress>
-              <md-ripple></md-ripple>
-            </div>
-
             <div class="list-item" id="security-patch-btn">
               <div class="li-icon"><md-icon aria-hidden="true">security_update_good</md-icon></div>
               <div class="list-item-content">
@@ -347,6 +336,20 @@
 
           </div>
 
+          <h2 class="list-title" data-i18n="tools_support_section">Support</h2>
+          <div class="list-container">
+            <div class="list-item" data-script="export_logs.sh">
+              <div class="li-icon"><md-icon aria-hidden="true">bug_report</md-icon></div>
+              <div class="list-item-content">
+                <div class="toggle-text" data-i18n="advance_export_logs">Export Logs</div>
+                <span class="supporting-text" data-i18n="advance_export_logs_desc">Save all Specter debug logs to /sdcard/Download/</span>
+              </div>
+              <div class="spacer"></div>
+              <md-circular-progress indeterminate class="action-spinner hidden"></md-circular-progress>
+              <md-ripple></md-ripple>
+            </div>
+          </div>
+
           <h2 class="list-title danger-zone-title" data-i18n="tools_danger_zone">Danger Zone</h2>
           <p class="danger-zone-desc" data-i18n="tools_danger_zone_desc">Destructive operations that may affect your device</p>
           <div class="list-container">
@@ -405,24 +408,9 @@
               <md-ripple></md-ripple>
             </div>
           </div>
-
-          <h2 class="list-title" data-i18n="support_section">Support</h2>
-          <div class="list-container">
-            <div class="list-item" data-script="export_logs.sh">
-              <div class="li-icon"><md-icon aria-hidden="true">bug_report</md-icon></div>
-              <div class="list-item-content">
-                <div class="toggle-text" data-i18n="export_logs_title">Export Logs</div>
-                <span class="supporting-text" data-i18n="export_logs_desc">Save all Specter debug logs to /sdcard/Download/</span>
-              </div>
-              <div class="spacer"></div>
-              <md-circular-progress indeterminate class="action-spinner hidden"></md-circular-progress>
-              <md-ripple></md-ripple>
-            </div>
-          </div>
         </section>
 
         <section id="control-page" hidden>
-
           <h2 class="list-title" data-i18n="control_boot_title">Boot Behavior</h2>
           <div class="list-container" id="control-boot-container"></div>
 

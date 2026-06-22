@@ -164,6 +164,9 @@ function buildOverlayHTML(): string {
         <md-menu-item id="ta-mode">
           <div slot="headline">${t('ta_mode_menu', 'Default Mode')}</div>
         </md-menu-item>
+        <md-menu-item id="ta-regenerate">
+          <div slot="headline">${t('ta_regenerate', 'Regenerate')}</div>
+        </md-menu-item>
         <md-menu-item id="ta-toggle-system">
           <div slot="headline">${t('ta_show_system', 'Show system apps')}</div>
         </md-menu-item>
@@ -433,6 +436,11 @@ export async function openTargetAppsManager() {
     closeTapMenu();
   });
 
+  overlay.querySelector('#ta-regenerate')!.addEventListener('click', () => {
+    closeTapMenu();
+    openRegenerateDialog();
+  });
+
   overlay.querySelector('#ta-mode')!.addEventListener('click', () => {
     closeTapMenu();
     openModeDialog();
@@ -529,6 +537,44 @@ export async function openTargetAppsManager() {
     d.querySelector('.dialog-action-close')!.addEventListener('click', () => d.close());
     d.show();
     paintSeg(d);
+  }
+
+  function openRegenerateDialog() {
+    const d = document.createElement('md-dialog');
+    d.innerHTML = `
+      <div slot="headline">${t('ta_regenerate', 'Regenerate')}</div>
+      <div slot="content">
+        <p class="supporting-text">${t('ta_regenerate_confirm', 'This will re-scan all installed apps and fully rebuild target.txt. Custom per-app states will be overwritten. A backup will be saved.')}</p>
+      </div>
+      <div slot="actions">
+        <md-text-button class="dialog-action-close">${t('dialog_cancel', 'Cancel')}</md-text-button>
+        <md-filled-button id="ta-regenerate-confirm">${t('ta_regenerate', 'Regenerate')}</md-filled-button>
+      </div>
+    `;
+    document.body.appendChild(d);
+    d.addEventListener('close', () => document.body.removeChild(d));
+
+    d.querySelector('#ta-regenerate-confirm')!.addEventListener('click', async () => {
+      d.close();
+      loading.style.display = '';
+      list.style.display = 'none';
+
+      appendToOutput('[TARGET] Regenerating target.txt from all apps...');
+      try {
+        await exec(`sh ${shellEscape(getModuleDir() + '/features/target.sh')}`);
+        appendToOutput('[TARGET] Regeneration complete');
+        showToast(t('ta_regenerate_success', 'Target list regenerated'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
+        await refreshApps();
+      } catch (e) {
+        appendToOutput(`[TARGET] Regeneration failed: ${e}`, true);
+      } finally {
+        loading.style.display = 'none';
+        list.style.display = '';
+      }
+    });
+
+    d.querySelector('.dialog-action-close')!.addEventListener('click', () => d.close());
+    d.show();
   }
 
   overlay.querySelector('#ta-toggle-system')!.addEventListener('click', async () => {
