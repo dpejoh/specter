@@ -16,6 +16,7 @@ const PRESETS: Record<string, string> = {
 
 let currentPreset: string = 'blue';
 let currentMappedPreset: string = 'blue';
+let monetSeed: string | null = null;
 
 export async function initTheme(savedMode: string) {
   currentPreset = await cfgGet('theme_preset', 'monet') || 'monet';
@@ -60,25 +61,33 @@ function resolveMode(mode: string): string {
 async function applyMonetPreset(mode: string) {
   const resolved = resolveMode(mode);
   const isDark = resolved === 'dark';
-  let seed = (await cfgGet('monet_seed')) as string | null;
 
-  if (!seed) {
-    seed = await extractMonetColor();
-    if (seed) cfgSet('monet_seed', seed);
+  if (!monetSeed) {
+    monetSeed = await extractMonetColor();
+    if (monetSeed) {
+      try { localStorage.setItem('monet_seed', monetSeed); } catch (e) {}
+    }
   }
 
-  if (!seed) {
+  if (!monetSeed) {
     currentMappedPreset = 'blue';
     applyNamedPreset('blue', isDark);
     return;
   }
 
-  currentMappedPreset = presetClosestTo(seed);
+  currentMappedPreset = presetClosestTo(monetSeed);
   document.documentElement.setAttribute('data-theme', mode);
   document.documentElement.setAttribute('data-theme-preset', 'monet');
   document.documentElement.setAttribute('data-theme-resolved', resolved);
   cfgSet('theme_preset', 'monet');
   applyNamedPreset(currentMappedPreset, isDark);
+}
+
+export function refreshTheme() {
+  if (currentPreset === 'monet') {
+    monetSeed = null;
+    applyMonetPreset(document.documentElement.getAttribute('data-theme') || 'dark');
+  }
 }
 
 function applyMode(mode: string) {
@@ -97,6 +106,7 @@ function applyPreset(preset: string) {
     document.querySelectorAll('.preset-chip').forEach(chip => {
       (chip as HTMLElement & { selected: boolean }).selected = (chip as HTMLElement).dataset.preset === 'monet';
     });
+    monetSeed = null;
     applyMonetPreset(document.documentElement.getAttribute('data-theme') || 'dark');
     return;
   }

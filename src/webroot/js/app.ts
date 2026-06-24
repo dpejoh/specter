@@ -151,7 +151,7 @@ async function wireConflictToggles() {
     const prettyFeatures = mod.features
       ? [...new Set(mod.features.split(',').map(f => f.trim()).map(f => {
           const key = FEATURE_I18N_KEYS[f];
-          return key ? t(key) || f : f;
+          return key ? t(key, f) : f;
         }))].join(', ')
       : '';
     const featLabel = prettyFeatures ? `${t('conflict_covers', 'Covers')}: ${prettyFeatures} | ` : '';
@@ -190,7 +190,7 @@ async function wireConflictToggles() {
         const prettyFeatures = mod.features
           ? [...new Set(mod.features.split(',').map(f => f.trim()).map(f => {
               const key = FEATURE_I18N_KEYS[f];
-              return key ? t(key) || f : f;
+              return key ? t(key, f) : f;
             }))].join(', ')
           : '';
         const featLabel = prettyFeatures ? `${t('conflict_covers', 'Covers')}: ${prettyFeatures} | ` : '';

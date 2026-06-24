@@ -2,6 +2,7 @@
 MODULE_ROOT="${0%/*}"
 MODULE_ROOT="${MODULE_ROOT%/webroot/common}"
 . "$MODULE_ROOT/lib/vbmeta.sh"
+. "$MODULE_ROOT/lib/paths.sh"
 
 TEMP_DIR="/data/local/tmp/.specter_tee_check"
 rm -rf "$TEMP_DIR" && mkdir -p "$TEMP_DIR"
@@ -28,6 +29,13 @@ if [ -f "$_dex" ]; then
   if [ -f "$TEMP_DIR/tee_tier" ]; then
     echo "tee_tier=$(cat "$TEMP_DIR/tee_tier" | tr -d ' \n')"
   fi
+
+  # Update cached files so device info reflects fresh results
+  mkdir -p "$SPECTER_DIR" 2>/dev/null || true
+  for _f in tee_status tee_hash tee_tier tee_keymaster_version; do
+    [ -f "$TEMP_DIR/$_f" ] && cp "$TEMP_DIR/$_f" "$SPECTER_DIR/$_f"
+  done
+  unset _f
 else
   echo "tee_status=error (no classes.dex)"
 fi

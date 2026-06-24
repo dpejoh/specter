@@ -46,10 +46,10 @@ describe('module.prop', () => {
     expect(Number(vc![1])).toBeGreaterThan(0)
   })
 
-  it('version matches update.json', () => {
+  it('versionCode matches update.json', () => {
     const updateJson = JSON.parse(readFileSync(resolve(PROJECT_ROOT, 'update.json'), 'utf8'))
-    const ver = moduleProp.match(/version=([\d.]+)/)![1]
-    expect(ver).toBe(updateJson.version)
+    const vc = moduleProp.match(/versionCode=(\d+)/)![1]
+    expect(Number(vc)).toBe(updateJson.versionCode)
   })
 })
 
@@ -68,6 +68,7 @@ describe('required files', () => {
     'features/keybox.sh',
     'features/gms.sh',
     'features/boot_hardening.sh',
+    'features/boot_hash.sh',
     'features/adb_disabler.sh',
     'features/tee.sh',
     'webroot/index.html',

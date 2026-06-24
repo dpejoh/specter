@@ -67,7 +67,7 @@ export async function runDevAction(scriptName: string) {
   });
   child.on('exit', (code: number) => {
     appendToOutput(`> ${scriptName} exited (code: ${code})`);
-    addEntry(scriptName, lines.join('\n'));
+    addEntry(scriptName, lines.join('\n'), code);
   });
   child.on('error', (err: Error) => {
     const msg = err.message || getTranslation('simple_toast_error') || 'Failed';
@@ -96,7 +96,7 @@ export async function runSimpleAction(scriptName: string) {
   });
   child.on('exit', (code: number) => {
     appendToOutput(`> ${friendlyName} exited (code: ${code})`);
-    addEntry(scriptName, lines.join('\n'));
+    addEntry(scriptName, lines.join('\n'), code);
     if (dialog) dialog.close();
     if (code !== 0) {
       const errorMsg = lines.find(l => l.includes('Error')) || lines[lines.length - 1] || friendlyName;
@@ -117,7 +117,7 @@ export async function runSimpleAction(scriptName: string) {
   child.on('error', (err: Error) => {
     const msg = err.message || getTranslation('simple_toast_error') || 'Failed';
     appendToOutput(`> Error: ${msg}`, true);
-    addEntry(scriptName, msg);
+    addEntry(scriptName, msg, 1);
     if (dialog) dialog.close();
     showToast(`${getTranslation('simple_toast_error') || 'Failed'}: ${friendlyName}`, {
       icon: 'error', type: 'error',

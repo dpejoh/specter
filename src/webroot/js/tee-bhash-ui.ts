@@ -59,7 +59,7 @@ export function wireTeeHash() {
 
       showResultDialog(teeStatus, teeHash, bootHash, vbmetaHash, teeTier);
 
-      addEntry('check_tee_bhash.sh', stdout);
+      addEntry('check_tee_bhash.sh', stdout, exitCode);
     } catch {
       progress?.close();
       showToast(t('simple_toast_error', 'Failed'), {

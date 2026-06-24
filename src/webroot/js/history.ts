@@ -36,6 +36,7 @@ interface HistoryEntry {
   script: string;
   output: string;
   time: string;
+  code?: number;
 }
 
 export function getHistory(): HistoryEntry[] {
@@ -44,11 +45,11 @@ export function getHistory(): HistoryEntry[] {
   } catch (e) { console.warn('Failed to parse history:', e); return []; }
 }
 
-export function addEntry(scriptName: string, output: string) {
+export function addEntry(scriptName: string, output: string, code?: number) {
   if (typeof output !== 'string') output = String(output || '');
   if (!output.trim()) return;
   const entries = getHistory();
-  entries.unshift({ script: scriptName, output, time: new Date().toISOString() });
+  entries.unshift({ script: scriptName, output, time: new Date().toISOString(), code });
   if (entries.length > MAX_ENTRIES) entries.length = MAX_ENTRIES;
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); } catch (e) { console.warn('Failed to save history:', e); }
 }
@@ -339,10 +340,9 @@ export function renderActivityPreview() {
     },
   };
 
-  function getScriptDescription(script: string, output: string): string {
-    const m = output.match(/exited \(code: (\d+)\)/);
-    const code = m ? parseInt(m[1] ?? '') : (output.includes('[!]') ? 1 : 0);
-    const desc = DESCRIPTION_EXTRACTORS[script]?.(output, code);
+  function getScriptDescription(script: string, output: string, code?: number): string {
+    const exitCode = code ?? (output.includes('[!]') ? 1 : 0);
+    const desc = DESCRIPTION_EXTRACTORS[script]?.(output, exitCode);
     if (desc) return desc.slice(0, 50);
 
     // Fallback: pick first meaningful line
@@ -355,11 +355,11 @@ export function renderActivityPreview() {
     return '';
   }
 
-  function createItem(entry: { script: string; output: string; time: string }): HTMLElement {
-    const isError = (entry.output.includes('[!]') && !entry.output.includes('note:')) || entry.output.toLowerCase().includes('error');
+  function createItem(entry: HistoryEntry): HTMLElement {
+    const isError = entry.code !== undefined ? entry.code !== 0 : (entry.output.includes('[!]') && !entry.output.includes('note:')) || entry.output.toLowerCase().includes('error');
     const i18nKey = getFriendlyNames()[entry.script];
     const friendlyName = (i18nKey && t(i18nKey, '')) || entry.script;
-    const desc = getScriptDescription(entry.script, entry.output);
+    const desc = getScriptDescription(entry.script, entry.output, entry.code);
     const timeAgo = formatRelativeTime(entry.time);
     const statusIcon = isError ? 'error' : 'check_circle';
     const iconType = isError ? 'error' : 'success';

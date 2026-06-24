@@ -39,6 +39,7 @@ SPECTER_DIR='${SPECTER_DIR}'
 _cg_val="\$(su -c "cat \${SPECTER_DIR}/config/toggle_auto_target.val" 2>/dev/null)"
 [ "\${_cg_val:-1}" = "1" ] || exit 0
 su -c "sh \${MODDIR}/features/auto_target.sh" 2>/dev/null || true
+. "\${MODDIR}/lib/paths.sh" 2>/dev/null
 . "\${MODDIR}/lib/desc.sh" 2>/dev/null
 refresh_module_description 2>/dev/null || true
 EOF

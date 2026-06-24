@@ -1,0 +1,12 @@
+project_id_env: CROWDIN_PROJECT_ID
+api_token_env: CROWDIN_PERSONAL_TOKEN
+preserve_hierarchy: true
+files:
+  - source: /src/webroot/lang/source/string.json
+    translation: /src/webroot/lang/%two_letters_code%.json
+    languages_mapping:
+      two_letters_code:
+        zh-CN: zh
+        es-ES: es
+        ar-SA: ar
+        ru-RU: ru

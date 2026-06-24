@@ -1,41 +1,40 @@
-. "$(dirname "$0")/helpers.sh"
-
 plan "app_info.sh — native app label resolution"
 
-# Mock dumpsys for known packages
-_dumpsys() {
-  case "$2" in
-    com.android.vending)
-      echo "  applicationInfo=label=Play Store flags=..."
-      ;;
-    com.google.android.gms)
-      echo "  applicationInfo=label=Google Play Services flags=..."
-      ;;
-    com.dpejoh.specter)
-      echo "  applicationInfo=label=Specter flags=..."
-      ;;
-  esac
-}
-
-# Test that app_info.sh produces correct JSON output by running
-# the core logic with mock commands
-test_json_output() {
-  bootstrap
-
-  # Create a mock dumpsys in PATH
+# Mock dumpsys that returns app labels
+_mock_dumpsys() {
   cat > "$BIN_DIR/dumpsys" << 'MOCK'
 #!/bin/sh
-echo "  applicationInfo=label=Mock App flags=..."
+case "$2" in
+  com.android.vending) echo "  applicationInfo=label=Play Store flags=..." ;;
+  com.google.android.gms) echo "  applicationInfo=label=Google Play Services flags=..." ;;
+  com.dpejoh.specter) echo "  applicationInfo=label=Specter flags=..." ;;
+  *) echo "  applicationInfo=label=$(echo "$2" | tr '.' ' ') flags=..." ;;
+esac
 MOCK
   chmod +x "$BIN_DIR/dumpsys"
+}
 
-  # Create a temp output dir
+# Mock pm that returns third-party packages
+_mock_pm() {
+  cat > "$BIN_DIR/pm" << 'MOCK'
+#!/bin/sh
+echo "package:com.android.vending"
+echo "package:com.google.android.gms"
+echo "package:com.dpejoh.specter"
+MOCK
+  chmod +x "$BIN_DIR/pm"
+}
+
+# Test that app_info.sh produces correct JSON output
+test_json_output() {
+  bootstrap
+  _mock_dumpsys
+  _mock_pm
+
   _out_dir="$TEST_ROOT/output"
   mkdir -p "$_out_dir"
 
-  # Run the script logic directly with overridden variables
   PATH="$BIN_DIR:/usr/bin:/bin" \
-  MODDIR="$REPO_ROOT/src" \
   SPECTER_DIR="$_out_dir" \
   sh "$REPO_ROOT/src/features/app_info.sh" 2>/dev/null; _rc=$?
 
@@ -45,23 +44,24 @@ MOCK
   _json=$(cat "$_out_dir/app_labels.json" 2>/dev/null)
   assert_contains "JSON starts with {" "$_json" "{"
   assert_contains "JSON ends with }" "$_json" "}"
-  assert_contains "contains package" "$_json" "com.android.vending"
-  assert_contains "contains label" "$_json" "Mock"
+  assert_contains "contains vending" "$_json" "com.android.vending"
+  assert_contains "contains specter" "$_json" "com.dpejoh.specter"
+  assert_contains "label includes Play Store" "$_json" "Play Store"
 
   _opens=$(printf '%s' "$_json" | tr -cd '{' | wc -c)
   _closes=$(printf '%s' "$_json" | tr -cd '}' | wc -c)
   assert_eq "JSON braces balanced" "$_opens" "$_closes"
 }
 
-# Test fallback when dumpsys is unavailable (labels = package names)
+# Test fallback when dumpsys fails (labels = package names)
 test_dumpsys_fallback() {
   bootstrap
 
   _out_dir="$TEST_ROOT/output"
   mkdir -p "$_out_dir"
 
+  # No dumpsys in PATH — script should fall back to package names
   PATH="$BIN_DIR:/usr/bin:/bin" \
-  MODDIR="$REPO_ROOT/src" \
   SPECTER_DIR="$_out_dir" \
   sh "$REPO_ROOT/src/features/app_info.sh" 2>/dev/null; _rc=$?
 

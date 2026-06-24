@@ -70,6 +70,11 @@ case "${1:-}" in
       echo "SET_PERSIST $NAME=$VAL" >> "$LOGS_DIR/resetprop.log"
     fi
     ;;
+  -d)
+    NAME="$2"
+    rm -f "$PROPS_DIR/$NAME"
+    echo "DELETE $NAME" >> "$LOGS_DIR/resetprop.log"
+    ;;
   -Z)
     echo "u:object_r:properties_serial:0:c260,c256,c512,c768 c0e8e35c vendor_default_prop"
     echo "GETZ $2" >> "$LOGS_DIR/resetprop.log"
@@ -117,8 +122,11 @@ MOCK_DIR="${MOCK_STATE_DIR:-/tmp/specter_test_state}"
 PROPS_DIR="$MOCK_DIR/props"
 LOGS_DIR="$MOCK_DIR/logs"
 mkdir -p "$PROPS_DIR" "$LOGS_DIR"
-printf '%s' "$2" > "$PROPS_DIR/$1"
 echo "SETPROP $1=$2" >> "$LOGS_DIR/resetprop.log"
+case "$1" in
+  ctl.stop) echo "CTL_STOP $2" >> "$LOGS_DIR/resetprop.log" ;;
+  *) printf '%s' "$2" > "$PROPS_DIR/$1" ;;
+esac
 MOCK
   chmod +x "$_dir/setprop"
 

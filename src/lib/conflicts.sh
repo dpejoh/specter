@@ -13,7 +13,10 @@ _conflict_detect() {
       [ -d "$MODULES_BASE/playintegrityfix" ] && [ -d "/data/adb/Box-Brain" ]
       ;;
     *)
-      [ -d "$MODULES_BASE/$_cd_modid" ] || [ -d "${MODULES_BASE}_update/$_cd_modid" ]
+      [ -d "$MODULES_BASE/$_cd_modid" ] ||
+      [ -d "${MODULES_BASE}_update/$_cd_modid" ] ||
+      [ -d "$MODULES_BASE/.$_cd_modid" ] ||
+      [ -d "${MODULES_BASE}_update/.$_cd_modid" ]
       ;;
   esac
 }
