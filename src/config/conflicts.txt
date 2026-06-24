@@ -5,3 +5,5 @@ sensitive_props|Sensitive Props|/data/adb/modules/sensitive_props/service.sh|boo
 Yurikey|Yurikey Manager|/data/adb/modules/Yurikey/service.sh|boot_hardening,security_patch|aggressive
 integritybox|Integrity Box|/data/adb/modules/playintegrityfix/service.sh|boot_hardening,security_patch,target|aggressive
 brene|.BRENE|/data/adb/modules/brene/service.sh,/data/adb/modules/brene/post-fs-data.sh,/data/adb/modules/brene/boot-completed.sh|boot_hardening,prop_handler,boot_hash|passive
+TA_utl|Tricky Addon - Update Target List|/data/adb/modules/TA_utl/prop.sh|boot_hardening,boot_hash|aggressive
+TA_enhanced|Tricky Addon Enhanced|/data/adb/modules/TA_enhanced/prop.sh,/data/adb/modules/TA_enhanced/bin/arm64-v8a/ta-enhanced,/data/adb/modules/TA_enhanced/bin/armeabi-v7a/ta-enhanced,/data/adb/modules/TA_enhanced/bin/x86_64/ta-enhanced,/data/adb/modules/TA_enhanced/bin/x86/ta-enhanced|boot_hardening,boot_hash,keybox,security_patch|aggressive
