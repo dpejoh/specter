@@ -92,7 +92,7 @@ spoof_build_props() {
 
 block_rom_spoof_engines() {
   _brs_gate=false
-  resetprop 2>/dev/null | grep -qE 'persist\.sys\.(entryhooks|pixelprops)' && _brs_gate=true
+  resetprop 2>/dev/null | grep -qE 'persist\.sys\.(entryhooks|pixelprops|pihooks)' && _brs_gate=true
   [ -f "$GMS_PROPS_FILE" ] && _brs_gate=true
   [ "$_brs_gate" = "false" ] && { log_i "PROPS" "No spoof engines detected"; unset _brs_gate; return 0; }
   log_i "PROPS" "Blocking spoof engines"
@@ -105,8 +105,9 @@ persist.sys.pixelprops.gms|false
 persist.sys.pixelprops.gapps|false
 persist.sys.pixelprops.google|false
 persist.sys.pixelprops.pi|false
+persist.sys.pihooks.disable.gms|true
 MAP
-  log_i "PROPS" "Blocked 5 spoof engine props"
+  log_i "PROPS" "Blocked 6 spoof engine props"
 
   if [ -f "$GMS_PROPS_FILE" ] && [ "$(resetprop persist.sys.spoof.gms 2>/dev/null)" != "false" ]; then
     resetprop persist.sys.spoof.gms false 2>/dev/null || true
@@ -125,7 +126,7 @@ MAP
     fi
     resetprop -p --delete "$_brs_prop" 2>/dev/null || true
   done << BRS_PROPS
-$(getprop 2>/dev/null | grep -E "pixelprops" | sed "s/^\[\(.*\)\]:.*/\1/" || true)
+$(getprop 2>/dev/null | grep -E "(pixelprops|pihooks)" | sed "s/^\[\(.*\)\]:.*/\1/" || true)
 BRS_PROPS
 
   unset _brs_gate _brs_prop _brs_val _brs_orig

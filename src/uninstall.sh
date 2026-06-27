@@ -33,14 +33,15 @@ for _pr in \
   persist.sys.pixelprops.gapps \
   persist.sys.pixelprops.google \
   persist.sys.pixelprops.pi \
-  persist.sys.spoof.gms; do
+  persist.sys.spoof.gms \
+  persist.sys.pihooks.disable.gms; do
   resetprop -p --delete "$_pr" 2>/dev/null || true
 done
 while IFS= read -r _pr; do
   [ -z "$_pr" ] && continue
   resetprop -p --delete "$_pr" 2>/dev/null || true
 done << PROPS
-$(getprop 2>/dev/null | grep -E "pixelprops" | sed "s/^\[\(.*\)\]:.*/\1/" || true)
+$(getprop 2>/dev/null | grep -E "(pixelprops|pihooks)" | sed "s/^\[\(.*\)\]:.*/\1/" || true)
 PROPS
 
 # Restore conflict backups, return renamed scripts to their modules
