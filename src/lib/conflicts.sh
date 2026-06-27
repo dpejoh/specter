@@ -1,5 +1,6 @@
 # shellcheck shell=sh
 CONFLICT_BACKUP_FILE="$SPECTER_DIR/conflict_backups.txt"
+CONFLICT_LIST="$CONFIG_DIR/conflicts.txt"
 
 _conflict_detect() {
   case "$1" in
@@ -39,24 +40,6 @@ _feature_should_run() {
   [ "$(cfg_get "$(_conflict_toggle_key "$_fsr_feature")" "$_fsr_default")" != "0" ] || return 1
 }
 
-_resolve_aggressive() {
-  case "$1" in
-    Yurikey|integritybox|tsupport-advance|sensitive_props)
-      _conflict_uninstall "$1" "$2"
-      log_i "CONFLICT" "$2: 100% overlap, uninstalled" ;;
-    *)
-      log_i "CONFLICT" "$2: 100% overlap, disabled, Specter covers all" ;;
-  esac
-  cfg_set "conflict_$1" "priority_specter"
-}
-
-_resolve_passive() {
-  if [ ! -f "$CONFIG_DIR/conflict_$1.val" ]; then
-    cfg_set "conflict_$1" "priority_module"
-    log_i "CONFLICT" "$2: partial overlap, defaulting to Module priority"
-  fi
-}
-
 _apply_scripts() {
   _as_scripts="$1" _as_choice="$2"
   _as_old_ifs="$IFS"; IFS=','
@@ -67,77 +50,83 @@ _apply_scripts() {
   IFS="$_as_old_ifs"
 }
 
+_resolve_aggressive() {
+  _conflict_uninstall "$1" "$2"
+  log_i "CONFLICT" "$2: 100% overlap, uninstalled"
+  cfg_set "conflict_$1" "priority_specter"
+}
+
+_resolve_moderate() {
+  _apply_scripts "$3" "priority_specter"
+  log_i "CONFLICT" "$2: overlap, disabled, Specter covers all"
+  cfg_set "conflict_$1" "priority_specter"
+}
+
+_resolve_passive() {
+  if [ ! -f "$CONFIG_DIR/conflict_$1.val" ]; then
+    cfg_set "conflict_$1" "priority_module"
+    log_i "CONFLICT" "$2: partial overlap, defaulting to Module priority"
+  fi
+}
+
 resolve_conflicts() {
   ensure_dir "$SPECTER_DIR"
   touch "$CONFLICT_BACKUP_FILE" 2>/dev/null || true
 
-  # Clean stale configs for undetected modules
-  for _rc_id in zygisk_nohello tsupport-advance treat_wheel sensitive_props Yurikey integritybox brene TA_utl TA_enhanced; do
-    _conflict_detect "$_rc_id" && continue
-    [ -f "$CONFIG_DIR/conflict_$_rc_id.val" ] || continue
-    rm -f "$CONFIG_DIR/conflict_$_rc_id.val"
-    sed -i "\|/$_rc_id/|d" "$CONFLICT_BACKUP_FILE" 2>/dev/null || true
-  done
+  while IFS='|' read -r _rc_id _rc_name _rc_type _rc_features _rc_scripts; do
+    case "$_rc_id" in ''|\#*) continue ;; esac
+    if ! _conflict_detect "$_rc_id"; then
+      [ -f "$CONFIG_DIR/conflict_$_rc_id.val" ] || continue
+      rm -f "$CONFIG_DIR/conflict_$_rc_id.val"
+      sed -i "\|/$_rc_id/|d" "$CONFLICT_BACKUP_FILE" 2>/dev/null || true
+    fi
+  done < "$CONFLICT_LIST"
 
-  for _rc_id in zygisk_nohello tsupport-advance treat_wheel sensitive_props Yurikey integritybox brene TA_utl TA_enhanced; do
+  while IFS='|' read -r _rc_id _rc_name _rc_type _rc_features _rc_scripts; do
+    case "$_rc_id" in ''|\#*) continue ;; esac
     _conflict_detect "$_rc_id" || continue
-    case "$_rc_id" in
-      tsupport-advance|sensitive_props|Yurikey|integritybox|TA_utl|TA_enhanced)
-        _resolve_aggressive "$_rc_id" "$_rc_id" ;;
-      zygisk_nohello|treat_wheel|brene)
-        _resolve_passive "$_rc_id" "$_rc_id" ;;
+    case "$_rc_type" in
+      aggressive) _resolve_aggressive "$_rc_id" "$_rc_name" "$_rc_scripts" ;;
+      moderate) _resolve_moderate "$_rc_id" "$_rc_name" "$_rc_scripts" ;;
+      passive) _resolve_passive "$_rc_id" "$_rc_name" ;;
     esac
-  done
+  done < "$CONFLICT_LIST"
 }
 
 _conflict_claimed() {
-  case "$1" in
-    boot_hardening)
-      _conflict_detect "integritybox" && [ "$(cfg_get conflict_integritybox priority_specter)" = "priority_specter" ] && return 1
-      _conflict_detect "Yurikey" && [ "$(cfg_get conflict_Yurikey priority_specter)" = "priority_specter" ] && return 1
-      _conflict_detect "tsupport-advance" && [ "$(cfg_get conflict_tsupport-advance priority_specter)" = "priority_specter" ] && return 1
-      _conflict_detect "sensitive_props" && [ "$(cfg_get conflict_sensitive_props priority_specter)" = "priority_specter" ] && return 1
-      _conflict_detect "TA_utl" && [ "$(cfg_get conflict_TA_utl priority_specter)" = "priority_specter" ] && return 1
-      _conflict_detect "TA_enhanced" && [ "$(cfg_get conflict_TA_enhanced priority_specter)" = "priority_specter" ] && return 1
-      _conflict_detect "brene" && [ "$(cfg_get conflict_brene priority_module)" = "priority_module" ] && return 0
-      _conflict_detect "zygisk_nohello" && [ "$(cfg_get conflict_zygisk_nohello priority_module)" = "priority_module" ] && return 0
-      ;;
-    prop_handler)
-      _conflict_detect "brene" && [ "$(cfg_get conflict_brene priority_module)" = "priority_module" ] && return 0
-      _conflict_detect "treat_wheel" && [ "$(cfg_get conflict_treat_wheel priority_module)" = "priority_module" ] && return 0
-      ;;
-    boot_hash)
-      _conflict_detect "brene" && [ "$(cfg_get conflict_brene priority_module)" = "priority_module" ] && return 0
-      _conflict_detect "TA_utl" && [ "$(cfg_get conflict_TA_utl priority_module)" = "priority_module" ] && return 0
-      _conflict_detect "TA_enhanced" && [ "$(cfg_get conflict_TA_enhanced priority_module)" = "priority_module" ] && return 0
-      ;;
-    security_patch)
-      _conflict_detect "tsupport-advance" && [ "$(cfg_get conflict_tsupport-advance priority_specter)" = "priority_specter" ] && return 1
-      _conflict_detect "TA_enhanced" && [ "$(cfg_get conflict_TA_enhanced priority_specter)" = "priority_specter" ] && return 1
-      _conflict_detect "Yurikey" && [ "$(cfg_get conflict_Yurikey priority_specter)" = "priority_specter" ] && return 1
-      _conflict_detect "integritybox" && [ "$(cfg_get conflict_integritybox priority_specter)" = "priority_specter" ] && return 1
-      ;;
-    target)
-      _conflict_detect "tsupport-advance" && [ "$(cfg_get conflict_tsupport-advance priority_specter)" = "priority_specter" ] && return 1
-      _conflict_detect "integritybox" && [ "$(cfg_get conflict_integritybox priority_specter)" = "priority_specter" ] && return 1
-      ;;
-    keybox)
-      _conflict_detect "TA_enhanced" && [ "$(cfg_get conflict_TA_enhanced priority_specter)" = "priority_specter" ] && return 1
-      ;;
-  esac
+  _cc_feature="$1"
+
+  while IFS='|' read -r _cc_id _cc_name _cc_type _cc_features _cc_scripts; do
+    case "$_cc_id" in ''|\#*) continue ;; esac
+    [ "$_cc_type" = "passive" ] && continue
+    _conflict_detect "$_cc_id" || continue
+    case ",$_cc_features," in *,"$_cc_feature",*) ;; *) continue ;; esac
+    [ "$(cfg_get "conflict_$_cc_id" "priority_specter")" = "priority_specter" ] && return 1
+  done < "$CONFLICT_LIST"
+
+  while IFS='|' read -r _cc_id _cc_name _cc_type _cc_features _cc_scripts; do
+    case "$_cc_id" in ''|\#*) continue ;; esac
+    [ "$_cc_type" != "passive" ] && continue
+    _conflict_detect "$_cc_id" || continue
+    case ",$_cc_features," in *,"$_cc_feature",*) ;; *) continue ;; esac
+    [ "$(cfg_get "conflict_$_cc_id" "priority_module")" = "priority_module" ] && return 0
+  done < "$CONFLICT_LIST"
+
   return 1
 }
 
 conflict_status_json() {
   _cs_first=1
   printf '['
-  for _cs_id in zygisk_nohello treat_wheel brene; do
+  while IFS='|' read -r _cs_id _cs_name _cs_type _cs_features _cs_scripts; do
+    case "$_cs_id" in ''|\#*) continue ;; esac
+    [ "$_cs_type" = "passive" ] || continue
     _conflict_detect "$_cs_id" || continue
     [ "$_cs_first" -eq 0 ] && printf ',' || _cs_first=0
     _cs_choice=$(cfg_get "conflict_$_cs_id" "priority_specter")
     printf '{"key":"%s","friendlyName":"%s","detected":true,"prioritySpecter":%s,"type":"%s","features":"%s"}' \
-      "$_cs_id" "$_cs_id" "$([ "$_cs_choice" = "priority_specter" ] && echo true || echo false)" "passive" ""
-  done
+      "$_cs_id" "$_cs_name" "$([ "$_cs_choice" = "priority_specter" ] && echo true || echo false)" "$_cs_type" "$_cs_features"
+  done < "$CONFLICT_LIST"
   printf ']'
 }
 
@@ -148,10 +137,11 @@ conflict_set_choice() {
 
 conflict_resolve_for_feature() {
   _crf_toggle_key="$(_conflict_toggle_key "$1")"
-  for _crf_id in zygisk_nohello tsupport-advance treat_wheel sensitive_props Yurikey integritybox brene TA_utl TA_enhanced; do
+  while IFS='|' read -r _crf_id _crf_name _crf_type _crf_features _crf_scripts; do
+    case "$_crf_id" in ''|\#*) continue ;; esac
     _conflict_detect "$_crf_id" || continue
     [ "$(cfg_get "conflict_$_crf_id" priority_specter)" = "priority_module" ] || continue
     cfg_set "conflict_$_crf_id" "priority_specter"
-  done
+  done < "$CONFLICT_LIST"
   cfg_set "$_crf_toggle_key" "1"
 }

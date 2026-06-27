@@ -10,10 +10,12 @@ refresh_module_description() {
   fi
 
   _cf=""
-  for _id in tsupport-advance sensitive_props Yurikey integritybox TA_utl TA_enhanced; do
+  while IFS='|' read -r _id _name _type _features _scripts; do
+    case "$_id" in ''|\#*) continue ;; esac
+    [ "$_type" = "aggressive" ] || continue
     _conflict_detect "$_id" || continue
     _cf="${_cf}${_cf:+, }$_id"
-  done
+  done < "$CONFIG_DIR/conflicts.txt"
   [ -n "$_cf" ] && _problems="${_problems}${_problems:+ | }🚨 Conflict: $_cf"
 
   if [ -n "$_problems" ]; then
