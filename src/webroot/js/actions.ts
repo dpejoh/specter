@@ -3,9 +3,9 @@ import { appendToOutput } from './terminal.js';
 import { showToast } from './toast.js';
 import { showErrorDialog } from './dialog.js';
 import { addEntry } from './history.js';
-import { escapeHtml } from './utils.js';
+import { escapeHtml, setFriendlyNames } from './utils.js';
 import { getTranslation } from './i18n.js';
-import { getFriendlyName, isDevMode, setFriendlyNames } from './state.js';
+import { getFriendlyName } from './utils.js';
 
 async function confirmDestructive(friendlyName: string): Promise<boolean> {
   return new Promise(resolve => {
@@ -18,17 +18,12 @@ async function confirmDestructive(friendlyName: string): Promise<boolean> {
         ${escapeHtml(friendlyName)}
       </div>
       <div slot="content">
-        <p class="danger-dialog-msg">
-          ${getTranslation('danger_confirm_msg') || 'This action may affect your device. Are you sure?'}
-        </p>
+        <p class="danger-dialog-msg">${getTranslation('danger_confirm_msg') || 'This action may affect your device. Are you sure?'}</p>
       </div>
       <div slot="actions">
         <md-text-button id="danger-cancel">${getTranslation('dialog_cancel') || 'Cancel'}</md-text-button>
-        <md-filled-button id="danger-confirm" class="danger-dialog-confirm">
-          ${getTranslation('danger_confirm') || 'Proceed'}
-        </md-filled-button>
-      </div>
-    `;
+        <md-filled-button id="danger-confirm" class="danger-dialog-confirm">${getTranslation('danger_confirm') || 'Proceed'}</md-filled-button>
+      </div>`;
     document.body.appendChild(dialog);
     dialog.querySelector('#danger-cancel')!.addEventListener('click', () => { dialog.close(); resolve(false); });
     dialog.querySelector('#danger-confirm')!.addEventListener('click', () => { dialog.close(); resolve(true); });
@@ -37,46 +32,7 @@ async function confirmDestructive(friendlyName: string): Promise<boolean> {
   });
 }
 
-export async function runDevAction(scriptName: string) {
-  const lines: string[] = [];
-  appendToOutput(`> ${scriptName}`);
-  const dialog = document.createElement('md-dialog');
-  dialog.className = 'dev-action-dialog';
-  dialog.innerHTML = `
-    <div slot="headline">${escapeHtml(scriptName)}</div>
-    <div slot="content"><div class="terminal"><pre id="live-output"></pre></div></div>
-    <div slot="actions">
-      <md-text-button class="dev-action-close">${getTranslation('dialog_close') || 'Close'}</md-text-button>
-    </div>
-  `;
-  document.body.appendChild(dialog);
-  dialog.querySelector('.dev-action-close')!.addEventListener('click', () => dialog.close());
-  dialog.addEventListener('close', () => document.body.removeChild(dialog));
-  dialog.show();
-  const pre = dialog.querySelector('#live-output');
-  const child = spawnScript(scriptName, 'feature');
-  child.stdout.on('data', (line: string) => {
-    appendToOutput(line); lines.push(line);
-    if (pre) pre.textContent += line + '\n';
-    if (pre?.parentElement) pre.parentElement.scrollTop = pre.parentElement.scrollHeight;
-  });
-  child.stderr.on('data', (line: string) => {
-    appendToOutput(line, true); lines.push('[!] ' + line);
-    if (pre) pre.textContent += '[!] ' + line + '\n';
-    if (pre?.parentElement) pre.parentElement.scrollTop = pre.parentElement.scrollHeight;
-  });
-  child.on('exit', (code: number) => {
-    appendToOutput(`> ${scriptName} exited (code: ${code})`);
-    addEntry(scriptName, lines.join('\n'), code);
-  });
-  child.on('error', (err: Error) => {
-    const msg = err.message || getTranslation('simple_toast_error') || 'Failed';
-    appendToOutput(`> Error: ${msg}`, true);
-    addEntry(scriptName, msg);
-  });
-}
-
-export async function runSimpleAction(scriptName: string) {
+export async function runAction(scriptName: string) {
   const i18nKey = getFriendlyName(scriptName);
   const friendlyName = getTranslation(i18nKey) || i18nKey;
   const lines: string[] = [];
@@ -87,45 +43,45 @@ export async function runSimpleAction(scriptName: string) {
   if (label) label.textContent = friendlyName;
   if (text) text.textContent = getTranslation('simple_dialog_wait') || 'This may take a moment';
   if (dialog) dialog.show();
-  const child = spawnScript(scriptName, 'feature');
-  child.stdout.on('data', (line: string) => {
-    appendToOutput(line); lines.push(line);
-  });
-  child.stderr.on('data', (line: string) => {
-    appendToOutput(line, true); lines.push('[!] ' + line);
-  });
-  child.on('exit', (code: number) => {
-    appendToOutput(`> ${friendlyName} exited (code: ${code})`);
-    addEntry(scriptName, lines.join('\n'), code);
-    if (dialog) dialog.close();
-    if (code !== 0) {
-      const errorMsg = lines.find(l => l.includes('Error')) || lines[lines.length - 1] || friendlyName;
-      showToast(`${getTranslation('simple_toast_error') || 'Failed'}: ${errorMsg}`, {
+
+  return new Promise<void>(resolve => {
+    const child = spawnScript(scriptName, 'feature');
+    child.stdout.on('data', (line: string) => {
+      appendToOutput(line);
+      lines.push(line);
+    });
+    child.stderr.on('data', (line: string) => {
+      appendToOutput(line, true);
+      lines.push('[!] ' + line);
+    });
+    child.on('exit', (code: number) => {
+      const output = lines.join('\n');
+      appendToOutput(`> ${friendlyName} exited (code: ${code})`);
+      addEntry(scriptName, output, code);
+      if (dialog) dialog.close();
+      if (code !== 0) {
+        const errorMsg = lines.find(l => l.includes('Error')) || lines[lines.length - 1] || friendlyName;
+        showToast(`${getTranslation('simple_toast_error') || 'Failed'}: ${errorMsg}`, {
+          icon: 'error', type: 'error',
+          action: getTranslation('simple_toast_view_details') || 'View Details', autoCloseDelay: 8000,
+          onActionClick: () => showErrorDialog(getTranslation('error_dialog_title') || 'Error Details', escapeHtml(output)),
+        });
+      } else {
+        showToast(getTranslation('toast_success') || 'Done', { icon: 'check_circle', type: 'success', autoCloseDelay: 3000 });
+      }
+      resolve();
+    });
+    child.on('error', (err: Error) => {
+      const msg = err.message || getTranslation('simple_toast_error') || 'Failed';
+      appendToOutput(`> Error: ${msg}`, true);
+      addEntry(scriptName, msg, 1);
+      if (dialog) dialog.close();
+      showToast(`${getTranslation('simple_toast_error') || 'Failed'}: ${friendlyName}`, {
         icon: 'error', type: 'error',
-        action: getTranslation('simple_toast_view_details') || 'View Details',
-        autoCloseDelay: 8000,
-        onActionClick: () => {
-          showErrorDialog(getTranslation('error_dialog_title') || 'Error Details', escapeHtml(lines.join('\n')));
-        },
+        action: getTranslation('simple_toast_view_details') || 'View Details', autoCloseDelay: 8000,
+        onActionClick: () => showErrorDialog(getTranslation('error_dialog_title') || 'Error Details', escapeHtml(msg)),
       });
-    } else {
-      showToast(getTranslation('toast_success') || 'Done', {
-        icon: 'check_circle', type: 'success', autoCloseDelay: 3000,
-      });
-    }
-  });
-  child.on('error', (err: Error) => {
-    const msg = err.message || getTranslation('simple_toast_error') || 'Failed';
-    appendToOutput(`> Error: ${msg}`, true);
-    addEntry(scriptName, msg, 1);
-    if (dialog) dialog.close();
-    showToast(`${getTranslation('simple_toast_error') || 'Failed'}: ${friendlyName}`, {
-      icon: 'error', type: 'error',
-      action: getTranslation('simple_toast_view_details') || 'View Details',
-      autoCloseDelay: 8000,
-      onActionClick: () => {
-        showErrorDialog(getTranslation('error_dialog_title') || 'Error Details', escapeHtml(msg));
-      },
+      resolve();
     });
   });
 }
@@ -147,14 +103,9 @@ export function wireActions() {
       (el as HTMLButtonElement).disabled = true;
       spinner?.classList.remove('hidden');
       try {
-        if (isDevMode()) {
-          await runDevAction(scriptName);
-        } else {
-          await runSimpleAction(scriptName);
-        }
-      } catch {
-        console.warn('Action error:');
-      } finally {
+        await runAction(scriptName);
+      } catch { console.warn('Action error:'); }
+      finally {
         (el as HTMLButtonElement).disabled = false;
         spinner?.classList.add('hidden');
       }

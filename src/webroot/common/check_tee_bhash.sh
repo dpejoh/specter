@@ -2,14 +2,14 @@
 MODULE_ROOT="${0%/*}"
 MODULE_ROOT="${MODULE_ROOT%/webroot/common}"
 . "$MODULE_ROOT/lib/vbmeta.sh"
-. "$MODULE_ROOT/lib/paths.sh"
+. "$MODULE_ROOT/lib/constants.sh"
 
 TEMP_DIR="/data/local/tmp/.specter_tee_check"
 rm -rf "$TEMP_DIR" && mkdir -p "$TEMP_DIR"
 
 _dex="$MODULE_ROOT/deps/classes.dex"
 if [ -f "$_dex" ]; then
-  /system/bin/app_process -Djava.class.path="$_dex" / com.dpejoh.specter.Main "$TEMP_DIR" 2>/dev/null || true
+  su -c "/system/bin/app_process -Djava.class.path='$_dex' / com.dpejoh.specter.Main '$TEMP_DIR'" 2>/dev/null || true
 
   if [ -f "$TEMP_DIR/tee_status" ]; then
     _val=$(grep -E '^(teeBroken|tee_broken)=' "$TEMP_DIR/tee_status" 2>/dev/null | cut -d= -f2)

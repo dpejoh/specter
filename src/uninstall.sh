@@ -6,12 +6,12 @@ MODDIR=${0%/*}
 if [ -f "$BACKUP_FILE" ]; then
     rm -f "$TARGET_FILE"
     mv "$BACKUP_FILE" "$TARGET_FILE" || true
-    log "UNINSTALL" "Restored original keybox from backup"
+    log_i "UNINSTALL" "Restored original keybox from backup"
 fi
 
 if [ -d "$CONFIG_DIR" ]; then
     rm -rf "$CONFIG_DIR" 2>/dev/null
-    log "UNINSTALL" "Removed $CONFIG_DIR"
+    log_i "UNINSTALL" "Removed $CONFIG_DIR"
 fi
 
 # Restore persisted props, format: restore|prop_name|prop_value
@@ -20,10 +20,10 @@ if [ -f "$SPECTER_DIR/persist_backup.txt" ]; then
     [ "$_pr_cmd" = "restore" ] || continue
     [ -n "$_pr_name" ] || continue
     resetprop -n -p "$_pr_name" "$_pr_val" 2>/dev/null || true
-    log "UNINSTALL" "Restored prop: $_pr_name"
+    log_d "UNINSTALL" "Restored prop: $_pr_name"
   done < "$SPECTER_DIR/persist_backup.txt"
   rm -f "$SPECTER_DIR/persist_backup.txt" 2>/dev/null
-  log "UNINSTALL" "All persistent props restored"
+  log_i "UNINSTALL" "All persistent props restored"
 fi
 
 # Clean up any persist props the module may have set or deleted
@@ -33,14 +33,15 @@ for _pr in \
   persist.sys.pixelprops.gapps \
   persist.sys.pixelprops.google \
   persist.sys.pixelprops.pi \
-  persist.sys.spoof.gms; do
+  persist.sys.spoof.gms \
+  persist.sys.pihooks.disable.gms; do
   resetprop -p --delete "$_pr" 2>/dev/null || true
 done
 while IFS= read -r _pr; do
   [ -z "$_pr" ] && continue
   resetprop -p --delete "$_pr" 2>/dev/null || true
 done << PROPS
-$(getprop 2>/dev/null | grep -E "pixelprops" | sed "s/^\[\(.*\)\]:.*/\1/" || true)
+$(getprop 2>/dev/null | grep -E "(pixelprops|pihooks)" | sed "s/^\[\(.*\)\]:.*/\1/" || true)
 PROPS
 
 # Restore conflict backups, return renamed scripts to their modules
@@ -49,16 +50,21 @@ if [ -f "$SPECTER_DIR/conflict_backups.txt" ]; then
     [ -z "$_bak_path" ] && continue
     if [ -f "${_bak_path}.bak" ]; then
       mv "${_bak_path}.bak" "$_bak_path" 2>/dev/null || true
-      log "UNINSTALL" "Restored conflict backup: $_bak_path"
+      log_i "UNINSTALL" "Restored conflict backup: $_bak_path"
     fi
   done < "$SPECTER_DIR/conflict_backups.txt"
   rm -f "$SPECTER_DIR/conflict_backups.txt" 2>/dev/null
-  log "UNINSTALL" "All conflict backups restored"
+  log_i "UNINSTALL" "All conflict backups restored"
 fi
 
-# Clean up log files
-rm -f "$SPECTER_DIR/log/boot.log" 2>/dev/null
-rm -f "$SPECTER_DIR/log/action.log" 2>/dev/null
+# Clean up all log files and data files
+rm -rf "$SPECTER_DIR/log" 2>/dev/null || rm -f "$SPECTER_DIR/log"/*.log "$SPECTER_DIR/log"/*.gz 2>/dev/null || true
+rm -f "$SPECTER_DIR/tee_reported" "$SPECTER_DIR/rom_spoof_reported" "$SPECTER_DIR/pif_reported" 2>/dev/null || true
+rm -f "$SPECTER_DIR/tee_status" "$SPECTER_DIR/tee_hash" "$SPECTER_DIR/tee_tier" 2>/dev/null || true
+rm -f "$SPECTER_DIR/tee_keymaster_version" "$SPECTER_DIR/tee_challenge" 2>/dev/null || true
+rm -f "$SPECTER_DIR/vbmeta_digest" "$SPECTER_DIR/app_labels.json" 2>/dev/null || true
+rm -f "$MODDIR/.first_boot_pending" 2>/dev/null || true
+rm -rf "$SPECTER_DIR/backup" 2>/dev/null || true
 
 # Clean up scheduler PID
 if [ -f "$SPECTER_DIR/scheduler.pid" ]; then
@@ -83,4 +89,4 @@ for _pid_key in loop_prop_handler.pid loop_keybox_info.pid auto_target.pid; do
 done
 unset _pid_key _pid_path _old_pid
 
-return 0
+exit 0

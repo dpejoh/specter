@@ -53,18 +53,19 @@ function applyKeyboxStatus(data: KeyboxInfoJson) {
     return;
   }
 
-  const name = data.source
-    ? data.source.charAt(0).toUpperCase() + data.source.slice(1)
+  const isRawbin = !!data.source;
+  const name = isRawbin
+    ? data.source!.charAt(0).toUpperCase() + data.source!.slice(1)
     : getTranslation('device_generic') || 'Generic';
   source.textContent = name;
 
   versionEl.textContent = data.text || data.source_version || '—';
   versionEl.className = 'kb-hero-provider-version kb-hero-provider-version--neutral';
 
-  if (data.up_to_date && data.source_version) {
+  if (isRawbin && data.up_to_date && data.source_version) {
     badgeEl.textContent = getTranslation('device_latest') || 'Latest';
     badgeEl.className = 'kb-version-badge kb-version-badge--latest';
-  } else if (data.source_version) {
+  } else if (!isRawbin && data.source_version) {
     badgeEl.textContent = getTranslation('device_generic') || 'Generic';
     badgeEl.className = 'kb-version-badge kb-version-badge--outdated';
   } else {

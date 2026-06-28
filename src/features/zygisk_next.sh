@@ -2,55 +2,36 @@
 set -e
 MODDIR=${0%/*}
 . "$MODDIR/../lib/common.sh"
-. "$MODDIR/../lib/config_env.sh"
-. "$MODDIR/../lib/paths.sh"
+. "$MODDIR/../lib/constants.sh"
 
-REQUIRED="1.3.0"
+ZN_DATA_DIR="/data/adb/zygisksu"
+ZN_MODULE_DIR="$MODULES_BASE/zygisksu"
+[ ! -d "$ZN_MODULE_DIR" ] && ZN_MODULE_DIR="${MODULES_BASE}_update/zygisksu"
 
-log "ZYGISK_NEXT" "Start"
+ZN_PROPFILE="$ZN_MODULE_DIR/module.prop"
 
-ZYNEXT_DIR="$MODULES_BASE/zygisksu"
-[ ! -d "$ZYNEXT_DIR" ] && ZYNEXT_DIR="${MODULES_BASE}_update/zygisksu"
-
-ZYNEXT_PROPFILE="$ZYNEXT_DIR/module.prop"
-SCRIPT_FILE="$ZYNEXT_DIR/bin/zygiskd"
-
-if [ ! -f "$ZYNEXT_PROPFILE" ]; then
-  log "ZYGISK_NEXT" "Error: Zygisk Next module not found at $ZYNEXT_DIR"
+if [ ! -f "$ZN_PROPFILE" ]; then
+  log_e "ZYGISK_NEXT" "Zygisk Next module not found at $ZN_MODULE_DIR"
   exit 1
 fi
 
-if [ ! -x "$SCRIPT_FILE" ]; then
-  log "ZYGISK_NEXT" "Error: zygiskd binary not found or not executable at $SCRIPT_FILE"
-  exit 1
-fi
+ZN_NAME=$(grep "^name=" "$ZN_PROPFILE" | cut -d= -f2)
+log_i "ZYGISK_NEXT" "Detected: $ZN_NAME"
 
-CURRENT=$(grep "^version=" "$ZYNEXT_PROPFILE" | cut -d'=' -f2 | cut -d' ' -f1 | sed 's/^v//')
-log "ZYGISK_NEXT" "Detected Zygisk Next version $CURRENT"
-ensure_dir "$(dirname "$SCRIPT_FILE")"
+case "$ZN_NAME" in
+  *Zygisk*Next*|*Zygisk-Next*|*ZygiskNext*)
+    ;;
+  *)
+    log_e "ZYGISK_NEXT" "Unknown module '$ZN_NAME'"
+    exit 1
+    ;;
+esac
 
-version_ge "$CURRENT" "$REQUIRED" || {
-  log "ZYGISK_NEXT" "Error: Zygisk Next version $CURRENT is too low, need $REQUIRED"
-  exit 0
-}
+ensure_dir "$ZN_DATA_DIR"
 
-_settled=0
-for _pair in "enforce-denylist:just_umount" "memory-type:anonymous" "linker:builtin"; do
-  _key="${_pair%:*}"
-  _val="${_pair#*:}"
-  _current=$("$SCRIPT_FILE" "$_key" 2>/dev/null || echo "")
-  if [ "$_current" = "$_val" ]; then
-    _settled=$((_settled + 1))
-    continue
-  fi
-  if "$SCRIPT_FILE" "$_key" "$_val" 2>/dev/null; then
-    _settled=$((_settled + 1))
-  else
-    log "ZYGISK_NEXT" "Warning: Failed to set $_key"
-  fi
-done
-unset _pair _key _val _current
+echo -n 1 > "$ZN_DATA_DIR/denylist_enforce" && log_d "ZYGISK_NEXT" "denylist_enforce → 1"
+echo -n 1 > "$ZN_DATA_DIR/denylist_policy" && log_d "ZYGISK_NEXT" "denylist_policy → 1"
 
-log "ZYGISK_NEXT" "$_settled/3 settings applied"
-log "ZYGISK_NEXT" "Finish"
+log_i "ZYGISK_NEXT" "Applied denylist config"
+log_i "ZYGISK_NEXT" "Zygisk Next config complete"
 exit 0

@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, vi, afterEach } from 'vitest'
-import { initBridge, exec, runScript, spawnScript, getModuleDir, getDataDir } from './bridge.js'
+import { initBridge, exec, runScript, getModuleDir, getDataDir } from './bridge.js'
 import type { KsuBridge } from './types.js'
 
 function mockKsu(overrides?: Partial<KsuBridge>) {
@@ -164,35 +164,4 @@ describe('runScript', () => {
   })
 })
 
-describe('spawnScript', () => {
-  it('emits error event when no bridge', async () => {
-    vi.useRealTimers()
-    delete (window as any).ksu
-    const child = spawnScript('test.sh')
-    const onError = vi.fn()
-    child.on('error', onError)
-    await vi.waitFor(() => expect(onError).toHaveBeenCalled())
-  })
 
-  it('emits stdout and exit events via exec fallback', async () => {
-    vi.useRealTimers()
-    mockKsu()
-    // Don't provide spawn so spawnScript falls back to exec
-    delete (window.ksu as any).spawn
-    mockFetchJson({ MODDIR: '/data/adb/modules/specter' })
-    const ksu = window.ksu!
-    ksu.exec = vi.fn((_cmd, _opts, cbName) => {
-      const cb = (window as any)[cbName]
-      cb(0, 'line1\nline2\n', '')
-    }) as any
-    await initBridge()
-    const child = spawnScript('output.sh')
-    const onData = vi.fn()
-    const onExit = vi.fn()
-    child.stdout.on('data', onData)
-    child.on('exit', onExit)
-    await new Promise(r => setTimeout(r, 10))
-    expect(onData).toHaveBeenCalledTimes(2)
-    expect(onExit).toHaveBeenCalledWith(0)
-  })
-})

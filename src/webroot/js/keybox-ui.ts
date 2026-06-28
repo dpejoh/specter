@@ -6,8 +6,8 @@ import { showToast } from './toast.js';
 import { openFileBrowser } from './file-browser.js';
 import { refreshKeyboxStatus } from './device.js';
 import { API_URLS } from './constants.js';
-import { runDevAction, runSimpleAction } from './actions.js';
-import { isDevMode } from './state.js';
+import { runAction } from './actions.js';
+
 import type { CatalogJson } from './types.js';
 
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
@@ -77,11 +77,7 @@ export function wireKeyboxInstallButton() {
     try {
       cfgSet('kb_custom_type', '');
       cfgSet('kb_custom_value', '');
-      if (isDevMode()) {
-        await runDevAction('keybox.sh');
-      } else {
-        await runSimpleAction('keybox.sh');
-      }
+      await runAction('keybox.sh');
       const moddir = getModuleDir();
       if (moddir) {
         await exec(`sh ${shellEscape(moddir + '/features/keybox_info.sh')}`).catch(() => {});

@@ -1,14 +1,13 @@
 #!/system/bin/sh
+set -e
 MODDIR=${0%/*}
 
 . "$MODDIR/../lib/common.sh"
-. "$MODDIR/../lib/config_env.sh"
-. "$MODDIR/../lib/paths.sh"
-. "$MODDIR/../lib/urls.sh"
+. "$MODDIR/../lib/constants.sh"
 
-log "HMA" "Start"
+log_i "HMA" "Starting HMA config install"
 
-_installed_pkgs=$(pm list packages 2>/dev/null) || log "HMA" "Warning: Failed to list installed packages"
+_installed_pkgs=$(pm list packages 2>/dev/null) || log_w "HMA" "Failed to list installed packages"
 
 if echo "$_installed_pkgs" | grep -q "org.frknkrc44.hma_oss"; then
   _target_dir="$HMA_DIR"
@@ -23,13 +22,13 @@ elif echo "$_installed_pkgs" | grep -q "com.google.android.hmal"; then
   _target_file="$_target_dir/config.json"
   _found="HMAL"
 else
-  log "HMA" "No HMA variant installed, skipping"
+  log_w "HMA" "No HMA variant installed, skipping"
   unset _installed_pkgs
-  log "HMA" "Finish"
+  log_i "HMA" "HMA config install complete"
   exit 0
 fi
 
-log "HMA" "Found $_found"
+log_i "HMA" "Found $_found"
 
 TEMP_FILE="/data/local/tmp/.specter_hma_config"
 _install_ok=0
@@ -55,16 +54,16 @@ if check_network; then
     fi
 
     if [ "$_install_ok" = "1" ]; then
-      log "HMA" "Config installed for $_found"
+      log_i "HMA" "Config installed for $_found"
     else
-      log "HMA" "Config download succeeded but install failed"
+      log_e "HMA" "Config download succeeded but install failed"
     fi
     rm -f "$TEMP_FILE"
   else
-    log "HMA" "Download returned empty"
+    log_w "HMA" "Download returned empty"
   fi
 fi
 
 unset _installed_pkgs _target_dir _target_file _found _uid _pkg _install_ok TEMP_FILE
-log "HMA" "Finish"
+log_i "HMA" "HMA config install complete"
 exit 0

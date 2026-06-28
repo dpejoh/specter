@@ -2,7 +2,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 MODULE_DEPS="$PROJECT_ROOT/src/deps"
 
 export ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}"

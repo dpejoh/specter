@@ -37,7 +37,7 @@ install_module_from_github() {
   if [ -z "$_mg_dl_url" ]; then
     [ -n "$_mg_debug_url" ] || return 1
     _mg_dl_url="$_mg_debug_url"
-    log "MODULE_INSTALL" "Only Debug release available for $_mg_name, using it"
+    log_w "MODULE_INSTALL" "Only Debug release available for $_mg_name, using it"
   fi
 
   _mg_tmp="/data/local/tmp/.mg_install_$$.zip"

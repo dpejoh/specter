@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from 'vitest'
-import { getGlobal, setGlobal, deleteGlobal } from './window-global.js'
+import { getGlobal, setGlobal, deleteGlobal } from './utils.js'
 
 beforeEach(() => {
   for (const key of Object.keys(window)) {

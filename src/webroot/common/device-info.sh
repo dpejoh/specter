@@ -3,7 +3,7 @@ set -e
 MODULE_ROOT="${0%/*}"
 MODULE_ROOT="${MODULE_ROOT%/webroot/common}"
 . "$MODULE_ROOT/lib/common.sh"
-. "$MODULE_ROOT/lib/paths.sh"
+. "$MODULE_ROOT/lib/constants.sh"
 
 INFO_PATH="$MODULE_ROOT/webroot/json/info.json"
 
@@ -14,7 +14,7 @@ _version=$(_escape_json "$(grep '^version=' "$MODULE_ROOT/module.prop" | cut -d'
 # Root Implementation
 # Strategy: kernel-level root providers first, then userspace
 # Most-specific variant checks before generic catch-alls
-detect_root_solution
+{ detect_root_solution; } >&2
 _root_type="$ROOT_TYPE"
 
 # Security patch date, real system value + optional spoofed value
@@ -38,6 +38,8 @@ if [ -f "$TEE_STATUS" ]; then
 fi
 if [ -f "$TEE_TIER" ]; then
   _tee_tier=$(cat "$TEE_TIER" | tr -d ' \n')
+else
+  _tee_tier="null"
 fi
 
 # PIF spoofed device, read from PIF config (support both .prop and .json)

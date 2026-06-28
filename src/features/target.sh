@@ -1,11 +1,11 @@
 #!/system/bin/sh
+set -e
 MODDIR=${0%/*}
 . "$MODDIR/../lib/common.sh"
-. "$MODDIR/../lib/package_list.sh"
-. "$MODDIR/../lib/config_env.sh"
+. "$MODDIR/../lib/constants.sh"
 . "$MODDIR/../lib/target_common.sh"
 
-log "TARGET" "Start"
+log_d "TARGET" "Starting target management"
 
 [ -d "$TRICKY_DIR" ] || die "Tricky Store data directory not found"
 
@@ -19,7 +19,7 @@ _parse_customize
 
 _ensure_target_txt() {
   [ -f "$TARGET_TXT" ] && [ -s "$TARGET_TXT" ] && return 0
-  log "TARGET" "target.txt missing or empty, creating default"
+  log_w "TARGET" "target.txt missing or empty, creating default"
   mkdir -p "$(dirname "$TARGET_TXT")" 2>/dev/null || true
   for _entry in $FIXED_TARGETS; do
     echo "$_entry"
@@ -31,8 +31,8 @@ _ensure_target_txt
 
 case "${1}" in
   --merge-denylist)
-    log "TARGET" "Mode: merge-denylist"
-    command -v magisk >/dev/null 2>&1 || { log "TARGET" "magisk not found, skipping"; exit 0; }
+    log_i "TARGET" "Mode: merge-denylist"
+    command -v magisk >/dev/null 2>&1 || { log_w "TARGET" "magisk not found, skipping"; exit 0; }
     _merge_setup
     trap 'rm -f "$_TMP_TARGET" "$_TMP_EXIST"' EXIT
     _merge_load_existing
@@ -48,10 +48,10 @@ case "${1}" in
 
     _merge_cleanup
     : "${_added:=0}"
-    log "TARGET" "Denylist merge: checked $_count entries, added $_added"
+    log_i "TARGET" "Denylist merge: checked $_count entries, added $_added"
     ;;
   --merge)
-    log "TARGET" "Mode: merge"
+    log_i "TARGET" "Mode: merge"
     _merge_setup
     trap 'rm -f "$TEMP_PKGS" "${TEMP_PKGS}.filtered" "$_TMP_TARGET" "$_TMP_EXIST"' EXIT
     _merge_load_existing
@@ -61,7 +61,7 @@ case "${1}" in
     done
 
     pkgs=$(pm list packages -3 2>/dev/null) || {
-      log "TARGET" "Warning: Failed to list packages"
+      log_w "TARGET" "Failed to list packages"
     }
     if [ -n "$pkgs" ]; then
       echo "$pkgs" | cut -d ":" -f 2 > "$TEMP_PKGS"
@@ -69,7 +69,7 @@ case "${1}" in
         if grep -Fvxf "$BLACKLIST" "$TEMP_PKGS" > "${TEMP_PKGS}.filtered" 2>/dev/null; then
           mv "${TEMP_PKGS}.filtered" "$TEMP_PKGS"
         else
-          log "TARGET" "Warning: Blacklist filtering failed"
+          log_w "TARGET" "Blacklist filtering failed"
         fi
       fi
 
@@ -83,10 +83,10 @@ case "${1}" in
 
     _merge_cleanup
     : "${_added:=0}"
-    log "TARGET" "Checked $_count entries, added $_added"
+    log_i "TARGET" "Checked $_count entries, added $_added"
     ;;
   *)
-    log "TARGET" "Mode: overwrite"
+    log_i "TARGET" "Mode: overwrite"
     _count=0
     trap 'rm -f "$TEMP_PKGS" "${TEMP_PKGS}.filtered" "$_TMP_TARGET"' EXIT
 
@@ -96,7 +96,7 @@ case "${1}" in
     done
 
     pkgs=$(pm list packages -3 2>/dev/null) || {
-      log "TARGET" "Warning: Failed to list packages"
+      log_w "TARGET" "Failed to list packages"
     }
     if [ -n "$pkgs" ]; then
       echo "$pkgs" | cut -d ":" -f 2 > "$TEMP_PKGS"
@@ -104,7 +104,7 @@ case "${1}" in
         if grep -Fvxf "$BLACKLIST" "$TEMP_PKGS" > "${TEMP_PKGS}.filtered" 2>/dev/null; then
           mv "${TEMP_PKGS}.filtered" "$TEMP_PKGS"
         else
-          log "TARGET" "Warning: Blacklist filtering failed"
+          log_w "TARGET" "Blacklist filtering failed"
         fi
       fi
 
@@ -125,9 +125,9 @@ case "${1}" in
     mv -f "$_TMP_TARGET" "$TARGET_TXT"
 
     _count=$(wc -l < "$TARGET_TXT")
-    log "TARGET" "Wrote $_count entries to target.txt"
+    log_i "TARGET" "Wrote $_count entries to target.txt"
     ;;
 esac
 
-log "TARGET" "Finish"
+log_i "TARGET" "Target management complete"
 exit 0

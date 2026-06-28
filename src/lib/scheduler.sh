@@ -5,7 +5,7 @@ case "$MODDIR" in */lib) MODDIR="${MODDIR%/lib}" ;; */features) MODDIR="${MODDIR
 [ -n "$MODDIR" ] || { echo "[SCHED] MODDIR not set" >&2; exit 1; }
 
 . "$MODDIR/lib/common.sh"
-. "$MODDIR/lib/config_env.sh"
+. "$MODDIR/lib/constants.sh"
 . "$MODDIR/lib/desc.sh"
 
 PID_FILE="$SPECTER_DIR/scheduler.pid"
@@ -20,7 +20,7 @@ if [ -f "$PID_FILE" ]; then
   if [ -n "$_old_pid" ] && [ -f "/proc/$_old_pid/cmdline" ]; then
     _cmdline=$(tr '\0' ' ' < "/proc/$_old_pid/cmdline" 2>/dev/null || echo "")
     case "$_cmdline" in
-      *scheduler*) log "SCHED" "Already running (PID $_old_pid), exiting"; exit 0 ;;
+      *scheduler*) log_w "SCHED" "Already running (PID $_old_pid), exiting"; exit 0 ;;
     esac
   fi
   rm -f "$PID_FILE"
@@ -28,25 +28,29 @@ fi
 echo "$$" > "$PID_FILE"
 trap 'rm -f "$PID_FILE" "$INOTIFY_HANDLER" 2>/dev/null; exit' EXIT TERM INT HUP
 
-log "SCHED" "Started (PID $$)"
+log_i "SCHED" "Started (PID $$)"
 
 # Launch inotifyd for app install detection if available (skip if method=polling)
-if command -v inotifyd >/dev/null 2>&1 && [ "$(cfg_get toggle_auto_target 1)" = "1" ] && [ "$(cfg_get auto_target_method instant)" != "polling" ]; then
-  cat > "$INOTIFY_HANDLER" <<EOF
+if [ "$(cfg_get toggle_auto_target 1)" = "1" ] && [ "$(cfg_get auto_target_method instant)" != "polling" ]; then
+  _inotify_bin="$MODDIR/deps/inotifyd"
+
+  if [ -x "$_inotify_bin" ]; then
+    cat > "$INOTIFY_HANDLER" <<EOF
 #!/system/bin/sh
 MODDIR='${MODDIR}'
 SPECTER_DIR='${SPECTER_DIR}'
 _cg_val="\$(su -c "cat \${SPECTER_DIR}/config/toggle_auto_target.val" 2>/dev/null)"
 [ "\${_cg_val:-1}" = "1" ] || exit 0
 su -c "sh \${MODDIR}/features/auto_target.sh" 2>/dev/null || true
-. "\${MODDIR}/lib/paths.sh" 2>/dev/null
+. "\${MODDIR}/lib/constants.sh" 2>/dev/null
 . "\${MODDIR}/lib/desc.sh" 2>/dev/null
 refresh_module_description 2>/dev/null || true
 EOF
-  chmod 755 "$INOTIFY_HANDLER"
-
-  inotifyd "$INOTIFY_HANDLER" /data/app:n >/dev/null 2>&1 &
-  log "SCHED" "inotifyd launched for /data/app"
+    chmod 755 "$INOTIFY_HANDLER"
+    "$_inotify_bin" /data/app "$INOTIFY_HANDLER" >/dev/null 2>&1 &
+    log_i "SCHED" "inotifyd launched for /data/app"
+  fi
+  unset _inotify_bin
 fi
 
 while true; do
@@ -72,8 +76,8 @@ while true; do
 
     if [ "$_now" -ge "$((_last_run + _cfg_interval))" ]; then
       log_rotate "$SPECTER_DIR/log/sched_${_name}.log"
-      log "SCHED" "Running $_name"
-      sh "$MODDIR/features/$_script" >"$SPECTER_DIR/log/sched_${_name}.log" 2>&1 || log "SCHED" "$_name failed"
+      log_i "SCHED" "Running $_name"
+      sh "$MODDIR/features/$_script" >"$SPECTER_DIR/log/sched_${_name}.log" 2>&1 || log_e "SCHED" "$_name failed"
       printf '%s' "$_now" > "$TASKS_DIR/${_name}_last"
 
       case "$_name" in

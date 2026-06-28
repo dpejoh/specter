@@ -4,6 +4,8 @@ download() {
     PATH="/data/adb/ap/bin:/data/adb/ksu/bin:/data/adb/magisk:/data/data/com.termux/files/usr/bin:$PATH"
     _dl_tmp="" _dl_code=1 _dl_try=0 _dl_ua="Specter/1.0"
 
+    log_d "NET" "Downloading $_dl_url"
+
     if [ -z "$_dl_output" ]; then
         _dl_tmp=$(mktemp 2>/dev/null || echo "/data/local/tmp/.specter_dl_${$}_$(date +%s)")
         _dl_output="$_dl_tmp"
@@ -19,14 +21,21 @@ download() {
         sleep 1
     done
 
-    if [ "$_dl_code" -eq 0 ] && [ -n "$_dl_sha256" ]; then
-        _dl_sum=$(sha256sum "$_dl_output" 2>/dev/null | cut -d' ' -f1)
-        if [ "$_dl_sum" != "$_dl_sha256" ]; then
-            rm -f "$_dl_output"
-            PATH="$_dl_oldpath"
-            unset _dl_url _dl_output _dl_sha256 _dl_oldpath _dl_tmp _dl_code _dl_try _dl_sum _dl_ua
-            return 1
+    if [ "$_dl_code" -eq 0 ]; then
+        log_d "NET" "Downloaded ($(_dl_stat "$_dl_output" 2>/dev/null || echo '?')) bytes"
+        if [ -n "$_dl_sha256" ]; then
+            _dl_sum=$(sha256sum "$_dl_output" 2>/dev/null | cut -d' ' -f1)
+            if [ "$_dl_sum" != "$_dl_sha256" ]; then
+                log_e "NET" "SHA256 mismatch for $_dl_url"
+                rm -f "$_dl_output"
+                PATH="$_dl_oldpath"
+                unset _dl_url _dl_output _dl_sha256 _dl_oldpath _dl_tmp _dl_code _dl_try _dl_sum _dl_ua
+                return 1
+            fi
+            log_d "NET" "SHA256 verified"
         fi
+    else
+        log_w "NET" "Download failed after 3 attempts: $_dl_url"
     fi
 
     if [ -n "$_dl_tmp" ]; then
@@ -39,6 +48,8 @@ download() {
     unset _dl_url _dl_output _dl_sha256 _dl_oldpath _dl_tmp _dl_code _dl_try _dl_sum _dl_ua
     return $_dl_rc
 }
+
+_dl_stat() { stat -c%s "$1" 2>/dev/null || wc -c < "$1" 2>/dev/null || echo "?"; }
 
 check_network() {
     _cn_oldpath="$PATH"

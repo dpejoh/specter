@@ -1,9 +1,20 @@
-zygisk_nohello|NoHello|/data/adb/modules/zygisk_nohello/service.sh|boot_hardening|passive
-tsupport-advance|TSupport-Advance|/data/adb/modules/tsupport-advance/post-fs-data.sh,/data/adb/modules/tsupport-advance/service.sh|boot_hardening,security_patch,target|aggressive
-treat_wheel|TreatWheel|/data/adb/modules/treat_wheel/service.sh|prop_handler|passive
-sensitive_props|Sensitive Props|/data/adb/modules/sensitive_props/service.sh|boot_hardening|aggressive
-Yurikey|Yurikey Manager|/data/adb/modules/Yurikey/service.sh|boot_hardening,security_patch|aggressive
-integritybox|Integrity Box|/data/adb/modules/playintegrityfix/service.sh|boot_hardening,security_patch,target|aggressive
-brene|.BRENE|/data/adb/modules/brene/service.sh,/data/adb/modules/brene/post-fs-data.sh,/data/adb/modules/brene/boot-completed.sh|boot_hardening,prop_handler,boot_hash|passive
-TA_utl|Tricky Addon - Update Target List|/data/adb/modules/TA_utl/prop.sh|boot_hardening,boot_hash|aggressive
-TA_enhanced|Tricky Addon Enhanced|/data/adb/modules/TA_enhanced/prop.sh,/data/adb/modules/TA_enhanced/bin/arm64-v8a/ta-enhanced,/data/adb/modules/TA_enhanced/bin/armeabi-v7a/ta-enhanced,/data/adb/modules/TA_enhanced/bin/x86_64/ta-enhanced,/data/adb/modules/TA_enhanced/bin/x86/ta-enhanced|boot_hardening,boot_hash,keybox,security_patch|aggressive
+# id|display_name|type|features|scripts
+#
+# type: aggressive (uninstall + desc warning)
+#       moderate   (disable scripts, no desc warning)
+#       passive    (user toggles in web UI)
+
+# --- passive ---
+zygisk_nohello|NoHello|passive|boot_hardening|/data/adb/modules/zygisk_nohello/service.sh
+treat_wheel|TreatWheel|passive|prop_handler|/data/adb/modules/treat_wheel/service.sh
+brene|.BRENE|passive|boot_hardening,prop_handler,boot_hash|/data/adb/modules/brene/service.sh,/data/adb/modules/brene/post-fs-data.sh,/data/adb/modules/brene/boot-completed.sh
+
+# --- aggressive ---
+tsupport-advance|TSupport-Advance|aggressive|boot_hardening,security_patch,target|/data/adb/modules/tsupport-advance/post-fs-data.sh,/data/adb/modules/tsupport-advance/service.sh
+sensitive_props|Sensitive Props|aggressive|boot_hardening|/data/adb/modules/sensitive_props/service.sh
+Yurikey|Yurikey Manager|aggressive|boot_hardening,security_patch|/data/adb/modules/Yurikey/service.sh
+integritybox|Integrity Box|aggressive|boot_hardening,security_patch,target|/data/adb/modules/playintegrityfix/service.sh
+
+# --- moderate ---
+TA_utl|Tricky Addon - Update Target List|moderate|boot_hardening,boot_hash|/data/adb/modules/TA_utl/prop.sh
+TA_enhanced|Tricky Addon Enhanced|moderate|boot_hardening,boot_hash,keybox,security_patch|/data/adb/modules/TA_enhanced/prop.sh,/data/adb/modules/TA_enhanced/bin/arm64-v8a/ta-enhanced,/data/adb/modules/TA_enhanced/bin/armeabi-v7a/ta-enhanced,/data/adb/modules/TA_enhanced/bin/x86_64/ta-enhanced,/data/adb/modules/TA_enhanced/bin/x86/ta-enhanced

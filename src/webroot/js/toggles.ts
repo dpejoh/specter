@@ -1,6 +1,6 @@
 import { cfgGet, cfgSet, cfgInvalidate } from './cfg.js';
 import { CONTROL_TOGGLES } from './constants.js';
-import { setDevMode } from './state.js';
+import { setDevMode } from './utils.js';
 
 function labelFromKey(key: string): string {
   const s = key.replace(/^(toggle_|action_)/, '').replace(/_/g, ' ');

@@ -13,7 +13,7 @@ decode_keybox_blob() {
 # shellcheck disable=SC3057,SC3052
 _parse_serial() {
   _h="$1"
-  case "${_h:0:1}" in "") return 1 ;; esac 2>/dev/null || { log "WARN" "Shell lacks string slicing, skipping serial decode"; return 1; }
+  case "${_h:0:1}" in "") return 1 ;; esac 2>/dev/null || { log_w "KEYBOX" "Shell lacks string slicing, skipping serial decode"; return 1; }
   case "$_h" in 30*) _h="${_h#30}" ;; *) return 1 ;; esac
   _l_hex="${_h:0:2}" _l_dec=$((16#$_l_hex))
   [ $_l_dec -ge 128 ] && _h="${_h:2 + ($_l_dec - 128) * 2}" || _h="${_h:2}"

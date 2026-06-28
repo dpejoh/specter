@@ -47,7 +47,7 @@ vbmeta_digest() {
   _total=$((256 + _auth + _aux))
   _aux_start=$((256 + _auth))
 
-  (
+  _digest=$(
     dd if="$_part" bs=$_total count=1 2>/dev/null
     _pos=$((_aux_start + _desc_off))
     _end=$((_aux_start + _desc_off + _desc_sz))
@@ -66,4 +66,7 @@ vbmeta_digest() {
       _pos=$((_pos + 16 + _nbf))
     done
   ) | sha256sum | cut -d' ' -f1
+
+  [ -n "$_digest" ] && log_d "VBMETA" "Digest from $_part: $_digest"
+  printf '%s' "$_digest"
 }

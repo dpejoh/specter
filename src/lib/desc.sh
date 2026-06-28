@@ -10,14 +10,12 @@ refresh_module_description() {
   fi
 
   _cf=""
-  while IFS='|' read -r _id _name _scripts _features _type; do
-    [ -z "$_id" ] && continue
-    [ "$_type" != "aggressive" ] && continue
+  while IFS='|' read -r _id _name _type _features _scripts; do
+    case "$_id" in ''|\#*) continue ;; esac
+    [ "$_type" = "aggressive" ] || continue
     _conflict_detect "$_id" || continue
-    _cf="${_cf}${_cf:+, }$_name"
-  done <<CF_EOF
-$(_conflict_registry)
-CF_EOF
+    _cf="${_cf}${_cf:+, }$_id"
+  done < "$CONFIG_DIR/conflicts.txt"
   [ -n "$_cf" ] && _problems="${_problems}${_problems:+ | }🚨 Conflict: $_cf"
 
   if [ -n "$_problems" ]; then
@@ -50,6 +48,7 @@ CF_EOF
     fi
   fi
 
+  log_d "DESC" "New description: $_new_desc"
   cfg_set "override.description" "$_new_desc"
 
   _escaped=$(printf '%s\n' "$_new_desc" | sed 's|[#/&\]|\\&|g')

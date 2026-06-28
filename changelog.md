@@ -1,3 +1,44 @@
+# v1.4.4-16
+
+**New**
+- Conflict system: 3-tier (aggressive/moderate/passive), data-driven from conflicts.txt
+- TA_utl/TA_enhanced moved to moderate (no desc warning)
+- pihooks spoof engine detection
+- Turkish + Polish translations
+- Auto keybox random selection from working entries
+- inotifyd watcher for instant app detection
+- Pipeline runs recorded to history (recent activity shows "Action" entries from terminal runs)
+- 10s network wait on first boot before pipeline
+
+**Changed**
+- Monet: HSL → HCT (CAM16) color matching
+- Zygisk Next: no `zygiskd` dep, writes config directly
+- Logging: simplified to single-format output, removed dual-path complexity
+- action.sh: start/end pipeline messages, blank line separators between phases
+- Recent activity: descriptions taken from last log line instead of per-script extractors
+- Actions: single runAction path, dev mode removed
+- Security patch offline fallback: uses current month instead of previous
+- auto_target cleans stale/blacklisted entries
+- ADB disabler: simplified USB config
+- config_env.sh: removed unnecessary stderr redirects
+- keybox.sh: fix download corruption in KernelSU action env (use direct file arg instead of stdout pipe)
+- First boot: 10s network wait before pipeline in first_boot_setup.sh
+
+**Fixed**
+- Hundreds of AI mistranslations (ar/es/ru/zh)
+- Inotify handler missing MODULES_BASE
+- TEE button stale cache
+- TEE status shows Normal/Broken not raw bool
+- Scheduler stale PID false match after reboot
+- Recent activity clear button now also clears device-side history
+- History write skipped on first boot (avoids noise)
+- Keybox download returning corrupted data in KernelSU action env
+- Minor fixes across features
+
+**Infrastructure**
+- 97 shell tests
+- Crowdin CI + weekly sync
+
 # v1.4.4-15
 
 **New**

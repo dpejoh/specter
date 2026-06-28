@@ -1,13 +1,10 @@
 #!/system/bin/sh
-# shellcheck shell=bash
+set -e
 MODDIR=${0%/*}
 
-case "$(readlink /proc/$$/exe 2>/dev/null)" in
-  *busybox) set +o standalone; unset ASH_STANDALONE ;;
-esac
+case "$(readlink /proc/$$/exe 2>/dev/null)" in *busybox) set +o standalone; unset ASH_STANDALONE ;; esac
 
 . "$MODDIR/lib/common.sh"
-. "$MODDIR/lib/config_env.sh"
 
 ACTION_LOG="$SPECTER_DIR/log/action.log"
 ensure_dir "$SPECTER_DIR/log" 2>/dev/null
@@ -22,48 +19,70 @@ _pif_validate_fingerprint() {
       *) _fp=$(sed -n 's/^FINGERPRINT=//p' "$_f" 2>/dev/null | head -1) ;;
     esac
     [ -z "$_fp" ] && continue
-    case "$_fp" in
-      *google*/*release-keys*) unset _f _fp; return 0 ;;
-    esac
+    case "$_fp" in *google*/*release-keys*) unset _f _fp; return 0 ;; esac
   done
-  unset _f _fp
-  return 1
+  unset _f _fp; return 1
 }
 
-{
-  log "ACTION" "Running full integrity pipeline"
+_first_boot=0
+[ -f "$SPECTER_DIR/pif_reported" ] && _first_boot=1
 
-  [ "$(cfg_get toggle_action_gms 1)" != "0" ] && sh "$MODDIR/features/kill_play_store.sh" || true
-  _feature_should_run "target" && sh "$MODDIR/features/target.sh" --merge || true
-  _feature_should_run "security_patch" && sh "$MODDIR/features/security_patch.sh" || true
-  [ "$(cfg_get toggle_action_keybox 1)" != "0" ] && sh "$MODDIR/features/keybox.sh" || true
-  if [ "$(cfg_get toggle_action_pif 1)" != "0" ]; then
+{
+  log_i "ACTION" "Running full integrity pipeline"
+
+  _feature_should_run "gms" && {
+    log_u "ACTION" ""
+    log_u "ACTION" "-> Play Store:"
+    sh "$MODDIR/features/kill_play_store.sh" || true
+  }
+
+  _feature_should_run "target" && {
+    log_u "ACTION" ""
+    log_u "ACTION" "-> App Targeting:"
+    sh "$MODDIR/features/target.sh" --merge || true
+  }
+
+  _feature_should_run "security_patch" && {
+    log_u "ACTION" ""
+    log_u "ACTION" "-> Security Patch:"
+    sh "$MODDIR/features/security_patch.sh" || true
+  }
+
+  _feature_should_run "keybox" && {
+    log_u "ACTION" ""
+    log_u "ACTION" "-> Keybox:"
+    sh "$MODDIR/features/keybox.sh" || true
+  }
+
+  if _feature_should_run "pif"; then
     _pif_name=$(_pif_prop) || _pif_name=""
     if [ -z "$_pif_name" ]; then
       if [ -f "$SPECTER_DIR/pif_reported" ]; then
-        log "ACTION" "PIF not found ,  first boot suppress (pif_reported token consumed)"
+        log_i "ACTION" "PIF not found, first boot suppress (pif_reported token consumed)"
         rm -f "$SPECTER_DIR/pif_reported"
       elif [ -t 1 ]; then
-        log "ACTION" "PIF not found. Press Volume UP to install, Volume DOWN to skip..."
+        log_u "ACTION" ""
+        log_u "ACTION" "PIF not found — Press Volume UP to install, DOWN to skip..."
         _ap_key=$(timeout 10 getevent -l 2>/dev/null | grep -oE "KEY_VOLUME(UP|DOWN)" | head -1)
         if [ "$_ap_key" = "KEY_VOLUMEUP" ]; then
           install_module_from_github "KOWX712/PlayIntegrityFix" "Play Integrity Fix" || \
-            log "ACTION" "PIF install failed"
-          log "ACTION" "PIF installed ,  reboot required before running autopif"
+            log_e "ACTION" "PIF install failed"
+          echo "PIF installed — reboot before running autopif"
           _pif_installed=1
         else
-          log "ACTION" "PIF install skipped by user"
+          echo "PIF install skipped"
         fi
         unset _ap_key
       else
-        log "ACTION" "PIF not found ,  auto-install skipped (run from terminal or install manually)"
+        log_w "ACTION" "PIF not found, auto-install skipped (run from terminal or install manually)"
       fi
     elif [ -f "$SPECTER_DIR/pif_reported" ]; then
-      log "ACTION" "PIF found, first boot - checking existing fingerprint validity"
+      log_u "ACTION" ""
+      log_u "ACTION" "PIF found, first boot - checking existing fingerprint validity"
       if _pif_validate_fingerprint; then
-        log "ACTION" "Existing fingerprint valid, skipping fetch"
+        log_i "ACTION" "Existing fingerprint valid, skipping fetch"
       else
-        log "ACTION" "Fingerprint invalid or missing, fetching new"
+        log_i "ACTION" "Fingerprint invalid or missing, fetching new"
         sh "$MODDIR/features/pif.sh" || true
       fi
       rm -f "$SPECTER_DIR/pif_reported"
@@ -82,7 +101,12 @@ _pif_validate_fingerprint() {
   . "$MODDIR/lib/desc.sh"
   refresh_module_description
 
-  log "ACTION" "Full integrity pipeline completed"
+  echo ""
+  log_i "ACTION" "Full integrity pipeline completed"
 } 2>&1 | tee -a "$ACTION_LOG"
 
-[ "${0##*/}" = "action.sh" ] && exit 0 || return 0
+if [ "$_first_boot" = "0" ]; then
+  printf '{"script":"action.sh","output":"Full integrity pipeline completed","time":"%s","code":0}\n' "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" >> "$SPECTER_DIR/log/history.jsonl"
+fi
+
+exit 0

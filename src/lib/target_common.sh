@@ -6,10 +6,10 @@
 _ensure_blacklist() {
   BLACKLIST="$SPECTER_DIR/blacklist.txt"
   if [ ! -f "$BLACKLIST" ]; then
-    log "TARGET" "Creating default blacklist"
+    log_i "TARGET" "Creating default blacklist"
     ensure_dir "$SPECTER_DIR"
     : > "$BLACKLIST"
-    log "TARGET" "Default blacklist created"
+    log_i "TARGET" "Default blacklist created"
   fi
   unset _pkg
 }
@@ -26,7 +26,7 @@ _parse_customize() {
       "#disable") _customize_mode="disabled" ;;
       *) _customize_mode="selective" ;;
     esac
-    log "TARGET" "customize.txt mode: $_customize_mode"
+    log_d "TARGET" "customize.txt mode: $_customize_mode"
   fi
   unset _customize _first
 }

@@ -2,9 +2,9 @@
 set -e
 MODDIR=${0%/*}
 . "$MODDIR/../lib/common.sh"
-. "$MODDIR/../lib/config_env.sh"
+. "$MODDIR/../lib/constants.sh"
 
-log "BOOT_HASH" "Start"
+log_i "BOOT_HASH" "Starting boot hash resolution"
 
 # BRENE cooperation: if BRENE is installed and has priority,
 # compute boot hash and write it to BRENE's config instead of setting the prop directly
@@ -16,7 +16,7 @@ if [ -d "/data/adb/modules/brene" ] && [ "$(cfg_get conflict_brene priority_modu
     if [ -f "/data/adb/brene/config.sh" ]; then
       sed -i "s/^config_verified_boot_hash=.*/config_verified_boot_hash='$_sh'/" /data/adb/brene/config.sh
     fi
-    log "BOOT_HASH" "Wrote $_sh to BRENE config"
+    log_d "BOOT_HASH" "Wrote $_sh to BRENE config"
   }
   apply_vbmeta_props() { :; }
 else
@@ -24,7 +24,7 @@ else
     resetprop -n ro.boot.vbmeta.digest "$1"
     ensure_dir "$SPECTER_DIR"
     echo "$1" > "$VBMETA_DIGEST"
-    log "BOOT_HASH" "Set: $1"
+    log_d "BOOT_HASH" "Set: $1"
   }
 fi
 
@@ -84,7 +84,7 @@ fi
 if [ -n "$_winner" ]; then
   case "$_winner_src" in
     "custom")
-      log "BOOT_HASH" "Custom boot hash override"
+      log_i "BOOT_HASH" "Custom boot hash override"
       _set_hash "$_winner"
       ;;
     "TEE attestation"|"partition")
@@ -96,16 +96,16 @@ if [ -n "$_winner" ]; then
       else
         ensure_dir "$SPECTER_DIR"
         echo "$_winner" > "$VBMETA_DIGEST"
-        log "BOOT_HASH" "Boot hash already valid, keeping bootloader value"
+        log_d "BOOT_HASH" "Boot hash already valid, keeping bootloader value"
       fi
       ;;
   esac
   apply_vbmeta_props
   echo "$_winner" > "$_tee_bhash_file"
-  log "BOOT_HASH" "Source: $_winner_src"
-  log "BOOT_HASH" "Done"
+  log_i "BOOT_HASH" "Source: $_winner_src"
+  log_i "BOOT_HASH" "Boot hash resolved"
   exit 0
 fi
 
-log "BOOT_HASH" "Failed to obtain boot hash"
+log_e "BOOT_HASH" "Failed to obtain boot hash"
 exit 1

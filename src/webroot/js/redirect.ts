@@ -1,5 +1,5 @@
 import { shellEscape } from './utils.js';
-import { setGlobal, deleteGlobal } from './window-global.js';
+import { setGlobal, deleteGlobal } from './utils.js';
 
 const ALLOWED_HOSTS = [
   'github.com',

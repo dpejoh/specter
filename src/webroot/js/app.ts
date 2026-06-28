@@ -1,5 +1,5 @@
 import { initBridge, getDataDir, getModuleDir, exec } from './bridge.js';
-import { shellEscape } from './utils.js';
+import { shellEscape, setDevMode } from './utils.js';
 import { setDataDir, migrateLocalStorage, cfgInit, cfgGet } from './cfg.js';
 import { initDevice, refreshDevice, refreshKeyboxStatus, refreshConflictStatus } from './device.js';
 import { initNetwork } from './network.js';
@@ -9,7 +9,6 @@ import { loadContributors } from './contributors.js';
 import { initRedirect } from './redirect.js';
 import { showToast } from './toast.js';
 import { initTerminal } from './terminal.js';
-import { setDevMode } from './state.js';
 import { renderActivityPreview } from './history.js';
 import { wireTopBarScroll, wireNavigation, onHomeShow } from './navigation.js';
 import { renderControlToggles, wireDevMode } from './toggles.js';
@@ -18,20 +17,9 @@ import { wireActions, buildFriendlyNames } from './actions.js';
 
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
-/*
- * Init phases (in order):
- *   0 — Critical path (bridge + config + core MWC), must complete
- *   1 — Render frame (theme, navigation, redirect)
- *   2 — Wire event handlers (all addEventListener, zero I/O)
- *   2b — Page-specific wiring (lazy imports)
- *   3 — Load text + data (fire-and-forget async)
- *   4 — Preload page MWC + background tasks
- *   5 — Lazy per-tab data (fire-and-forget async)
- */
 let _homeInitialized = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
-  /* Phase 0: Critical path — start MWC load in parallel with bridge/cfg */
   const coreMWC = import('./material-core.js');
   try {
     await initBridge();
@@ -39,38 +27,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (dataPath) setDataDir(dataPath);
     await cfgInit();
     await migrateLocalStorage();
-  } catch (e) {
-    console.warn('Bridge init failed, running without module path:', e);
-  }
+  } catch (e) { console.warn('Bridge init failed:', e); }
   await coreMWC;
 
-  /* Phase 1: Render frame */
   wireTopBarScroll();
   const savedTheme = await cfgGet('theme', 'dark') || 'dark';
   initTheme(savedTheme);
   wireNavigation();
   initRedirect();
 
-  /* Phase 2: Wire event handlers */
   wireActions();
   renderControlToggles();
   wireDevMode();
   buildFriendlyNames();
   initTerminal();
 
-  /* Phase 2b: Page-specific wiring (lazy imports) */
-  import('./keybox-ui.js').then(m => {
-    m.wireCustomKeybox();
-    m.wireKeyboxInstallButton();
-  }).catch(() => {});
+  import('./keybox-ui.js').then(m => { m.wireCustomKeybox(); m.wireKeyboxInstallButton(); }).catch(() => {});
   import('./target-apps.js').then(m => m.wireTargetApps()).catch(() => {});
   import('./auto-target-ui.js').then(m => m.wireAutoTarget()).catch(() => {});
   import('./autopif-ui.js').then(m => m.wireAutopif()).catch(() => {});
   import('./autokeybox-ui.js').then(m => m.wireAutokeybox()).catch(() => {});
   import('./rom-fingerprint-ui.js').then(m => m.wireRomFingerprint()).catch(() => {});
-  import('./adb-disabler-ui.js').then(m => {
-    m.wireAdbDisabler();
-  }).catch(() => {});
+  import('./adb-disabler-ui.js').then(m => m.wireAdbDisabler()).catch(() => {});
   import('./boot-harden-ui.js').then(m => m.wireBootHarden()).catch(() => {});
   import('./prop-handler-ui.js').then(m => m.wirePropHandler()).catch(() => {});
   import('./gms-ui.js').then(m => m.wireGms()).catch(() => {});
@@ -94,7 +72,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  /* Phase 3: Load text + data */
   initI18n().then(() => loadContributors()).catch(() => {});
   initDevice().catch(() => {});
   renderActivityPreview();
@@ -105,12 +82,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     refreshKeyboxStatus().catch(() => {});
   });
 
-  /* Phase 4: Background tasks */
   initNetwork();
   import('./keybox-ui.js').then(m => m.populateProviders()).catch(() => {});
   import('./font.js').then(m => m.initFonts()).catch(() => {});
 
-  /* Phase 5: Lazy per-tab data */
   wireConflictToggles().catch(() => {});
 });
 
@@ -156,7 +131,6 @@ async function wireConflictToggles() {
       : '';
     const featLabel = prettyFeatures ? `${t('conflict_covers', 'Covers')}: ${prettyFeatures} | ` : '';
     hint.textContent = featLabel.replace(/ \| $/, '');
-
     content.appendChild(label);
     content.appendChild(hint);
 
@@ -179,13 +153,9 @@ async function wireConflictToggles() {
       try {
         const isModule = sw.selected;
         const choice = isModule ? 'priority_module' : 'priority_specter';
-
         const cmd = `sh ${shellEscape(moddir + '/webroot/common/conflicts.sh')} set ${shellEscape(mod.key)} ${shellEscape(choice)}`;
         const result = await exec(cmd);
-        const code = result.code;
-        if (typeof code === 'number' && code !== 0) {
-          const err = result.stderr || 'Failed to update';          throw new Error(String(err));
-        }
+        if (typeof result.code === 'number' && result.code !== 0) throw new Error(result.stderr || 'Failed to update');
 
         const prettyFeatures = mod.features
           ? [...new Set(mod.features.split(',').map(f => f.trim()).map(f => {
@@ -199,9 +169,7 @@ async function wireConflictToggles() {
       } catch (e) {
         showToast(t('toast_failed_update', 'Failed to update'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
         sw.selected = !sw.selected;
-      } finally {
-        sw.disabled = false;
-      }
+      } finally { sw.disabled = false; }
     });
   }
 }

@@ -1,179 +1,106 @@
-import { shellEscape } from './utils.js';
+import { shellEscape, setGlobal, deleteGlobal, BridgeError, TimeoutError, ScriptError } from './utils.js';
 import { EXEC_TIMEOUT_MS } from './constants.js';
-import type { ModulePaths, ScriptResult, ExecResult, ChildProcess, PackageInfo } from './types.js';
-import { setGlobal, deleteGlobal } from './window-global.js';
-import { BridgeError, ScriptError, TimeoutError } from './errors.js';
+import type { ModulePaths, ScriptResult, ExecResult, PackageInfo, ChildProcess } from './types.js';
 
 let MODULE: ModulePaths | null = null;
 
-function registerCallback(name: string, value: unknown): void {
-  setGlobal(name, value);
-}
-
-function unregisterCallback(name: string): void {
-  deleteGlobal(name);
-}
-
-/** Initialise the bridge: fetch module paths and set up the environment. Must be called once before any other bridge function. */
 export async function initBridge(): Promise<void> {
   try {
     const r = await fetch('/json/module_paths.json');
     MODULE = await r.json() as ModulePaths;
-    if (MODULE?.MODDIR) {
-      MODULE.MODDIR = MODULE.MODDIR.replace('/modules_update/', '/modules/');
-    }
-  } catch (e) {
-    console.warn('Bridge init parse fallback:', e);
-    const src = (document.currentScript as HTMLScriptElement | null)?.src || '';
-    const m = src.match(/^(file:\/\/\/data\/adb\/modules\/[^/]+)/);
-    const moddir = m ? m[1] : null;
-    MODULE = moddir ? { MODDIR: moddir } : null;
+    if (MODULE?.MODDIR) MODULE.MODDIR = MODULE.MODDIR.replace('/modules_update/', '/modules/');
+  } catch {
+    const m = (document.currentScript as HTMLScriptElement | null)?.src?.match(/^(file:\/\/\/data\/adb\/modules\/[^/]+)/);
+    MODULE = m ? { MODDIR: m[1] } as ModulePaths : null;
   }
   if (!MODULE) throw new BridgeError('NO_MODULE', 'Cannot determine module path');
 }
 
-/** Return the detected module install directory, or null if not yet initialised. */
-export function getModuleDir(): string | null {
-  return MODULE?.MODDIR || null;
-}
-
-/** Return the Specter data directory, or null if not yet initialised. */
-export function getDataDir(): string | null {
-  return MODULE?.SPECTER_DIR || null;
-}
+export function getModuleDir(): string | null { return MODULE?.MODDIR || null; }
+export function getDataDir(): string | null { return MODULE?.SPECTER_DIR || null; }
 
 function scriptDir(type: string): string {
   const dirs: Record<string, string> = { feature: 'features', common: 'webroot/common' };
-  const sub = dirs[type] || 'features';
-  const m = MODULE;
-  if (!m) return '';
-  return `${m.MODDIR}/${sub}/`;
+  return MODULE ? `${MODULE.MODDIR}/${dirs[type] || 'features'}/` : '';
 }
 
-function getExecutor(): string | null {
-  if (typeof window.ksu?.exec === 'function') return 'ksu';
-  return null;
-}
-
-/** Resolve app labels for the given packages via the KernelSU native API.
- *  Returns null when the API is unavailable. */
 export function getPackagesInfo(packages: string[]): PackageInfo[] | null {
   const fn = (globalThis as any).ksu?.getPackagesInfo;
   if (typeof fn !== 'function') return null;
-  try {
-    const raw = fn(JSON.stringify(packages));
-    return JSON.parse(raw) as PackageInfo[];
-  } catch {
-    return null;
-  }
+  try { return JSON.parse(fn(JSON.stringify(packages))) as PackageInfo[]; } catch { return null; }
 }
 
-function genCallbackName(): string {
-  return `__sp_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-}
+function genCallbackName(): string { return `__sp_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`; }
 
-/**
- * Run a shell script and collect its result.
- * The script is executed via the KernelSU bridge.
- * @param scriptName - file name of the script (e.g. `device-info.sh`)
- * @param type - script directory: `'feature'` (default) or `'common'`
- * @returns `ScriptResult` with success flag and output
- */
 export function runScript(scriptName: string, type = 'feature'): Promise<ScriptResult> {
   return new Promise((resolve, reject) => {
-    const executor = getExecutor();
-    if (!executor) { reject(new BridgeError('NO_BRIDGE', 'no-bridge')); return; }
+    if (!window.ksu?.exec) { reject(new BridgeError('NO_BRIDGE', 'no-bridge')); return; }
     if (!MODULE) { reject(new BridgeError('NO_MODULE', 'no-module-path')); return; }
 
-    const scriptPath = scriptDir(type) + scriptName;
     const globalName = genCallbackName();
-    let timer: ReturnType<typeof setTimeout>;
+    const timer = setTimeout(() => { deleteGlobal(globalName); reject(new TimeoutError()); }, EXEC_TIMEOUT_MS);
 
-    function cleanup() { clearTimeout(timer); unregisterCallback(globalName); }
-
-    timer = setTimeout(() => {
-      cleanup();
-      reject(new TimeoutError());
-    }, EXEC_TIMEOUT_MS);
-
-    registerCallback(globalName, (...args: unknown[]) => {
-      cleanup();
-      const code = args[0];
-      const stdout = args[1];
+    setGlobal(globalName, (code: unknown, stdout: unknown) => {
+      clearTimeout(timer); deleteGlobal(globalName);
       if (typeof code === 'number') {
         resolve({ success: code === 0, output: typeof stdout === 'string' ? stdout : '', rawOutput: typeof stdout === 'string' ? stdout : '' });
-        return;
-      }
-      if (typeof code === 'string') {
-        const result = parseScriptOutput(code);
-        if (result.success) resolve(result);
-        else reject(new ScriptError(result));
+      } else if (typeof code === 'string' && code) {
+        try {
+          const json = JSON.parse(code);
+          if (json.success !== false) {
+            resolve({ success: true, output: json.result || json.stdout || json.output || '', rawOutput: code });
+          } else {
+            reject(new ScriptError({ success: false, output: json.stdout || json.result || '', rawOutput: code }));
+          }
+        } catch {
+          resolve({ success: false, output: code, rawOutput: code });
+        }
       } else {
-        reject(new BridgeError('UNEXPECTED_CALLBACK', 'unexpected-callback-type'));
+        resolve({ success: false, output: '', rawOutput: String(code || '') });
       }
     });
 
-    try {
-      window.ksu.exec(`sh ${shellEscape(scriptPath)}`, '{}', globalName);
-    } catch (err) { cleanup(); reject(err); }
+    try { window.ksu.exec(`sh ${shellEscape(scriptDir(type) + scriptName)}`, '{}', globalName); }
+    catch (e) { clearTimeout(timer); deleteGlobal(globalName); reject(e); }
   });
 }
 
-/**
- * Execute an arbitrary shell command and return its stdout/stderr.
- * Results are returned as `ExecResult` regardless of exit code.
- */
 export function exec(command: string): Promise<ExecResult> {
   return new Promise((resolve, reject) => {
-    const executor = getExecutor();
-    if (!executor) { reject(new BridgeError('NO_BRIDGE', 'no-bridge')); return; }
+    if (!window.ksu?.exec) { reject(new BridgeError('NO_BRIDGE', 'no-bridge')); return; }
+
     const globalName = genCallbackName();
-    let timer: ReturnType<typeof setTimeout>;
+    const timer = setTimeout(() => { deleteGlobal(globalName); reject(new TimeoutError()); }, EXEC_TIMEOUT_MS);
 
-    function cleanup() { clearTimeout(timer); unregisterCallback(globalName); }
-
-    timer = setTimeout(() => {
-      cleanup();
-      reject(new TimeoutError());
-    }, EXEC_TIMEOUT_MS);
-
-    registerCallback(globalName, (...args: unknown[]) => {
-      cleanup();
-      const code = args[0];
-      const stdout = args[1];
-      const stderr = args[2];
+    setGlobal(globalName, (code: unknown, stdout: unknown, stderr: unknown) => {
+      clearTimeout(timer); deleteGlobal(globalName);
       if (typeof code === 'number') {
         resolve({ code, stdout: typeof stdout === 'string' ? stdout : '', stderr: typeof stderr === 'string' ? stderr : '' });
-        return;
-      }
-      if (typeof code !== 'string') {
-        resolve({ code: -1, stdout: '', stderr: 'unexpected-callback-type' });
-        return;
-      }
-      if (!code) { resolve({ code: -1, stdout: '', stderr: '' }); return; }
-      try {
-        const json = JSON.parse(code);
-        resolve({
-          code: typeof json.code === 'number' ? json.code : json.success !== false ? 0 : 1,
-          stdout: json.result || json.stdout || json.output || '',
-          stderr: json.stderr || json.error || '',
-        });
-      } catch (e) {
-        console.warn('Exec JSON parse fallback:', e);
-        resolve({ code: -1, stdout: code, stderr: '' });
+      } else if (typeof code === 'string' && code) {
+        try {
+          const json = JSON.parse(code);
+          resolve({
+            code: typeof json.code === 'number' ? json.code : json.success !== false ? 0 : 1,
+            stdout: json.result || json.stdout || json.output || '',
+            stderr: json.stderr || json.error || '',
+          });
+        } catch {
+          resolve({ code: -1, stdout: code, stderr: '' });
+        }
+      } else {
+        resolve({ code: -1, stdout: '', stderr: '' });
       }
     });
 
-    try {
-      window.ksu.exec(command, '{}', globalName);
-    } catch (e) { cleanup(); reject(e); }
+    try { window.ksu.exec(command, '{}', globalName); }
+    catch (e) { clearTimeout(timer); deleteGlobal(globalName); reject(e); }
   });
 }
 
 function createChildProcess(): ChildProcess {
-  const cbs: Record<string, Function[]> = { stdout: [], stderr: [], stdin: [], exit: [], error: [] };
+  const cbs: Record<string, Function[]> = { stdout: [], stderr: [], exit: [], error: [] };
   const getCbs = (k: string) => cbs[k]!;
-  const child: ChildProcess = {
+  return {
     stdout: {
       on(ev: 'data', fn: (data: string) => void) { if (ev === 'data') getCbs('stdout').push(fn); },
       emit(ev: 'data', data: string) { if (ev === 'data') getCbs('stdout').forEach(fn => fn(data)); },
@@ -182,63 +109,36 @@ function createChildProcess(): ChildProcess {
       on(ev: 'data', fn: (data: string) => void) { if (ev === 'data') getCbs('stderr').push(fn); },
       emit(ev: 'data', data: string) { if (ev === 'data') getCbs('stderr').forEach(fn => fn(data)); },
     },
-    stdin: { on() {}, emit() {} },
     on(ev: string, fn: Function) { const a = getCbs(ev); if (a) a.push(fn); },
     emit(ev: string, ...args: unknown[]) { const a = getCbs(ev); if (a) a.forEach(fn => fn(...args)); },
   };
-  return child;
 }
 
-/**
- * Spawn a script and return a `ChildProcess` that emits stdout/stderr lines
- * and an exit/error event.  Falls back to polling `exec` when `ksu.spawn`
- * is unavailable.
- */
 export function spawnScript(scriptName: string, type = 'feature'): ChildProcess {
-  const executor = getExecutor();
   const child = createChildProcess();
-  if (!executor) { setTimeout(() => child.emit('error', new BridgeError('NO_BRIDGE', 'no-bridge'))); return child; }
-  if (!MODULE) { setTimeout(() => child.emit('error', new BridgeError('NO_MODULE', 'no-module-path'))); return child; }
+  if (!window.ksu?.exec) { setTimeout(() => (child as any).emit('error', new BridgeError('NO_BRIDGE', 'no-bridge'))); return child; }
+  if (!MODULE) { setTimeout(() => (child as any).emit('error', new BridgeError('NO_MODULE', 'no-module-path'))); return child; }
 
   const scriptPath = scriptDir(type) + scriptName;
 
-  if (executor === 'ksu' && typeof window.ksu?.spawn === 'function') {
+  if (typeof window.ksu?.spawn === 'function') {
     const globalName = genCallbackName();
-    registerCallback(globalName, child);
-    child.on('exit', () => unregisterCallback(globalName));
-    child.on('error', () => unregisterCallback(globalName));
-    try {
-      window.ksu.spawn('sh', JSON.stringify([scriptPath]), '{}', globalName);
-    } catch (e) { unregisterCallback(globalName); setTimeout(() => child.emit('error', e)); }
+    setGlobal(globalName, child);
+    (child as any).on('exit', () => deleteGlobal(globalName));
+    (child as any).on('error', () => deleteGlobal(globalName));
+    try { window.ksu.spawn('sh', JSON.stringify([scriptPath]), '{}', globalName); }
+    catch (e) { deleteGlobal(globalName); setTimeout(() => (child as any).emit('error', e)); }
   } else {
     const cmd = `sh ${shellEscape(scriptPath)}`;
     let timedOut = false;
-    const t = setTimeout(() => { timedOut = true; child.emit('error', new Error('timeout')); }, EXEC_TIMEOUT_MS);
+    const t = setTimeout(() => { timedOut = true; (child as any).emit('error', new TimeoutError()); }, EXEC_TIMEOUT_MS);
     exec(cmd).then(({ code, stdout, stderr }) => {
       if (timedOut) return;
       clearTimeout(t);
-      if (stdout) stdout.split('\n').forEach(l => l && child.stdout.emit('data', l));
-      if (stderr) stderr.split('\n').forEach(l => l && child.stderr.emit('data', l));
-      if (typeof code === 'number') child.emit('exit', code);
-    }).catch(e => { if (!timedOut) { clearTimeout(t); child.emit('error', e); } });
+      if (stdout) stdout.split('\n').forEach(l => l && (child as any).stdout.emit('data', l));
+      if (stderr) stderr.split('\n').forEach(l => l && (child as any).stderr.emit('data', l));
+      if (typeof code === 'number') (child as any).emit('exit', code);
+    }).catch(e => { if (!timedOut) { clearTimeout(t); (child as any).emit('error', e); } });
   }
   return child;
-}
-
-function parseScriptOutput(raw: string): ScriptResult {
-  if (!raw) return { success: true, rawOutput: '' };
-  try {
-    const json = JSON.parse(raw);
-    return {
-      success: json.success !== false,
-      output: json.result || json.stdout || json.output || '',
-      rawOutput: raw,
-    };
-  } catch (e) {
-    console.warn('Script output parse fallback:', e);
-    const lower = raw.toLowerCase();
-    const errorKeywords = ['not found', 'failed', 'error', 'permission denied', 'no such file'];
-    const hasError = errorKeywords.some(kw => lower.includes(kw));
-    return { success: !hasError, rawOutput: raw };
-  }
 }

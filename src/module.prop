@@ -1,7 +1,7 @@
 id=specter
 name=Specter
 version=1.4.4
-versionCode=15
+versionCode=16
 author=dpejoh
 description=Unified Play Integrity and root hiding stack for Android
 updateJson=https://raw.githubusercontent.com/dpejoh/specter/main/update.json

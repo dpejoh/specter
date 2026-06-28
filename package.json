@@ -13,7 +13,8 @@
 "build:zip": "FULL_VER=$(npm run build:fullversion --silent 2>/dev/null) && VC=$(npm run build:versioncode --silent 2>/dev/null) && cd Module && sed -i \"s/^version=.*/version=${FULL_VER}/\" module.prop && sed -i \"s/^versionCode=.*/versionCode=${VC}/\" module.prop && rm -f \"../module.zip\" \"../Specter-${FULL_VER}.zip\" && zip -r \"../Specter-${FULL_VER}.zip\" . && cd ..",
 "build:releasever": "BASE_VER=$(grep '^version=' src/module.prop | cut -d= -f2) && BUILD=$(grep '^versionCode=' src/module.prop | cut -d= -f2) && echo \"v${BASE_VER}-${BUILD}\"",
 "build:release": "vite build && node inline-css.cjs && npm run build:module && rm -f Module/webroot/*.map && rm -f Module/webroot/lang/source/string.json && npm run build:releasezip",
-"build:releasezip": "VER=$(npm run build:releasever --silent 2>/dev/null) && VC=$(npm run build:versioncode --silent 2>/dev/null) && cd Module && sed -i \"s/^version=.*/version=${VER}/\" module.prop && sed -i \"s/^versionCode=.*/versionCode=${VC}/\" module.prop && rm -f \"../module.zip\" \"../Specter-${VER}.zip\" && zip -r \"../Specter-${VER}.zip\" . && cd .."
+    "build:releasezip": "VER=$(npm run build:releasever --silent 2>/dev/null) && VC=$(npm run build:versioncode --silent 2>/dev/null) && cd Module && sed -i \"s/^version=.*/version=${VER}/\" module.prop && sed -i \"s/^versionCode=.*/versionCode=${VC}/\" module.prop && rm -f \"../module.zip\" \"../Specter-${VER}.zip\" && zip -r \"../Specter-${VER}.zip\" . && cd ..",
+    "build:inotifyd": "bash deps/inotifyd/build.sh"
   },
   "devDependencies": {
     "happy-dom": "^20.9.0",

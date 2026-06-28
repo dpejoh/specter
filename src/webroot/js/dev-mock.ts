@@ -1,4 +1,4 @@
-import { getGlobal } from './window-global.js';
+import { getGlobal } from './utils.js';
 
 const MOCK_TARGET_TXT = [
   'com.example.one',

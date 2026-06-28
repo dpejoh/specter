@@ -12,41 +12,27 @@ export async function initI18n() {
 
 export async function applyLanguage(langCode: string) {
   cfgSet('lang', langCode);
-
-  let targetLang = langCode;
-  const available = ['en', 'zh', 'ru', 'es', 'ar'];
+  const available = ['en', 'zh', 'ru', 'es', 'ar', 'pl', 'tr'];
+  let target = langCode;
   if (langCode === 'auto') {
-    targetLang = (navigator.language || '').slice(0, 2);
-    if (!available.includes(targetLang)) targetLang = 'en';
+    target = (navigator.language || '').slice(0, 2);
+    if (!available.includes(target)) target = 'en';
   }
 
-  if (targetLang === 'en') {
+  if (target === 'en') {
     currentStrings = enStrings;
-    applyTranslations();
-    document.documentElement.dir = 'ltr';
-    document.dispatchEvent(new CustomEvent('languageChanged', { detail: { langCode } }));
-    return;
-  }
-
-  const cached = localStorage.getItem('i18n_' + targetLang);
-  if (cached) {
+  } else {
     try {
-      currentStrings = JSON.parse(cached);
-      applyTranslations();
-    } catch (_e) { /* */ }
+      const cached = localStorage.getItem('i18n_' + target);
+      if (cached) { currentStrings = JSON.parse(cached); }
+      const res = await fetch('lang/' + target + '.json?ts=' + Date.now());
+      currentStrings = await res.json();
+      localStorage.setItem('i18n_' + target, JSON.stringify(currentStrings));
+    } catch { /* cached will be used if fetch failed */ }
   }
 
-  const ts = String(Date.now());
-  try {
-    const res = await fetch('lang/' + targetLang + '.json?ts=' + ts);
-    currentStrings = await res.json();
-    applyTranslations();
-    localStorage.setItem('i18n_' + targetLang, JSON.stringify(currentStrings));
-  } catch (_e) {
-    console.warn('Failed to load language:', _e);
-  }
-
-  document.documentElement.dir = targetLang === 'ar' ? 'rtl' : 'ltr';
+  applyTranslations();
+  document.documentElement.dir = target === 'ar' ? 'rtl' : 'ltr';
   document.dispatchEvent(new CustomEvent('languageChanged', { detail: { langCode } }));
 }
 
@@ -55,90 +41,42 @@ export function getTranslation(key: string): string | null {
 }
 
 function applyTranslations() {
-  document.querySelectorAll('[data-i18n]').forEach(el => {
+  for (const el of document.querySelectorAll('[data-i18n]')) {
     const key = (el as HTMLElement).dataset.i18n;
-    if (!key) return;
-
-    if (el.tagName === 'TITLE') {
-      const val = currentStrings[key] || fallbackStrings[key];
-      if (val) document.title = val;
-      return;
-    }
-
+    if (!key) continue;
     const val = currentStrings[key] || fallbackStrings[key];
-    if (!val) return;
-
-    if (el.tagName === 'MD-NAVIGATION-TAB' || el.tagName === 'MD-ASSIST-CHIP' || el.tagName === 'MD-FILTER-CHIP') {
+    if (!val) continue;
+    if (el.tagName === 'TITLE') { document.title = val; continue; }
+    if (el.tagName.startsWith('MD-')) {
       (el as HTMLElement & { label: string }).label = val;
-      setAriaLabel(el, val);
-      return;
+      if (el.hasAttribute('aria-label')) el.setAttribute('aria-label', val);
+      continue;
     }
-
-    if (val.includes('<')) {
-      el.innerHTML = val;
-    } else {
-      while (el.firstChild) el.removeChild(el.firstChild);
-      el.appendChild(document.createTextNode(val));
-    }
-  });
-
-  document.querySelectorAll('[data-i18n-aria]').forEach(el => {
-    const key = (el as HTMLElement).dataset.i18nAria;
-    if (!key) return;
-    const val = currentStrings[key] || fallbackStrings[key];
-    if (val) setAriaLabel(el, val);
-  });
-
-  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-    const key = (el as HTMLElement).dataset.i18nPlaceholder;
-    if (!key) return;
-    const val = currentStrings[key] || fallbackStrings[key];
+    if (val.includes('<')) { el.innerHTML = val; } else { el.textContent = val; }
+  }
+  for (const el of document.querySelectorAll('[data-i18n-aria]')) {
+    const val = currentStrings[(el as HTMLElement).dataset.i18nAria!] || fallbackStrings[(el as HTMLElement).dataset.i18nAria!];
+    if (val) el.setAttribute('aria-label', val);
+  }
+  for (const el of document.querySelectorAll('[data-i18n-placeholder]')) {
+    const val = currentStrings[(el as HTMLElement).dataset.i18nPlaceholder!] || fallbackStrings[(el as HTMLElement).dataset.i18nPlaceholder!];
     if (val) (el as HTMLInputElement).placeholder = val;
-  });
-}
-
-function setAriaLabel(el: Element, val: string) {
-  if (el.hasAttribute('aria-label')) {
-    el.setAttribute('aria-label', val);
   }
 }
 
 function wireLanguageSelect(currentLang: string) {
   const select = document.getElementById('language-select') as HTMLSelectElement | null;
   if (!select) return;
-
   select.innerHTML = '';
-
-  const LANGUAGES: [string, string, string][] = [
-    ['auto', '🌐', getTranslation('theme_mode_auto') || 'Auto'],
-    ['en', '🇬🇧', 'English'],
-    ['zh', '🇨🇳', '中文'],
-    ['ru', '🇷🇺', 'Русский'],
-    ['es', '🇪🇸', 'Español'],
-    ['ar', '🇸🇦', 'العربية'],
-  ];
-
-  LANGUAGES.forEach(([code, flag, name]) => {
-    const item = document.createElement('option');
-    item.value = code;
-    item.textContent = `${flag} ${name}`;
-    select.appendChild(item);
-  });
-
+  const langs: [string, string][] = [['auto', 'Auto'], ['en', 'English'], ['zh', '中文'], ['ru', 'Русский'], ['es', 'Español'], ['ar', 'العربية'], ['pl', 'Polski'], ['tr', 'Türkçe']];
+  for (const [code, name] of langs) {
+    const opt = document.createElement('option');
+    opt.value = code; opt.textContent = name; select.appendChild(opt);
+  }
   select.value = currentLang;
-
-  select.addEventListener('change', async () => {
-    try {
-      await applyLanguage(select.value);
-    } catch (e) {
-      console.warn('Language change failed:', e);
-    }
-  });
-
+  select.addEventListener('change', () => applyLanguage(select.value));
   document.addEventListener('languageChanged', () => {
-    const autoOption = select.querySelector('option[value="auto"]');
-    if (autoOption) {
-      autoOption.textContent = `🌐 ${getTranslation('theme_mode_auto') || 'Auto'}`;
-    }
+    const auto = select.querySelector('option[value="auto"]');
+    if (auto) auto.textContent = getTranslation('theme_mode_auto') || 'Auto';
   });
 }
