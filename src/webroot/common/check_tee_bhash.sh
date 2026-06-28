@@ -22,8 +22,8 @@ if [ -f "$_dex" ]; then
     echo "tee_status=error"
   fi
 
-  if [ -f "$TEMP_DIR/tee_hash" ]; then
-    echo "tee_bhash=$(cat "$TEMP_DIR/tee_hash")"
+  if [ -f "$TEMP_DIR/tee_bhash" ]; then
+    echo "tee_bhash=$(cat "$TEMP_DIR/tee_bhash")"
   fi
 
   if [ -f "$TEMP_DIR/tee_tier" ]; then
@@ -32,7 +32,7 @@ if [ -f "$_dex" ]; then
 
   # Update cached files so device info reflects fresh results
   mkdir -p "$SPECTER_DIR" 2>/dev/null || true
-  for _f in tee_status tee_hash tee_tier tee_keymaster_version; do
+  for _f in tee_status tee_bhash tee_tier tee_keymaster_version; do
     [ -f "$TEMP_DIR/$_f" ] && cp "$TEMP_DIR/$_f" "$SPECTER_DIR/$_f"
   done
   unset _f

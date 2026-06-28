@@ -6,9 +6,11 @@ MODDIR=${0%/*}
 
 log_i "BOOT_HASH" "Starting boot hash resolution"
 
+_brene_priority=false
 # BRENE cooperation: if BRENE is installed and has priority,
 # compute boot hash and write it to BRENE's config instead of setting the prop directly
 if [ -d "/data/adb/modules/brene" ] && [ "$(cfg_get conflict_brene priority_module)" = "priority_module" ]; then
+  _brene_priority=true
   _set_hash() {
     _sh="$1"
     ensure_dir "$SPECTER_DIR"
@@ -67,19 +69,6 @@ if [ -z "$_winner" ] && [ -n "$PROP_BHASH" ] && ! _is_zero "$PROP_BHASH" && [ "$
   _winner_src="prop"
 fi
 
-# Priority 3: Compute from vbmeta partition
-if [ -z "$_winner" ]; then
-  . "$MODDIR/../lib/vbmeta.sh"
-  _vbmeta_slot=$(getprop ro.boot.slot_suffix 2>/dev/null || echo "")
-  _vbmeta_dev="/dev/block/by-name/vbmeta${_vbmeta_slot}"
-  [ -b "$_vbmeta_dev" ] || _vbmeta_dev="/dev/block/by-name/vbmeta"
-  CALC_BHASH=$(vbmeta_digest "$_vbmeta_dev" 2>/dev/null || true)
-  if [ -n "$CALC_BHASH" ] && [ "${#CALC_BHASH}" -eq 64 ]; then
-    _winner="$CALC_BHASH"
-    _winner_src="partition"
-  fi
-fi
-
 # Step 3: Apply winner
 if [ -n "$_winner" ]; then
   case "$_winner_src" in
@@ -87,7 +76,7 @@ if [ -n "$_winner" ]; then
       log_i "BOOT_HASH" "Custom boot hash override"
       _set_hash "$_winner"
       ;;
-    "TEE attestation"|"partition")
+    "TEE attestation")
       _set_hash "$_winner"
       ;;
     "prop")
@@ -105,6 +94,11 @@ if [ -n "$_winner" ]; then
   log_i "BOOT_HASH" "Source: $_winner_src"
   log_i "BOOT_HASH" "Boot hash resolved"
   exit 0
+fi
+
+if [ "$_brene_priority" = "true" ] && [ -f "/data/adb/brene/config.sh" ]; then
+  sed -i "/^config_verified_boot_hash=/d" /data/adb/brene/config.sh
+  log_d "BOOT_HASH" "Cleared BRENE boot hash (no valid source)"
 fi
 
 log_e "BOOT_HASH" "Failed to obtain boot hash"

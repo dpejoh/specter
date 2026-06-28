@@ -60,7 +60,7 @@ fi
 # Clean up all log files and data files
 rm -rf "$SPECTER_DIR/log" 2>/dev/null || rm -f "$SPECTER_DIR/log"/*.log "$SPECTER_DIR/log"/*.gz 2>/dev/null || true
 rm -f "$SPECTER_DIR/tee_reported" "$SPECTER_DIR/rom_spoof_reported" "$SPECTER_DIR/pif_reported" 2>/dev/null || true
-rm -f "$SPECTER_DIR/tee_status" "$SPECTER_DIR/tee_hash" "$SPECTER_DIR/tee_tier" 2>/dev/null || true
+rm -f "$SPECTER_DIR/tee_status" "$SPECTER_DIR/tee_bhash" "$SPECTER_DIR/tee_tier" 2>/dev/null || true
 rm -f "$SPECTER_DIR/tee_keymaster_version" "$SPECTER_DIR/tee_challenge" 2>/dev/null || true
 rm -f "$SPECTER_DIR/vbmeta_digest" "$SPECTER_DIR/app_labels.json" 2>/dev/null || true
 rm -f "$MODDIR/.first_boot_pending" 2>/dev/null || true

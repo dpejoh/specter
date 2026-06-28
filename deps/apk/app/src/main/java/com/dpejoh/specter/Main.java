@@ -92,7 +92,7 @@ public class Main {
                     "challenge_verified=" + challengeVerified + "\n");
 
             if (hash != null) {
-                writeFile(new File(dir, "tee_hash"), hash + "\n");
+                writeFile(new File(dir, "tee_bhash"), hash + "\n");
             }
 
             writeFile(new File(dir, "tee_tier"), tier + "\n");

@@ -12,7 +12,7 @@ export function wireTeeHash() {
   btn.addEventListener('click', () => {
     const progress = document.getElementById('progress-dialog') as MdDialog | null;
     const label = document.getElementById('progress-label');
-    if (label) label.textContent = t('check_tee_hash', 'TEE & Boot Hash');
+    if (label) label.textContent = t('check_tee_bhash', 'TEE & Boot Hash');
     progress?.show();
 
     const lines: string[] = [];
@@ -99,7 +99,7 @@ function showResultDialog(teeStatus: string, teeHash: string, bootHash: string, 
     ${hashRow(t('boot_hash_calc', 'Boot Hash (Calc)'), vbmetaHash, 'tee-hash-copy-calc', vbmetaClass)}`;
 
   const dialog = document.createElement('md-dialog');
-  dialog.innerHTML = `<div slot="headline">${t('check_tee_hash', 'TEE & Boot Hash')}</div>
+  dialog.innerHTML = `<div slot="headline">${t('check_tee_bhash', 'TEE & Boot Hash')}</div>
     <div slot="content">${content}</div>
     <div slot="actions"><md-text-button id="tee-hash-close">${t('dialog_close', 'Close')}</md-text-button></div>`;
   document.body.appendChild(dialog);

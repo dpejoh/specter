@@ -80,7 +80,7 @@ mkdir -p "$SPECTER_DIR"
 echo "1" > "$SPECTER_DIR/tee_reported"
 echo "1" > "$SPECTER_DIR/rom_spoof_reported"
 echo "1" > "$SPECTER_DIR/pif_reported"
-rm -f "$SPECTER_DIR/tee_status" "$SPECTER_DIR/tee_hash" "$SPECTER_DIR/tee_tier" 2>/dev/null || true
+rm -f "$SPECTER_DIR/tee_status" "$SPECTER_DIR/tee_bhash" "$SPECTER_DIR/tee_tier" 2>/dev/null || true
 unset _pif_name
 
 # Ensure backup dir exists for first-boot snapshot
