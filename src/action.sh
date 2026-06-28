@@ -24,7 +24,12 @@ _pif_validate_fingerprint() {
   unset _f _fp; return 1
 }
 
+_first_boot=0
+[ -f "$SPECTER_DIR/pif_reported" ] && _first_boot=1
+
 {
+  log_i "ACTION" "Running full integrity pipeline"
+
   _feature_should_run "gms" && {
     log_u "ACTION" ""
     log_u "ACTION" "-> Play Store:"
@@ -52,23 +57,39 @@ _pif_validate_fingerprint() {
   if _feature_should_run "pif"; then
     _pif_name=$(_pif_prop) || _pif_name=""
     if [ -z "$_pif_name" ]; then
-      if [ -t 1 ]; then
+      if [ -f "$SPECTER_DIR/pif_reported" ]; then
+        log_i "ACTION" "PIF not found, first boot suppress (pif_reported token consumed)"
+        rm -f "$SPECTER_DIR/pif_reported"
+      elif [ -t 1 ]; then
         log_u "ACTION" ""
         log_u "ACTION" "PIF not found — Press Volume UP to install, DOWN to skip..."
         _ap_key=$(timeout 10 getevent -l 2>/dev/null | grep -oE "KEY_VOLUME(UP|DOWN)" | head -1)
         if [ "$_ap_key" = "KEY_VOLUMEUP" ]; then
-          install_module_from_github "KOWX712/PlayIntegrityFix" "Play Integrity Fix"
+          install_module_from_github "KOWX712/PlayIntegrityFix" "Play Integrity Fix" || \
+            log_e "ACTION" "PIF install failed"
           echo "PIF installed — reboot before running autopif"
+          _pif_installed=1
         else
           echo "PIF install skipped"
         fi
         unset _ap_key
       else
-        log_w "ACTION" "PIF not found, auto-install skipped"
+        log_w "ACTION" "PIF not found, auto-install skipped (run from terminal or install manually)"
       fi
-    else
+    elif [ -f "$SPECTER_DIR/pif_reported" ]; then
       log_u "ACTION" ""
-      log_u "ACTION" "-> PIF Fingerprint:"
+      log_u "ACTION" "PIF found, first boot - checking existing fingerprint validity"
+      if _pif_validate_fingerprint; then
+        log_i "ACTION" "Existing fingerprint valid, skipping fetch"
+      else
+        log_i "ACTION" "Fingerprint invalid or missing, fetching new"
+        sh "$MODDIR/features/pif.sh" || true
+      fi
+      rm -f "$SPECTER_DIR/pif_reported"
+      _pif_skip=1
+    fi
+    unset _pif_name
+    if [ -z "$_pif_installed" ] && [ -z "$_pif_skip" ] && [ -f "$MODDIR/features/pif.sh" ]; then
       sh "$MODDIR/features/pif.sh" || true
     fi
   fi
@@ -79,6 +100,13 @@ _pif_validate_fingerprint() {
   [ -f "$MODDIR/module.prop.bak" ] && cp "$MODDIR/module.prop.bak" "$MODDIR/module.prop"
   . "$MODDIR/lib/desc.sh"
   refresh_module_description
+
+  echo ""
+  log_i "ACTION" "Full integrity pipeline completed"
 } 2>&1 | tee -a "$ACTION_LOG"
+
+if [ "$_first_boot" = "0" ]; then
+  printf '{"script":"action.sh","output":"Full integrity pipeline completed","time":"%s","code":0}\n' "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" >> "$SPECTER_DIR/log/history.jsonl"
+fi
 
 exit 0

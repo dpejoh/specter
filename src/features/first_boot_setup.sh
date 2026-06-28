@@ -30,6 +30,10 @@ if [ -f "$SECURITY_PATCH_FILE" ]; then
   log_d "FIRST_BOOT" "Backed up $SECURITY_PATCH_FILE"
 fi
 
+log_i "FIRST_BOOT" "Waiting for network..."
+for _sec in 1 2 3 4 5 6 7 8 9 10; do check_network 2>/dev/null && break; sleep 1; done
+unset _sec
+
 log_i "FIRST_BOOT" "Running full integrity pipeline"
 sh "$MODDIR/../action.sh" || log_e "FIRST_BOOT" "action.sh failed (exit $?)"
 

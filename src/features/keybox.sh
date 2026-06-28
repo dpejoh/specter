@@ -39,12 +39,12 @@ if [ -n "$_custom_type" ] && [ -n "$_custom_value" ]; then
       ;;
     url)
       log_i "KEYBOX" "Downloading custom keybox from URL..."
-      download "$_custom_value" > "$TEMP_FILE" || {
-        log_e "KEYBOX" "Custom URL download failed"
-        _clear_custom
-        exit 1
-      }
-      if decode_keybox_blob "$TEMP_FILE" "$DECODE_FILE" 2>/dev/null && [ -s "$DECODE_FILE" ]; then
+download "$_custom_value" "$TEMP_FILE" || {
+  log_e "KEYBOX" "Custom URL download failed"
+  _clear_custom
+  exit 1
+}
+if decode_keybox_blob "$TEMP_FILE" "$DECODE_FILE" 2>/dev/null && [ -s "$DECODE_FILE" ]; then
         mv "$DECODE_FILE" "$TARGET_FILE" || die "Failed to move decoded keybox"
         log_i "KEYBOX" "Custom keybox installed from URL"
         _clear_custom
@@ -127,27 +127,34 @@ _DL_URL="${KEYBOX_URL}/${_DL_SOURCE}/${_DL_VER}"
 [ "$_DL_SOURCE" = "fallback" ] && _DL_URL="${KEYBOX_URL}/${_DL_VER}"
 
 log_i "KEYBOX" "Downloading keybox..."
-download "$_DL_URL" > "$TEMP_FILE" || {
+download "$_DL_URL" "$TEMP_FILE" || {
   log_e "KEYBOX" "Download failed"
   exit 1
 }
+
+log_d "KEYBOX" "Downloaded $(wc -c < "$TEMP_FILE" 2>/dev/null || echo "?") bytes"
 
 if ! decode_keybox_blob "$TEMP_FILE" "$DECODE_FILE" 2>/dev/null; then
   log_e "KEYBOX" "Base64 decode failed"
   exit 1
 fi
 
-[ -s "$DECODE_FILE" ] || {
-  log_e "KEYBOX" "Decoded keybox is empty"
-  exit 1
-}
+_dk_size=$(wc -c < "$DECODE_FILE" 2>/dev/null || echo "0")
+log_d "KEYBOX" "Decoded $_dk_size bytes"
+[ "$_dk_size" -gt 0 ] || { log_e "KEYBOX" "Decoded keybox is empty"; exit 1; }
+unset _dk_size
 
 _has_ecdsa=$(sed -n '/<Key algorithm="ecdsa">/,/<\/Key>/p' "$DECODE_FILE" 2>/dev/null)
 _has_rsa=$(sed -n '/<Key algorithm="rsa">/,/<\/Key>/p' "$DECODE_FILE" 2>/dev/null)
 _has_id=$(( $(grep -c '<serial>' "$DECODE_FILE" 2>/dev/null || true) + $(grep -c 'DeviceID' "$DECODE_FILE" 2>/dev/null || true) ))
 
-[ -z "$_has_ecdsa" ] && [ -z "$_has_rsa" ] && die "No valid attestation keys found"
-[ "$_has_id" -eq 0 ] && die "No identifier field found (serial/DeviceID)"
+if [ -z "$_has_ecdsa" ] && [ -z "$_has_rsa" ]; then
+  log_w "KEYBOX" "No ECDSA key, no RSA key in decoded file"
+  log_d "KEYBOX" "First 100 bytes: $(head -c 100 "$DECODE_FILE" 2>/dev/null | tr '\n' ' ' | tr '\0' '.')"
+  log_e "KEYBOX" "No valid attestation keys found in downloaded keybox"
+  exit 1
+fi
+[ "$_has_id" -eq 0 ] && { log_e "KEYBOX" "No identifier field found (serial/DeviceID)"; exit 1; }
 [ -n "$_has_ecdsa" ] || log_w "KEYBOX" "Missing ECDSA key block"
 [ -n "$_has_rsa" ] || log_w "KEYBOX" "Missing RSA key block"
 

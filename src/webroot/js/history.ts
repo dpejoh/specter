@@ -1,8 +1,9 @@
-import { escapeHtml } from './utils.js';
-import { getFriendlyNames } from './utils.js';
+import { escapeHtml, getFriendlyNames } from './utils.js';
 import { STORAGE_KEY, MAX_ENTRIES } from './constants.js';
 import { getTranslation } from './i18n.js';
 import { showToast } from './toast.js';
+import { exec, getDataDir } from './bridge.js';
+import { shellEscape } from './utils.js';
 import '@material/web/iconbutton/icon-button.js';
 
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
@@ -11,6 +12,23 @@ interface HistoryEntry { script: string; output: string; time: string; code?: nu
 
 export function getHistory(): HistoryEntry[] {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; }
+}
+
+async function fetchDeviceHistory(): Promise<HistoryEntry[]> {
+  try {
+    const dir = getDataDir() || '/data/adb/specter';
+    const r = await exec(`cat ${shellEscape(dir + '/log/history.jsonl')} 2>/dev/null || true`);
+    if (!r.stdout) return [];
+    return r.stdout.trim().split('\n').filter(Boolean).map(l => { try { return JSON.parse(l) as HistoryEntry; } catch { return null; } }).filter((e): e is HistoryEntry => e !== null);
+  } catch { return []; }
+}
+
+function mergeHistory(local: HistoryEntry[], device: HistoryEntry[]): HistoryEntry[] {
+  const seen = new Set(local.map(e => e.script + e.time));
+  for (const e of device) {
+    if (!seen.has(e.script + e.time)) local.push(e);
+  }
+  return local.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
 }
 
 export function addEntry(scriptName: string, output: string, code?: number) {
@@ -24,6 +42,10 @@ export function addEntry(scriptName: string, output: string, code?: number) {
 
 function clearHistory() {
   try { localStorage.removeItem(STORAGE_KEY); } catch {}
+}
+
+async function clearDeviceHistory() {
+  try { await exec('rm -f /data/adb/specter/log/history.jsonl'); } catch {}
 }
 
 function formatTime(iso: string): string {
@@ -51,7 +73,8 @@ export function formatRelativeTime(iso: string): string {
 }
 
 export async function openRecentActivity(devMode = false) {
-  const entries = getHistory();
+  const [device, local] = await Promise.all([fetchDeviceHistory(), Promise.resolve(getHistory())]);
+  const entries = mergeHistory(local, device);
   if (!entries || entries.length === 0) {
     const d = document.createElement('md-dialog');
     d.innerHTML = `<div slot="headline">${t('history_title', 'Recent Activity')}</div>
@@ -68,8 +91,7 @@ export async function openRecentActivity(devMode = false) {
   list.className = 'activity-list';
 
   for (const entry of entries) {
-    const i18nKey = getFriendlyNames()[entry.script];
-    const friendlyName = (i18nKey && t(i18nKey, '')) || entry.script;
+    const friendlyName = entry.script === 'action.sh' ? 'Action' : (t(getFriendlyNames()[entry.script] ?? '', '') || entry.script);
     const isError = entry.output.includes('[!]') || entry.output.toLowerCase().includes('error');
     const card = document.createElement('md-elevated-card');
     card.className = 'activity-card' + (isError ? ' activity-card--error' : ' activity-card--success');
@@ -104,20 +126,21 @@ export async function openRecentActivity(devMode = false) {
     <div slot="actions"><md-text-button class="dialog-action-clear">${t('dialog_clear', 'Clear')}</md-text-button><md-text-button class="dialog-action-close">${t('dialog_close', 'Close')}</md-text-button></div>`;
   dialog.querySelector('[slot="content"]')!.appendChild(list);
   document.body.appendChild(dialog);
-  dialog.querySelector('.dialog-action-clear')!.addEventListener('click', async () => { clearHistory(); dialog.close(); setTimeout(() => openRecentActivity(devMode), 100); });
+  dialog.querySelector('.dialog-action-clear')!.addEventListener('click', async () => { clearHistory(); await clearDeviceHistory(); dialog.close(); setTimeout(() => openRecentActivity(devMode), 100); });
   dialog.querySelector('.dialog-action-close')!.addEventListener('click', () => dialog.close());
   dialog.addEventListener('close', () => document.body.removeChild(dialog));
   dialog.show();
 }
 
-export function renderActivityPreview() {
+export async function renderActivityPreview() {
   const container = document.getElementById('activity-list');
   const countEl = document.getElementById('activity-count');
   if (!container) return;
 
-  document.getElementById('clear-history-btn')?.addEventListener('click', () => { clearHistory(); renderActivityPreview(); });
+  document.getElementById('clear-history-btn')?.addEventListener('click', () => { clearHistory(); clearDeviceHistory(); renderActivityPreview(); });
 
-  const allEntries = getHistory();
+  const [device, local] = await Promise.all([fetchDeviceHistory(), Promise.resolve(getHistory())]);
+  const allEntries = mergeHistory(local, device);
   const count = allEntries.length;
   if (countEl) countEl.textContent = `${count} ${t('home_events', 'events')}`;
   container.innerHTML = '';
@@ -126,8 +149,7 @@ export function renderActivityPreview() {
   for (let i = 0; i < Math.min(count, VISIBLE); i++) {
     const entry = allEntries[i]!;
     const isError = entry.code !== undefined ? entry.code !== 0 : entry.output.toLowerCase().includes('error');
-    const i18nKey = getFriendlyNames()[entry.script];
-    const friendlyName = (i18nKey && t(i18nKey, '')) || entry.script;
+    const friendlyName = entry.script === 'action.sh' ? 'Action' : (t(getFriendlyNames()[entry.script] ?? '', '') || entry.script);
     const stripLog = (l: string) => l.replace(/^\[\d{2}:\d{2}:\d{2}\] \[[DIWE]\] \[[^\]]*\] /, '');
     const desc = entry.output.split('\n').map(stripLog).reverse().find(l => l.trim() && !/^(>|x |\[!\])/.test(l))?.slice(0, 50) || '';
     const item = document.createElement('div');
