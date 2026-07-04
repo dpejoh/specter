@@ -44,11 +44,4 @@ body:
     validations:
       required: false
 
-  - type: checkboxes
-    id: contribute
-    attributes:
-      label: Contribution
-      description: Can you help implement or test this?
-      options:
-        - label: I can help implement this
-        - label: I can help test this
+
