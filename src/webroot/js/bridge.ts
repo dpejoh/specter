@@ -9,7 +9,11 @@ export async function initBridge(): Promise<void> {
   if (preloaded && typeof preloaded?.then === 'function') {
     try {
       const data = await preloaded;
-      if (data?.MODDIR) { MODULE = data; MODULE.MODDIR = MODULE.MODDIR.replace('/modules_update/', '/modules/'); return; }
+      if (data?.MODDIR) {
+        data.MODDIR = data.MODDIR.replace('/modules_update/', '/modules/');
+        MODULE = data;
+        return;
+      }
     } catch {}
   }
   try {
