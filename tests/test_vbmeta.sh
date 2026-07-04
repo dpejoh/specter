@@ -24,7 +24,7 @@ assert_prop_eq "vbmeta: hash_alg preserved"    "ro.boot.vbmeta.hash_alg" "sha512
 bootstrap
 source_libs
 apply_vbmeta_props
-assert_prop_eq "vbmeta: avb_version set to default"          "ro.boot.vbmeta.avb_version" "1.2"
+assert_prop_eq "vbmeta: avb_version set to default"          "ro.boot.vbmeta.avb_version" "1.3"
 assert_prop_eq "vbmeta: hash_alg set to default"             "ro.boot.vbmeta.hash_alg" "sha256"
 assert_prop_eq "vbmeta: invalidate_on_error set to default"  "ro.boot.vbmeta.invalidate_on_error" "yes"
 assert_prop_eq "vbmeta: size set to default"                 "ro.boot.vbmeta.size" "4096"
@@ -35,6 +35,6 @@ source_libs
 rm -f "$VBMETA_DIGEST"
 apply_vbmeta_props
 assert_prop_not_set "vbmeta: digest not set when file missing" "ro.boot.vbmeta.digest"
-assert_prop_eq "vbmeta: avb_version still set" "ro.boot.vbmeta.avb_version" "1.2"
+assert_prop_eq "vbmeta: avb_version still set" "ro.boot.vbmeta.avb_version" "1.3"
 
 done_testing
