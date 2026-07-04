@@ -65,6 +65,7 @@ case "${1}" in
     _merge_cleanup
     : "${_added:=0}"
     log_i "TARGET" "Denylist merge: checked $_count entries, added $_added"
+    unset _count _added
     ;;
   --merge)
     log_i "TARGET" "Mode: merge"
@@ -100,6 +101,7 @@ case "${1}" in
     _merge_cleanup
     : "${_added:=0}"
     log_i "TARGET" "Checked $_count entries, added $_added"
+    unset _count _added
     ;;
   *)
     log_i "TARGET" "Mode: overwrite"
