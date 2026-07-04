@@ -11,7 +11,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -31,7 +31,7 @@ jobs:
         run: npx tsc --noEmit
 
       - name: Lint shell scripts
-        uses: ludeeus/action-shellcheck@master
+        uses: ludeeus/action-shellcheck@2.0.0
         with:
           scandir: src
           severity: warning
@@ -51,7 +51,7 @@ jobs:
           test -f Module/META-INF/com/google/android/updater-script
           test -f Module/webroot/index.html
           test -f Module/lib/common.sh
-          test -f Module/lib/config_env.sh
+          test -f Module/lib/constants.sh
           test -f Module/webroot/json/module_paths.json
 
       - name: Check no hardcoded paths
