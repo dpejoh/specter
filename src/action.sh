@@ -2,6 +2,7 @@
 set -e
 MODDIR=${0%/*}
 
+# shellcheck disable=SC3040
 case "$(readlink /proc/$$/exe 2>/dev/null)" in *busybox) set +o standalone; unset ASH_STANDALONE ;; esac
 
 . "$MODDIR/lib/common.sh"
