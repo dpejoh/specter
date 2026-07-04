@@ -319,6 +319,7 @@
   "tee_status_label": "TEE 状态",
   "tee_status_normal": "正常",
   "tee_status_broken": "已损坏",
+  "tee_status_broken_hint": "已损坏表示硬件 TEE 未响应。当软件证明模块处于活动状态时，这是正常现象。",
   "tee_status_unknown": "未知",
   "tee_status_error": "错误",
   "boot_hash": "启动哈希",

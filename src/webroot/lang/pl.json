@@ -316,6 +316,7 @@
   "tee_status_label": "Status TEE",
   "tee_status_normal": "Normalny",
   "tee_status_broken": "Uszkodzony",
+  "tee_status_broken_hint": "Uszkodzony oznacza, że sprzętowy TEE nie odpowiada. Jest to oczekiwane, gdy aktywny jest moduł atestacji programowej.",
   "tee_status_unknown": "Nieznany",
   "tee_status_error": "Błąd",
   "boot_hash": "Boot Hash",

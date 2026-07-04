@@ -316,6 +316,7 @@
   "tee_status_label": "Status TEE",
   "tee_status_normal": "Normal",
   "tee_status_broken": "Rusak",
+  "tee_status_broken_hint": "Rusak berarti TEE perangkat keras tidak merespons. Ini normal ketika modul atestasi perangkat lunak aktif.",
   "tee_status_unknown": "Tidak diketahui",
   "tee_status_error": "Kesalahan",
   "boot_hash": "Boot Hash",

@@ -319,6 +319,7 @@
   "tee_status_label": "حالة TEE",
   "tee_status_normal": "طبيعي",
   "tee_status_broken": "معطل",
+  "tee_status_broken_hint": "معطل يعني أن جهاز TEE الأساسي لا يستجيب. هذا أمر طبيعي عندما تكون وحدة مصادقة البرمجيات نشطة.",
   "tee_status_unknown": "غير معروف",
   "tee_status_error": "خطأ",
   "boot_hash": "تجزئة الإقلاع",

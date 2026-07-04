@@ -322,6 +322,7 @@
   "tee_status_label": "Состояние TEE",
   "tee_status_normal": "Нормальный",
   "tee_status_broken": "Сломан",
+  "tee_status_broken_hint": "Сломан означает, что аппаратный TEE не отвечает. Это ожидаемо, когда активен модуль программной аттестации.",
   "tee_status_unknown": "Неизвестно",
   "tee_status_error": "Ошибка",
   "boot_hash": "Хэш загрузки",

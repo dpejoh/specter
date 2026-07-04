@@ -319,6 +319,7 @@
   "tee_status_label": "Estado del TEE",
   "tee_status_normal": "Normal",
   "tee_status_broken": "Dañado",
+  "tee_status_broken_hint": "Dañado significa que el TEE del hardware no responde. Esto es normal cuando un módulo de atestación por software está activo.",
   "tee_status_unknown": "Desconocido",
   "tee_status_error": "Error",
   "boot_hash": "Hash de arranque",

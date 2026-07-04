@@ -81,7 +81,8 @@ function showResultDialog(teeStatus: string, teeHash: string, bootHash: string, 
     </div>`;
   }
 
-  const content = `<div class="tee-hash-row">
+  const content = `<p class="supporting-text">${t('tee_status_broken_hint', 'Broken means the hardware TEE is not responding. This is expected when a software attestation module is active.')}</p>
+    <div class="tee-hash-row">
       <span class="tee-hash-label">${t('tee_status_label', 'TEE Status')}</span>
       <span class="tee-hash-value">
         <span class="tee-status-badge ${statusClass}"><md-icon aria-hidden="true">${statusIcon}</md-icon> ${statusLabel}</span>

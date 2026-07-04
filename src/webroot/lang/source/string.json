@@ -316,6 +316,7 @@
   "tee_status_label": "TEE Status",
   "tee_status_normal": "Normal",
   "tee_status_broken": "Broken",
+  "tee_status_broken_hint": "Broken means the hardware TEE is not responding. This is expected when a software attestation module is active.",
   "tee_status_unknown": "Unknown",
   "tee_status_error": "Error",
   "boot_hash": "Boot Hash",
