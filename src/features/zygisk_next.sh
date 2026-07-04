@@ -19,7 +19,7 @@ ZN_NAME=$(grep "^name=" "$ZN_PROPFILE" | cut -d= -f2)
 log_i "ZYGISK_NEXT" "Detected: $ZN_NAME"
 
 case "$ZN_NAME" in
-  *Zygisk*Next*|*Zygisk-Next*|*ZygiskNext*)
+  *Zygisk*Next*)
     ;;
   *)
     log_e "ZYGISK_NEXT" "Unknown module '$ZN_NAME'"
@@ -29,8 +29,8 @@ esac
 
 ensure_dir "$ZN_DATA_DIR"
 
-echo -n 1 > "$ZN_DATA_DIR/denylist_enforce" && log_d "ZYGISK_NEXT" "denylist_enforce → 1"
-echo -n 1 > "$ZN_DATA_DIR/denylist_policy" && log_d "ZYGISK_NEXT" "denylist_policy → 1"
+printf '1' > "$ZN_DATA_DIR/denylist_enforce" && log_d "ZYGISK_NEXT" "denylist_enforce → 1"
+printf '1' > "$ZN_DATA_DIR/denylist_policy" && log_d "ZYGISK_NEXT" "denylist_policy → 1"
 
 log_i "ZYGISK_NEXT" "Applied denylist config"
 log_i "ZYGISK_NEXT" "Zygisk Next config complete"
