@@ -1,0 +1,97 @@
+name: Bug report
+description: Report a reproducible bug in Specter.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Report a reproducible bug. For setup help, use the [Telegram group](https://t.me/dpejoh0).
+
+  - type: input
+    id: version
+    attributes:
+      label: Specter version
+      description: Found in module.prop or the WebUI settings page.
+      placeholder: "e.g., 1.4.4-17"
+    validations:
+      required: true
+
+  - type: input
+    id: root_solution
+    attributes:
+      label: Root solution
+      description: Magisk, KernelSU, or APatch, plus version.
+      placeholder: "e.g., KernelSU 12018"
+    validations:
+      required: true
+
+  - type: input
+    id: android_version
+    attributes:
+      label: Android version
+      placeholder: "e.g., Android 15"
+    validations:
+      required: false
+
+  - type: textarea
+    id: other_modules
+    attributes:
+      label: Other installed modules
+      description: |
+        List modules that interact with Specter: Tricky Store / TEESimulator, PIF fork, Zygisk Next, HMA, etc.
+      placeholder: |
+        - Tricky Store v1.x
+        - KOWX712/PlayIntegrityFix
+        - Zygisk Next
+        - ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug clearly. Include error messages and when it occurs.
+      placeholder: "Specter fails to set the security patch after boot..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Attach logs from the WebUI Export Logs button, action.sh, service.sh, or adb shell logcat.
+      placeholder: "Paste logs here. Redact sensitive info if needed."
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the WebUI
+        2. Tap ...
+        3. Observe ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual behavior
+      placeholder: |
+        Expected: ...
+        Actual: ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: tried
+    attributes:
+      label: What you've already tried
+      placeholder: "e.g., rebooted, cleared caches, reinstalled Specter..."
+    validations:
+      required: false

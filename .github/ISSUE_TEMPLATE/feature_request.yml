@@ -1,0 +1,54 @@
+name: Feature request
+description: Suggest a feature for Specter.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Suggest a focused feature. Keep it within Specter's scope: root-device integrity, keybox, TEE, detection cleanup, and module automation.
+
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: One-line description of the feature.
+      placeholder: "e.g., Add a one-tap backup export button"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem it solves
+      description: What problem does this solve? Be specific.
+      placeholder: "Currently, exporting backups requires..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How should it work? Keep it concrete.
+      placeholder: "Add a button in Settings that copies..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: fit
+    attributes:
+      label: Why it fits Specter
+      description: How does this align with Specter's goals? Optional, but useful.
+      placeholder: "This stays within Specter's scope by..."
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contribution
+      description: Can you help implement or test this?
+      options:
+        - label: I can help implement this
+        - label: I can help test this
