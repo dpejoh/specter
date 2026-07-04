@@ -6,6 +6,13 @@ source_libs
 detect_keystore_manager
 assert_eq "detect: neither installed -> none" "none" "$KSM"
 
+# ---------- detection: stale OMK data dir without module -> none ----------
+bootstrap
+source_libs
+mkdir -p "$OMK_DIR"
+detect_keystore_manager
+assert_eq "detect: stale omk dir without module -> none" "none" "$KSM"
+
 # ---------- detection: Tricky Store only ----------
 bootstrap
 source_libs

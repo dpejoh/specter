@@ -76,7 +76,6 @@ _omk_prop() {
     done
   done
   [ -f "$OMK_MODULE/module.prop" ] && { grep "^name=" "$OMK_MODULE/module.prop" 2>/dev/null | cut -d= -f2; return 0; }
-  [ -d "$OMK_DIR" ] && { echo "OhMyKeymint"; return 0; }
   echo ""
 }
 
