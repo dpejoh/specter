@@ -1,6 +1,6 @@
 # shellcheck shell=sh
 # Shared routines for target.sh and target_merge.sh
-# Source after common.sh, paths.sh, package_list.sh, config_env.sh
+# Source after common.sh and constants.sh
 
 # Ensure blacklist exists
 _ensure_blacklist() {
@@ -47,7 +47,7 @@ _merge_setup() {
 
 _merge_cleanup() {
   [ -f "$_TMP_TARGET" ] && ksm_commit_targets "$_TMP_TARGET"
-  unset _TMP_EXIST _TMP_TARGET _count _added
+  unset _TMP_EXIST _TMP_TARGET
 }
 
 _merge_load_existing() {
