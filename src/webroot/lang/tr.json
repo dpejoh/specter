@@ -316,7 +316,7 @@
   "tee_status_label": "TEE Durumu",
   "tee_status_normal": "Normal",
   "tee_status_broken": "Kırık",
-  "tee_status_broken_hint": "Kırık, donanım TEE'sinin yanıt vermediği anlamına gelir. Bir yazılım atestasyon modülü aktifken bu normaldir.",
+  "tee_status_broken_hint": "Kırık, gerçek cihaz TEE'sinin yanıt vermediği anlamına gelir. TEE simulasyon modülü kullanıldığı için bu normaldir, bu bir hata değildir.",
   "tee_status_unknown": "Bilinmiyor",
   "tee_status_error": "Hata",
   "boot_hash": "Boot Hash",
