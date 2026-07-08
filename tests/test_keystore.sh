@@ -13,13 +13,13 @@ mkdir -p "$OMK_DIR"
 detect_keystore_manager
 assert_eq "detect: stale omk dir without module -> none" "none" "$KSM"
 
-# ---------- detection: OMK data dir with config files but no module.prop -> omk ----------
+# ---------- detection: OMK config files without module.prop -> none ----------
 bootstrap
 source_libs
 mkdir -p "$OMK_DIR"
 printf '[main]\nbackend = "injector"\n' > "$OMK_CONFIG"
 detect_keystore_manager
-assert_eq "detect: omk config files without module.prop -> omk" "omk" "$KSM"
+assert_eq "detect: omk config without module.prop -> none" "none" "$KSM"
 
 # ---------- detection: Tricky Store only ----------
 bootstrap
@@ -32,23 +32,16 @@ assert_eq "detect: format is txt" "txt" "$KSM_FORMAT"
 # ---------- detection: OMK only ----------
 bootstrap
 source_libs
-mk_module OhMyKeymint "OhMyKeymint"
+mk_module oh_my_keymint "OhMyKeymint"
 detect_keystore_manager
-assert_eq "detect: OhMyKeymint only -> omk" "omk" "$KSM"
+assert_eq "detect: oh_my_keymint only -> omk" "omk" "$KSM"
 assert_eq "detect: format is toml" "toml" "$KSM_FORMAT"
-
-# ---------- detection: upstream module id oh_my_keymint ----------
-bootstrap
-source_libs
-mk_module oh_my_keymint "Oh My Keymint"
-detect_keystore_manager
-assert_eq "detect: oh_my_keymint module id -> omk" "omk" "$KSM"
 
 # ---------- detection: both installed, Tricky Store wins by default ----------
 bootstrap
 source_libs
 mk_module tricky_store "Tricky Store"
-mk_module OhMyKeymint "OhMyKeymint"
+mk_module oh_my_keymint "OhMyKeymint"
 detect_keystore_manager
 assert_eq "detect: both installed -> trickystore wins" "trickystore" "$KSM"
 
@@ -56,7 +49,7 @@ assert_eq "detect: both installed -> trickystore wins" "trickystore" "$KSM"
 bootstrap
 source_libs
 mk_module tricky_store "Tricky Store"
-mk_module OhMyKeymint "OhMyKeymint"
+mk_module oh_my_keymint "OhMyKeymint"
 set_cfg "keystore_manager" "omk"
 detect_keystore_manager
 assert_eq "detect: override=omk wins" "omk" "$KSM"
@@ -64,7 +57,7 @@ assert_eq "detect: override=omk wins" "omk" "$KSM"
 # ---------- detection: override=trickystore forces even if only OMK installed ----------
 bootstrap
 source_libs
-mk_module OhMyKeymint "OhMyKeymint"
+mk_module oh_my_keymint "OhMyKeymint"
 set_cfg "keystore_manager" "trickystore"
 detect_keystore_manager
 assert_eq "detect: override=trickystore forces" "trickystore" "$KSM"
@@ -182,7 +175,7 @@ assert_file_not_exists "security patch txt: no restart.all created" "$OMK_RESTAR
 # ---------- ksm_set_security_patch: OMK (toml) ----------
 bootstrap
 source_libs
-mk_module OhMyKeymint "OhMyKeymint"
+mk_module oh_my_keymint "OhMyKeymint"
 mkdir -p "$OMK_DIR"
 cat > "$OMK_CONFIG" << 'EOF'
 [trust]
@@ -197,7 +190,7 @@ assert_file_exists "security patch toml: restart.all created" "$OMK_RESTART_DIR/
 # ---------- security_patch.sh --get: OMK returns current value ----------
 bootstrap
 source_libs
-mk_module OhMyKeymint "OhMyKeymint"
+mk_module oh_my_keymint "OhMyKeymint"
 mkdir -p "$OMK_DIR"
 cat > "$OMK_CONFIG" << 'EOF'
 [trust]
@@ -210,7 +203,7 @@ assert_eq "security_patch.sh --get omk" "2026-06-05" "$_sp_get_out"
 # ---------- security_patch.sh --set: OMK updates config.toml ----------
 bootstrap
 source_libs
-mk_module OhMyKeymint "OhMyKeymint"
+mk_module oh_my_keymint "OhMyKeymint"
 mkdir -p "$OMK_DIR"
 cat > "$OMK_CONFIG" << 'EOF'
 [trust]
@@ -251,7 +244,7 @@ assert_file_not_exists "targets txt commit: no restart.all" "$OMK_RESTART_DIR/re
 # ---------- ksm_read_targets / ksm_commit_targets: OMK strips suffixes into scoop ----------
 bootstrap
 source_libs
-mk_module OhMyKeymint "OhMyKeymint"
+mk_module oh_my_keymint "OhMyKeymint"
 mkdir -p "$OMK_DIR"
 cat > "$OMK_INJECTOR" << 'EOF'
 [main]
@@ -279,7 +272,7 @@ assert_contains "targets toml commit: other sections preserved" "$(cat "$OMK_INJ
 # ---------- ksm_reload touches all three OMK restart triggers ----------
 bootstrap
 source_libs
-mk_module OhMyKeymint "OhMyKeymint"
+mk_module oh_my_keymint "OhMyKeymint"
 mkdir -p "$OMK_DIR"
 detect_keystore_manager
 ksm_reload

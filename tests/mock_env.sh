@@ -14,7 +14,7 @@ bootstrap() {
   SPECTER_DIR="$TEST_ROOT/specter"; TRICKY_DIR="$TEST_ROOT/tricky_store"
   MODDIR="$TEST_ROOT"
   MODULES_BASE="$TEST_ROOT/modules"
-  OMK_MODULE="$MODULES_BASE/OhMyKeymint"
+  OMK_MODULE="$MODULES_BASE/oh_my_keymint"
   OMK_DIR="$TEST_ROOT/omk"
   OMK_KEYBOX="$OMK_DIR/keybox.xml"
   OMK_INJECTOR="$OMK_DIR/injector.toml"
@@ -81,6 +81,7 @@ source_libs() {
   . "$REPO_ROOT/src/lib/log.sh" 2>/dev/null
   . "$REPO_ROOT/src/lib/constants.sh" 2>/dev/null
   . "$REPO_ROOT/src/lib/network.sh" 2>/dev/null
+  . "$REPO_ROOT/src/lib/modules.sh" 2>/dev/null
   . "$REPO_ROOT/src/lib/detect.sh" 2>/dev/null
   . "$REPO_ROOT/src/lib/props.sh" 2>/dev/null
   . "$REPO_ROOT/src/lib/keybox.sh" 2>/dev/null
