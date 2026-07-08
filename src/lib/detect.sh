@@ -52,39 +52,11 @@ _zygisk_variant() {
 }
 
 _ts_prop() {
-  for _ts_dir in "$MODULES_BASE/tricky_store" "${MODULES_BASE}_update/tricky_store"; do
-    [ -f "$_ts_dir/module.prop" ] || continue
-    grep "^name=" "$_ts_dir/module.prop" 2>/dev/null | cut -d= -f2
-    return 0
-  done
-  echo ""
+  module_detect "tricky_store"
 }
 
-# Case-insensitive scan: OMK's installed folder name isn't guaranteed to be
-# exactly "OhMyKeymint" across forks/manual installs.
 _omk_prop() {
-  for _omk_base in "$MODULES_BASE" "${MODULES_BASE}_update"; do
-    [ -d "$_omk_base" ] || continue
-    for _omk_dir in "$_omk_base"/*; do
-      [ -f "$_omk_dir/module.prop" ] || continue
-      case "$(basename "$_omk_dir")" in
-        oh_my_keymint|[Oo]h[Mm]y[Kk]eymint|omk|OMK)
-          grep "^name=" "$_omk_dir/module.prop" 2>/dev/null | cut -d= -f2
-          return 0
-          ;;
-      esac
-    done
-  done
-  [ -f "$OMK_MODULE/module.prop" ] && { grep "^name=" "$OMK_MODULE/module.prop" 2>/dev/null | cut -d= -f2; return 0; }
-  # Real OMK may be installed without a module.prop under the standard modules
-  # dir (forks, manual installs, or older variants). Only treat the data dir as
-  # active when it contains actual OMK config files; a stale empty dir left
-  # after uninstall must not count as installed.
-  if [ -f "$OMK_INJECTOR" ] || [ -f "$OMK_CONFIG" ]; then
-    echo "OhMyKeymint"
-    return 0
-  fi
-  echo ""
+  module_detect "${OMK_MODULE##*/}" && return 0
 }
 
 _is_teesimulator() {

@@ -2,7 +2,7 @@
 
 module_detect() {
   _md_id="$1"
-  for _md_dir in "/data/adb/modules/$_md_id" "/data/adb/modules_update/$_md_id"; do
+  for _md_dir in "$MODULES_BASE/$_md_id" "${MODULES_BASE}_update/$_md_id"; do
     [ -f "$_md_dir/module.prop" ] || continue
     grep "^name=" "$_md_dir/module.prop" 2>/dev/null | cut -d= -f2
     return 0
