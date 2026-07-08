@@ -194,6 +194,32 @@ ksm_set_security_patch "2026-06-05"
 assert_contains "security patch toml: value set" "$(cat "$KSM_SECURITY")" 'security_patch = "2026-06-05"'
 assert_file_exists "security patch toml: restart.all created" "$OMK_RESTART_DIR/restart.all"
 
+# ---------- security_patch.sh --get: OMK returns current value ----------
+bootstrap
+source_libs
+mk_module OhMyKeymint "OhMyKeymint"
+mkdir -p "$OMK_DIR"
+cat > "$OMK_CONFIG" << 'EOF'
+[trust]
+os_version = 17
+security_patch = "2026-06-05"
+EOF
+_sp_get_out=$(run_feature security_patch.sh --get)
+assert_eq "security_patch.sh --get omk" "2026-06-05" "$_sp_get_out"
+
+# ---------- security_patch.sh --set: OMK updates config.toml ----------
+bootstrap
+source_libs
+mk_module OhMyKeymint "OhMyKeymint"
+mkdir -p "$OMK_DIR"
+cat > "$OMK_CONFIG" << 'EOF'
+[trust]
+os_version = 17
+security_patch = "auto"
+EOF
+run_feature security_patch.sh --set 2026-07-05 >/dev/null
+assert_contains "security_patch.sh --set omk" "$(cat "$OMK_CONFIG")" 'security_patch = "2026-07-05"'
+
 # ---------- ksm_read_targets / ksm_commit_targets: Tricky Store preserves suffixes+comments ----------
 bootstrap
 source_libs

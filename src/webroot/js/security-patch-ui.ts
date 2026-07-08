@@ -1,7 +1,7 @@
 import { exec, getModuleDir } from './bridge.js';
 import { getTranslation } from './i18n.js';
 import { showToast } from './toast.js';
-import { TRICKY_DIR, defaultSecurityPatch } from './constants.js';
+import { defaultSecurityPatch } from './constants.js';
 import { shellEscape } from './utils.js';
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
@@ -9,16 +9,20 @@ export function wireSecurityPatch() {
   const btn = document.getElementById('security-patch-btn');
   if (!btn) return;
   btn.addEventListener('click', async () => {
+    const moddir = getModuleDir();
+    if (!moddir) {
+      showToast(t('simple_toast_error', 'Failed'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
+      return;
+    }
     const defaultDate = defaultSecurityPatch();
+    const scriptPath = shellEscape(moddir + '/features/security_patch.sh');
 
-    const { stdout: currentRaw } = await exec(`cat ${TRICKY_DIR}/security_patch.txt 2>/dev/null || echo ""`);
     let current = '';
-    for (const line of currentRaw.split('\n')) {
-      const trimmed = line.trim();
-      if (trimmed.startsWith('all=')) {
-        current = trimmed.slice(4).trim();
-        break;
-      }
+    try {
+      const { stdout } = await exec(`sh ${scriptPath} --get 2>/dev/null || echo ""`);
+      current = stdout.trim();
+    } catch {
+      current = '';
     }
 
     const dialog = document.createElement('md-dialog');
@@ -42,14 +46,9 @@ export function wireSecurityPatch() {
     if (input) input.value = current || defaultDate;
 
     dialog.querySelector('#sp-fetch')!.addEventListener('click', async () => {
-      const moddir = getModuleDir();
-      if (!moddir) {
-        showToast(t('simple_toast_error', 'Failed'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
-        return;
-      }
       showToast(t('sp_fetching', 'Fetching latest security patch...'), { icon: 'info', type: 'info', autoCloseDelay: 10000 });
       try {
-        const { stdout } = await exec(`sh ${shellEscape(moddir + '/features/security_patch.sh')} --fetch 2>/dev/null || echo ""`);
+        const { stdout } = await exec(`sh ${scriptPath} --fetch 2>/dev/null || echo ""`);
         const date = stdout.trim();
         if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
           input!.value = date;
@@ -69,11 +68,13 @@ export function wireSecurityPatch() {
         showToast(t('sp_invalid_date', 'Invalid date format (use YYYY-MM-DD)'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
         return;
       }
-      const content = `all=${val}`;
       try {
-        await exec(`cat > ${TRICKY_DIR}/security_patch.txt << 'SEOF'\n${content}\nSEOF`);
-        const moddir = getModuleDir();
-        if (moddir) await exec(`sh ${moddir}/refresh_desc.sh`);
+        const { code, stderr } = await exec(`sh ${scriptPath} --set ${shellEscape(val)}`);
+        if (code !== 0) {
+          showToast(t('sp_save_error', stderr.trim() || 'Failed to save'), { icon: 'error', type: 'error', autoCloseDelay: 4000 });
+          return;
+        }
+        await exec(`sh ${shellEscape(moddir + '/refresh_desc.sh')}`);
         showToast(t('sp_saved', 'Security patch date saved'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
         dialog.close();
       } catch {
