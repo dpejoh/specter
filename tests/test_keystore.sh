@@ -13,6 +13,14 @@ mkdir -p "$OMK_DIR"
 detect_keystore_manager
 assert_eq "detect: stale omk dir without module -> none" "none" "$KSM"
 
+# ---------- detection: OMK data dir with config files but no module.prop -> omk ----------
+bootstrap
+source_libs
+mkdir -p "$OMK_DIR"
+printf '[main]\nbackend = "injector"\n' > "$OMK_CONFIG"
+detect_keystore_manager
+assert_eq "detect: omk config files without module.prop -> omk" "omk" "$KSM"
+
 # ---------- detection: Tricky Store only ----------
 bootstrap
 source_libs
@@ -28,6 +36,13 @@ mk_module OhMyKeymint "OhMyKeymint"
 detect_keystore_manager
 assert_eq "detect: OhMyKeymint only -> omk" "omk" "$KSM"
 assert_eq "detect: format is toml" "toml" "$KSM_FORMAT"
+
+# ---------- detection: upstream module id oh_my_keymint ----------
+bootstrap
+source_libs
+mk_module oh_my_keymint "Oh My Keymint"
+detect_keystore_manager
+assert_eq "detect: oh_my_keymint module id -> omk" "omk" "$KSM"
 
 # ---------- detection: both installed, Tricky Store wins by default ----------
 bootstrap

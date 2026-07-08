@@ -68,7 +68,7 @@ _omk_prop() {
     for _omk_dir in "$_omk_base"/*; do
       [ -f "$_omk_dir/module.prop" ] || continue
       case "$(basename "$_omk_dir")" in
-        [Oo]h[Mm]y[Kk]eymint|omk|OMK)
+        oh_my_keymint|[Oo]h[Mm]y[Kk]eymint|omk|OMK)
           grep "^name=" "$_omk_dir/module.prop" 2>/dev/null | cut -d= -f2
           return 0
           ;;
@@ -76,6 +76,14 @@ _omk_prop() {
     done
   done
   [ -f "$OMK_MODULE/module.prop" ] && { grep "^name=" "$OMK_MODULE/module.prop" 2>/dev/null | cut -d= -f2; return 0; }
+  # Real OMK may be installed without a module.prop under the standard modules
+  # dir (forks, manual installs, or older variants). Only treat the data dir as
+  # active when it contains actual OMK config files; a stale empty dir left
+  # after uninstall must not count as installed.
+  if [ -f "$OMK_INJECTOR" ] || [ -f "$OMK_CONFIG" ]; then
+    echo "OhMyKeymint"
+    return 0
+  fi
   echo ""
 }
 

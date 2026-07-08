@@ -32,7 +32,7 @@ FALLBACK_KEYBOXES="Yuri/8"
 : "${BACKUP_DIR:=$SPECTER_DIR/backup}"
 
 # -- OhMyKeymint (OMK) paths (defaults, overridable by env) --
-: "${OMK_MODULE:=$MODULES_BASE/OhMyKeymint}"
+: "${OMK_MODULE:=$MODULES_BASE/oh_my_keymint}"
 : "${OMK_DIR:=/data/misc/keystore/omk}"
 : "${OMK_KEYBOX:=$OMK_DIR/keybox.xml}"
 : "${OMK_INJECTOR:=$OMK_DIR/injector.toml}"
