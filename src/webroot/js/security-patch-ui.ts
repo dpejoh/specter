@@ -1,6 +1,6 @@
 import { exec, getModuleDir } from './bridge.js';
 import { getTranslation } from './i18n.js';
-import { showToast } from './toast.js';
+import { showToast, closeToast } from './toast.js';
 import { defaultSecurityPatch } from './constants.js';
 import { shellEscape } from './utils.js';
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
@@ -46,9 +46,10 @@ export function wireSecurityPatch() {
     if (input) input.value = current || defaultDate;
 
     dialog.querySelector('#sp-fetch')!.addEventListener('click', async () => {
-      showToast(t('sp_fetching', 'Fetching latest security patch...'), { icon: 'info', type: 'info', autoCloseDelay: 10000 });
+      const fetchingToast = showToast(t('sp_fetching', 'Fetching latest security patch...'), { icon: 'info', type: 'info', autoCloseDelay: 10000 });
       try {
         const { stdout } = await exec(`sh ${scriptPath} --fetch 2>/dev/null || echo ""`);
+        closeToast(fetchingToast);
         const date = stdout.trim();
         if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
           input!.value = date;
@@ -57,6 +58,7 @@ export function wireSecurityPatch() {
           showToast(t('simple_toast_error', 'Failed'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
         }
       } catch {
+        closeToast(fetchingToast);
         showToast(t('simple_toast_error', 'Failed'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
       }
     });
