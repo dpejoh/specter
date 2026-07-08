@@ -121,31 +121,20 @@ specter_hot_install
 assert_file_eq "modid: myfork live updated" "$MODULES_BASE/myfork/module.prop" "$(printf 'id=myfork\nname=NewVersion\nversionCode=2\n')"
 assert_file_exists "modid: myfork executor ran" "$MODULES_BASE/myfork/hi.ran"
 
-# ---- real executor: src/hotinstall.sh invokes tee.sh + action.sh, streams to ui_print ----
-# Replace the stub hotinstall.sh with the REAL src/hotinstall.sh and stub its
-# siblings (features/tee.sh, action.sh, lib/scheduler.sh). This catches
-# regressions in the actual executor — e.g. "did we forget to call tee.sh?"
-# — that a stub-based test cannot.
-bootstrap
-source_libs
-_hi_setup
-rm -f "$STAGE/hotinstall.sh"
-cp "$REPO_ROOT/src/hotinstall.sh" "$STAGE/hotinstall.sh"
-chmod +x "$STAGE/hotinstall.sh"
-# Stub: features/tee.sh — writes a marker so we can prove it ran
-mkdir -p "$STAGE/features"
-printf '#!/bin/sh\necho tee_ok > "$SPECTER_DIR/tee.ran"\n' > "$STAGE/features/tee.sh"
-chmod +x "$STAGE/features/tee.sh"
-# Stub: action.sh — writes a marker; uses set -e-safe pattern (real action.sh)
-printf '#!/bin/sh\necho ACTION-OK\necho ran > "$SPECTER_DIR/act.ran"\nexit 0\n' > "$STAGE/action.sh"
-chmod +x "$STAGE/action.sh"
-# Stub: lib/scheduler.sh — exits immediately; sched loop never starts in tests
-mkdir -p "$STAGE/lib"
-printf '#!/bin/sh\nexit 0\n' > "$STAGE/lib/scheduler.sh"
-# Stub lib/common.sh needs to be available — the real common.sh sources more
-# libs. Use a minimal stub so we don't drag in detect/keystore/network etc. that
-# rely on Android runtime. Plus a stub log_i/log_w/log_e/log_d/log_rotate.
-cat > "$STAGE/lib/common.sh" << 'COMMON_EOF'
+# Helpers for real-executor tests: use the actual src/hotinstall.sh, but stub
+# its siblings so the test runs without an Android runtime.
+_hi_setup_real_executor() {
+  bootstrap
+  source_libs
+  _hi_setup
+  rm -f "$STAGE/hotinstall.sh"
+  cp "$REPO_ROOT/src/hotinstall.sh" "$STAGE/hotinstall.sh"
+  chmod +x "$STAGE/hotinstall.sh"
+  mkdir -p "$STAGE/features" "$STAGE/lib"
+  printf '#!/bin/sh\necho tee_ok > "$SPECTER_DIR/tee.ran"\n' > "$STAGE/features/tee.sh"
+  chmod +x "$STAGE/features/tee.sh"
+  printf '#!/bin/sh\nexit 0\n' > "$STAGE/lib/scheduler.sh"
+  cat > "$STAGE/lib/common.sh" << 'COMMON_EOF'
 log_d() { :; }
 log_i() { echo "$2"; }
 log_w() { echo "Warning: $2"; }
@@ -154,9 +143,15 @@ log_rotate() { :; }
 cfg_get() { echo "${2:-}"; }
 ensure_dir() { mkdir -p "$1" 2>/dev/null; }
 COMMON_EOF
-# Pre-seed the scheduler pid file so the kill path runs (proves it tolerates
-# a missing process: kill on a non-existent pid just fails silently).
-echo "99999" > "$SPECTER_DIR/scheduler.pid"
+  # Pre-seed the scheduler pid file so the kill path runs (proves it tolerates
+  # a missing process: kill on a non-existent pid just fails silently).
+  echo "99999" > "$SPECTER_DIR/scheduler.pid"
+}
+
+# ---- real executor: src/hotinstall.sh invokes tee.sh + action.sh, streams to ui_print ----
+_hi_setup_real_executor
+printf '#!/bin/sh\necho ACTION-OK\necho ran > "$SPECTER_DIR/act.ran"\nexit 0\n' > "$STAGE/action.sh"
+chmod +x "$STAGE/action.sh"
 specter_hot_install
 assert_file_exists "real-exec: tee.sh ran (TEE cache refresh)" "$SPECTER_DIR/tee.ran"
 assert_file_exists "real-exec: action.sh ran" "$SPECTER_DIR/act.ran"
@@ -169,27 +164,9 @@ assert_contains "real-exec: action.sh child output streamed (ACTION-OK)" "$_ui" 
 assert_contains "real-exec: done line streamed" "$_ui" "Hot-install live-apply done"
 
 # ---- real executor: action.sh failure writes status marker, hot install warns ----
-bootstrap
-source_libs
-_hi_setup
-rm -f "$STAGE/hotinstall.sh"
-cp "$REPO_ROOT/src/hotinstall.sh" "$STAGE/hotinstall.sh"
-chmod +x "$STAGE/hotinstall.sh"
-mkdir -p "$STAGE/features" "$STAGE/lib"
-printf '#!/bin/sh\necho tee_ok > "$SPECTER_DIR/tee.ran"\n' > "$STAGE/features/tee.sh"
-chmod +x "$STAGE/features/tee.sh"
+_hi_setup_real_executor
 printf '#!/bin/sh\necho ACTION-FAIL\nexit 7\n' > "$STAGE/action.sh"
 chmod +x "$STAGE/action.sh"
-printf '#!/bin/sh\nexit 0\n' > "$STAGE/lib/scheduler.sh"
-cat > "$STAGE/lib/common.sh" << 'COMMON_EOF'
-log_d() { :; }
-log_i() { echo "$2"; }
-log_w() { echo "Warning: $2"; }
-log_e() { echo "Error: $2" >&2; }
-log_rotate() { :; }
-cfg_get() { echo "${2:-}"; }
-ensure_dir() { mkdir -p "$1" 2>/dev/null; }
-COMMON_EOF
 specter_hot_install
 assert_file_exists "real-exec-fail: tee.sh still ran" "$SPECTER_DIR/tee.ran"
 assert_file_not_exists "real-exec-fail: no stale failure marker" "$SPECTER_DIR/.hotinstall_failed"

@@ -13,23 +13,17 @@ HOT_LOG="$SPECTER_DIR/log/hotinstall.log"
 ensure_dir "$SPECTER_DIR/log" 2>/dev/null || true
 log_rotate "$HOT_LOG" 2>/dev/null || true
 
-# Parent (specter_hot_install, running in customize.sh) reads this back to
-# decide whether to print the apply-failed warning — exit status across a
-# streaming pipe isn't reliable in POSIX sh.
+# Parent reads this back; exit status across the streaming pipe isn't reliable.
 rm -f "$SPECTER_DIR/.hotinstall_failed"
 
 {
   log_i "HOT" "Hot-install live-apply starting"
 
-  # customize.sh clears tee_status/tee_tier on every install; service.sh would
-  # re-run tee.sh at boot to repopulate them, but we skip service.sh. Run it
-  # here, before action.sh — device-info.sh reads the cached files to build
-  # info.json for the WebUI.
+  # service.sh is skipped, so refresh TEE status here for the WebUI info.json.
   log_i "HOT" "Refreshing TEE status"
   sh "$MODDIR/features/tee.sh" || log_w "HOT" "tee.sh failed (TEE indicator may be stale until reboot)"
 
-  # Kill the boot-time scheduler + its inotifyd children — it's still running
-  # pre-update code sourced before the dir move.
+  # Kill the boot-time scheduler + its inotifyd children (pre-update code).
   _old_pid="$(cat "$SPECTER_DIR/scheduler.pid" 2>/dev/null || true)"
   if [ -n "$_old_pid" ]; then
     for _child in $(pgrep -P "$_old_pid" 2>/dev/null || true); do
@@ -57,5 +51,3 @@ rm -f "$SPECTER_DIR/.hotinstall_failed"
 
   log_i "HOT" "Hot-install live-apply done"
 } 2>&1 | tee -a "$HOT_LOG"
-
-exit 0
