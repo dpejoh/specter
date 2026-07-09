@@ -187,14 +187,12 @@ ksm_commit_targets() {
       rm -f "$_kct_tmp"
       ksm_secure "$KSM_DIR" 0770
       ksm_secure "$KSM_TARGETS" 0600
-      # OMK's injector watches injector.toml; no daemon restart needed.
       unset _kct_line _kct_base _kct_tmp
       ;;
     *)
       rm -f "${KSM_TARGETS}.bak"
       [ -f "$KSM_TARGETS" ] && cp "$KSM_TARGETS" "${KSM_TARGETS}.bak"
       mv -f "$_kct_src" "$KSM_TARGETS"
-      # Tricky Store watches target.txt directly.
       ;;
   esac
   unset _kct_src
@@ -212,7 +210,6 @@ ksm_set_security_patch() {
       printf 'all=%s\n' "$_ksp_date" > "$KSM_SECURITY" || { unset _ksp_date; return 1; }
       ;;
   esac
-  # OMK hot-applies security_patch changes; no restart needed.
   unset _ksp_date
 }
 

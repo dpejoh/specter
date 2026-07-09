@@ -104,7 +104,6 @@ esac
 
 ksm_available || die "No keystore manager (Tricky Store / OhMyKeymint) data directory found"
 
-# build.prop first — network may not be available yet at boot.
 _patch=$(_resolve_device_patch) || _patch=""
 _patch_source="device"
 if [ -z "$_patch" ]; then

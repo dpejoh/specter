@@ -66,7 +66,6 @@ fi
 log_i "RESTORE" "Restored $_restored files"
 echo "Restored $_restored files from backup."
 
-# keybox.xml is read at keymint startup; restart to use the restored keybox.
 [ "${_keybox_restored:-0}" = "1" ] && ksm_reload
 
 log_i "RESTORE" "Backup restoration complete"
