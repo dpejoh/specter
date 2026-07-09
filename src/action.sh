@@ -7,6 +7,8 @@ case "$(readlink /proc/$$/exe 2>/dev/null)" in *busybox) set +o standalone; unse
 
 . "$MODDIR/lib/common.sh"
 
+export SPECTER_KSM_RELOAD_DEFERRED=1
+
 ACTION_LOG="$SPECTER_DIR/log/action.log"
 ensure_dir "$SPECTER_DIR/log" 2>/dev/null
 log_rotate "$ACTION_LOG"
@@ -107,6 +109,9 @@ _first_boot=0
   [ -f "$MODDIR/module.prop.bak" ] && cp "$MODDIR/module.prop.bak" "$MODDIR/module.prop"
   . "$MODDIR/lib/desc.sh"
   refresh_module_description
+
+  detect_keystore_manager
+  ksm_reload_commit || true
 
   log_u "ACTION" ""
   log_i "ACTION" "Full integrity pipeline completed"

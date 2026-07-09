@@ -185,7 +185,8 @@ EOF
 detect_keystore_manager
 ksm_set_security_patch "2026-06-05"
 assert_contains "security patch toml: value set" "$(cat "$KSM_SECURITY")" 'security_patch = "2026-06-05"'
-assert_file_exists "security patch toml: restart.all created" "$OMK_RESTART_DIR/restart.all"
+assert_file_not_exists "security patch toml: no restart markers created" "$OMK_RESTART_DIR/restart.keymint"
+assert_file_not_exists "security patch toml: no restart.all created" "$OMK_RESTART_DIR/restart.all"
 
 # ---------- security_patch.sh --get: OMK returns current value ----------
 bootstrap
@@ -213,6 +214,35 @@ EOF
 run_feature security_patch.sh --set 2026-07-05 >/dev/null
 assert_contains "security_patch.sh --set omk" "$(cat "$OMK_CONFIG")" 'security_patch = "2026-07-05"'
 
+# ---------- security_patch.sh default: Tricky Store uses build.prop patch ----------
+bootstrap
+source_libs
+mk_module tricky_store "Tricky Store"
+set_prop "ro.build.version.security_patch" "2026-08-05"
+set_prop "ro.vendor.build.security_patch" "2026-08-01"
+detect_keystore_manager
+run_feature security_patch.sh >/dev/null
+assert_contains "security patch default txt: system line" "$(cat "$KSM_SECURITY")" "system=202608"
+assert_contains "security patch default txt: boot line" "$(cat "$KSM_SECURITY")" "boot=2026-08-05"
+assert_contains "security patch default txt: vendor line" "$(cat "$KSM_SECURITY")" "vendor=2026-08-01"
+assert_file_not_exists "security patch default txt: no restart markers" "$OMK_RESTART_DIR/restart.keymint"
+
+# ---------- security_patch.sh default: OMK uses build.prop patch ----------
+bootstrap
+source_libs
+mk_module oh_my_keymint "OhMyKeymint"
+mkdir -p "$OMK_DIR"
+cat > "$OMK_CONFIG" << 'EOF'
+[trust]
+os_version = 17
+security_patch = "auto"
+EOF
+set_prop "ro.build.version.security_patch" "2026-09-05"
+detect_keystore_manager
+run_feature security_patch.sh >/dev/null
+assert_contains "security patch default toml: value set" "$(cat "$OMK_CONFIG")" 'security_patch = "2026-09-05"'
+assert_file_not_exists "security patch default toml: no restart markers" "$OMK_RESTART_DIR/restart.keymint"
+
 # ---------- ksm_read_targets / ksm_commit_targets: Tricky Store preserves suffixes+comments ----------
 bootstrap
 source_libs
@@ -239,7 +269,8 @@ assert_contains "targets txt commit: section preserved" "$(cat "$KSM_TARGETS")" 
 assert_contains "targets txt commit: suffix preserved" "$(cat "$KSM_TARGETS")" "com.existing.app!"
 assert_contains "targets txt commit: new entry present" "$(cat "$KSM_TARGETS")" "com.new.app"
 assert_file_exists "targets txt commit: backup created" "${KSM_TARGETS}.bak"
-assert_file_not_exists "targets txt commit: no restart.all" "$OMK_RESTART_DIR/restart.all"
+assert_file_not_exists "targets txt commit: no restart markers created" "$OMK_RESTART_DIR/restart.keymint"
+assert_file_not_exists "targets txt commit: no restart.all created" "$OMK_RESTART_DIR/restart.all"
 
 # ---------- ksm_read_targets / ksm_commit_targets: OMK strips suffixes into scoop ----------
 bootstrap
@@ -266,10 +297,11 @@ _kt_out2=$(ksm_read_targets)
 assert_contains "targets toml commit: new.app present, no suffix" "$_kt_out2" "com.new.app"
 assert_not_contains "targets toml commit: suffix stripped" "$_kt_out2" "com.new.app!"
 assert_contains "targets toml commit: other.app present" "$_kt_out2" "com.other.app"
-assert_file_exists "targets toml commit: restart.all created" "$OMK_RESTART_DIR/restart.all"
+assert_file_not_exists "targets toml commit: no restart.keymint created" "$OMK_RESTART_DIR/restart.keymint"
+assert_file_not_exists "targets toml commit: no restart.all created" "$OMK_RESTART_DIR/restart.all"
 assert_contains "targets toml commit: other sections preserved" "$(cat "$OMK_INJECTOR")" "[main]"
 
-# ---------- ksm_reload touches all three OMK restart triggers ----------
+# ---------- ksm_reload touches only the keymint restart trigger ----------
 bootstrap
 source_libs
 mk_module oh_my_keymint "OhMyKeymint"
@@ -277,8 +309,33 @@ mkdir -p "$OMK_DIR"
 detect_keystore_manager
 ksm_reload
 assert_file_exists "reload: restart.keymint created" "$OMK_RESTART_DIR/restart.keymint"
-assert_file_exists "reload: restart.injector created" "$OMK_RESTART_DIR/restart.injector"
-assert_file_exists "reload: restart.all created" "$OMK_RESTART_DIR/restart.all"
+assert_file_not_exists "reload: no restart.injector created" "$OMK_RESTART_DIR/restart.injector"
+assert_file_not_exists "reload: no restart.all created" "$OMK_RESTART_DIR/restart.all"
+
+# ---------- ksm_reload_full touches all three OMK restart triggers ----------
+bootstrap
+source_libs
+mk_module oh_my_keymint "OhMyKeymint"
+mkdir -p "$OMK_DIR"
+detect_keystore_manager
+ksm_reload_full
+assert_file_exists "full reload: restart.keymint created" "$OMK_RESTART_DIR/restart.keymint"
+assert_file_exists "full reload: restart.injector created" "$OMK_RESTART_DIR/restart.injector"
+assert_file_exists "full reload: restart.all created" "$OMK_RESTART_DIR/restart.all"
+
+# ---------- ksm_reload_commit batches deferred reloads ----------
+bootstrap
+source_libs
+mk_module oh_my_keymint "OhMyKeymint"
+mkdir -p "$OMK_DIR"
+detect_keystore_manager
+SPECTER_KSM_RELOAD_DEFERRED=1 SPECTER_DIR="$SPECTER_DIR" ksm_reload
+SPECTER_KSM_RELOAD_DEFERRED=1 SPECTER_DIR="$SPECTER_DIR" ksm_reload_full
+assert_file_not_exists "deferred: no immediate restart.keymint" "$OMK_RESTART_DIR/restart.keymint"
+SPECTER_KSM_RELOAD_DEFERRED=1 SPECTER_DIR="$SPECTER_DIR" ksm_reload_commit
+assert_file_exists "deferred commit: restart.keymint created" "$OMK_RESTART_DIR/restart.keymint"
+assert_file_exists "deferred commit: restart.injector created" "$OMK_RESTART_DIR/restart.injector"
+assert_file_exists "deferred commit: restart.all created" "$OMK_RESTART_DIR/restart.all"
 
 # ---------- ksm_reload is a no-op for Tricky Store ----------
 bootstrap

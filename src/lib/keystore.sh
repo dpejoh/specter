@@ -61,16 +61,56 @@ ksm_available() {
   [ "$KSM" != "none" ] && [ -n "$KSM_DIR" ] && [ -d "$KSM_DIR" ]
 }
 
+_KSM_RELOAD_PENDING="${SPECTER_DIR:-/data/adb/specter}/.ksm_reload_pending"
+
 # Triggers the active manager to pick up config changes. Tricky Store
 # watches its files directly (no-op here); OMK only reloads on these touches.
-# Touch all three triggers so both the keymint and injector daemons restart
-# regardless of which one is watching which file.
+# Only restart.keymint — injector restarts kill keystore2 and log users out.
 ksm_reload() {
   [ "$KSM" = "omk" ] || return 0
+  if [ "${SPECTER_KSM_RELOAD_DEFERRED:-0}" = "1" ]; then
+    ensure_dir "$(dirname "$_KSM_RELOAD_PENDING")"
+    printf '%s\n' "keymint" >> "$_KSM_RELOAD_PENDING"
+    return 0
+  fi
+  mkdir -p "$OMK_RESTART_DIR" 2>/dev/null || true
+  touch "$OMK_RESTART_DIR/restart.keymint" 2>/dev/null
+}
+
+# Full OMK restart including injector. Use sparingly.
+ksm_reload_full() {
+  [ "$KSM" = "omk" ] || return 0
+  if [ "${SPECTER_KSM_RELOAD_DEFERRED:-0}" = "1" ]; then
+    ensure_dir "$(dirname "$_KSM_RELOAD_PENDING")"
+    printf '%s\n' "full" >> "$_KSM_RELOAD_PENDING"
+    return 0
+  fi
   mkdir -p "$OMK_RESTART_DIR" 2>/dev/null || true
   touch "$OMK_RESTART_DIR/restart.keymint" 2>/dev/null
   touch "$OMK_RESTART_DIR/restart.injector" 2>/dev/null
   touch "$OMK_RESTART_DIR/restart.all" 2>/dev/null
+}
+
+ksm_reload_commit() {
+  [ "$KSM" = "omk" ] || return 0
+  [ -f "$_KSM_RELOAD_PENDING" ] || return 0
+  _needs_keymint=false
+  _needs_full=false
+  while IFS= read -r _line || [ -n "$_line" ]; do
+    case "$_line" in
+      keymint) _needs_keymint=true ;;
+      full) _needs_full=true ;;
+    esac
+  done < "$_KSM_RELOAD_PENDING"
+  rm -f "$_KSM_RELOAD_PENDING"
+  mkdir -p "$OMK_RESTART_DIR" 2>/dev/null || true
+  $_needs_keymint && touch "$OMK_RESTART_DIR/restart.keymint" 2>/dev/null
+  $_needs_full && {
+    touch "$OMK_RESTART_DIR/restart.keymint" 2>/dev/null
+    touch "$OMK_RESTART_DIR/restart.injector" 2>/dev/null
+    touch "$OMK_RESTART_DIR/restart.all" 2>/dev/null
+  }
+  unset _needs_keymint _needs_full _line
 }
 
 # OMK's keymint/injector processes drop to uid 1017 (AID_KEYSTORE) and read
@@ -147,14 +187,14 @@ ksm_commit_targets() {
       rm -f "$_kct_tmp"
       ksm_secure "$KSM_DIR" 0770
       ksm_secure "$KSM_TARGETS" 0600
-      ksm_reload
+      # OMK's injector watches injector.toml; no daemon restart needed.
       unset _kct_line _kct_base _kct_tmp
       ;;
     *)
       rm -f "${KSM_TARGETS}.bak"
       [ -f "$KSM_TARGETS" ] && cp "$KSM_TARGETS" "${KSM_TARGETS}.bak"
       mv -f "$_kct_src" "$KSM_TARGETS"
-      ksm_reload
+      # Tricky Store watches target.txt directly.
       ;;
   esac
   unset _kct_src
@@ -172,7 +212,7 @@ ksm_set_security_patch() {
       printf 'all=%s\n' "$_ksp_date" > "$KSM_SECURITY" || { unset _ksp_date; return 1; }
       ;;
   esac
-  ksm_reload
+  # OMK hot-applies security_patch changes; no restart needed.
   unset _ksp_date
 }
 
