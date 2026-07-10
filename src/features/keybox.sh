@@ -84,26 +84,17 @@ if [ -z "$_history" ]; then
 else
   if [ "$_provider" = "auto" ]; then
     _wk_raw=$(echo "$_history" | grep -o '"workingEntries":\[[^]]*\]' | sed 's/"workingEntries":\[//' | sed 's/\]$//')
-    if [ -n "$_wk_raw" ]; then
-      _wk_count=$(echo "$_wk_raw" | grep -o '{"source":"[^"]*","version":"[^"]*","text":"[^"]*"}' | wc -l)
-      if [ "$_wk_count" -gt 0 ]; then
-        _rand_hex=$(hexdump -n 4 -e '4/4 "%08X"' /dev/urandom 2>/dev/null) && _random_index=$(( 0x${_rand_hex} % _wk_count )) || _random_index=$(( $$ % _wk_count ))
-        _wk_entry=$(echo "$_wk_raw" | grep -o '{"source":"[^"]*","version":"[^"]*","text":"[^"]*"}' | sed -n "$((_random_index + 1))p")
-        _DL_SOURCE=$(echo "$_wk_entry" | sed 's/.*"source":"\([^"]*\)".*/\1/')
-        _DL_VER=$(echo "$_wk_entry" | sed 's/.*"version":"\([^"]*\)".*/\1/')
-        _DL_TEXT=$(echo "$_wk_entry" | sed 's/.*"text":"\([^"]*\)".*/\1/')
-        [ -z "$_DL_TEXT" ] && _DL_TEXT="$_DL_VER"
-        log_i "KEYBOX" "Randomly selected: $_DL_SOURCE $_DL_TEXT (entry $_random_index of $_wk_count)"
-      else
-        _working_source=$(echo "$_history" | grep -o '"working":{[^}]*"source":"[^"]*"' | sed 's/.*"source":"\([^"]*\)".*/\1/')
-        _working_version=$(echo "$_history" | grep -o '"working":{[^}]*"version":"[^"]*"' | sed 's/.*"version":"\([^"]*\)".*/\1/')
-        [ -n "$_working_source" ] && [ -n "$_working_version" ] || die "No working keybox available (all revoked?)"
-        _DL_SOURCE="$_working_source"
-        _DL_VER="$_working_version"
-        _DL_TEXT=$(echo "$_history" | grep -o '"source":"'"$_DL_SOURCE"'"[^}]*"version":"'"$_DL_VER"'"[^}]*"text":"[^"]*"' | sed 's/.*"text":"\([^"]*\)".*/\1/')
-        [ -z "$_DL_TEXT" ] && _DL_TEXT="$_DL_VER"
-        log_i "KEYBOX" "Auto-selected: $_DL_SOURCE $_DL_TEXT"
-      fi
+    _wk_pool=$(echo "$_wk_raw" | grep -o '{"source":"[^"]*","version":"[^"]*","text":"[^"]*"}' | keybox_prefer_active "$_history")
+    _wk_count=$(printf '%s' "$_wk_pool" | grep -c '{"source":' || true)
+    [ -z "$_wk_count" ] && _wk_count=0
+    if [ "$_wk_count" -gt 0 ]; then
+      _rand_hex=$(hexdump -n 4 -e '4/4 "%08X"' /dev/urandom 2>/dev/null) && _random_index=$(( 0x${_rand_hex} % _wk_count )) || _random_index=$(( $$ % _wk_count ))
+      _wk_entry=$(printf '%s' "$_wk_pool" | grep -o '{"source":"[^"]*","version":"[^"]*","text":"[^"]*"}' | sed -n "$((_random_index + 1))p")
+      _DL_SOURCE=$(echo "$_wk_entry" | sed 's/.*"source":"\([^"]*\)".*/\1/')
+      _DL_VER=$(echo "$_wk_entry" | sed 's/.*"version":"\([^"]*\)".*/\1/')
+      _DL_TEXT=$(echo "$_wk_entry" | sed 's/.*"text":"\([^"]*\)".*/\1/')
+      [ -z "$_DL_TEXT" ] && _DL_TEXT="$_DL_VER"
+      log_i "KEYBOX" "Randomly selected: $_DL_SOURCE $_DL_TEXT (entry $_random_index of $_wk_count)"
     else
       _working_source=$(echo "$_history" | grep -o '"working":{[^}]*"source":"[^"]*"' | sed 's/.*"source":"\([^"]*\)".*/\1/')
       _working_version=$(echo "$_history" | grep -o '"working":{[^}]*"version":"[^"]*"' | sed 's/.*"version":"\([^"]*\)".*/\1/')
@@ -116,7 +107,7 @@ else
     fi
   else
     _DL_SOURCE="$_provider"
-    _DL_VER=$(echo "$_history" | grep -o '"source":"'"$_provider"'"[^}]*"version":"[^"]*"' | sed 's/.*"version":"\([^"]*\)".*/\1/' | sort -rn | head -1)
+    _DL_VER=$(keybox_latest_for_provider "$_history" "$_provider")
     [ -n "$_DL_VER" ] || die "No versions found for provider '$_provider'"
     _DL_TEXT=$(echo "$_history" | grep -o '"source":"'"$_DL_SOURCE"'"[^}]*"version":"'"$_DL_VER"'"[^}]*"text":"[^"]*"' | sed 's/.*"text":"\([^"]*\)".*/\1/')
     [ -z "$_DL_TEXT" ] && _DL_TEXT="$_DL_VER"
