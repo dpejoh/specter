@@ -113,6 +113,87 @@ ksm_reload_commit() {
   unset _needs_keymint _needs_full _line
 }
 
+# True if both OMK daemon pid files exist and those PIDs are alive.
+_omk_daemons_alive() {
+  _oda_km=$(cat "$OMK_RESTART_DIR/keymint-daemon.pid" 2>/dev/null) || _oda_km=
+  _oda_inj=$(cat "$OMK_RESTART_DIR/injector-daemon.pid" 2>/dev/null) || _oda_inj=
+  [ -n "$_oda_km" ] && [ -n "$_oda_inj" ] \
+    && kill -0 "$_oda_km" 2>/dev/null \
+    && kill -0 "$_oda_inj" 2>/dev/null
+  _oda_rc=$?
+  unset _oda_km _oda_inj
+  return $_oda_rc
+}
+
+# Convert "YYYY-MM-DD HH:MM:SS" (optional trailing UTC) to epoch seconds.
+_omk_ts_to_epoch() {
+  _ote_t="$1"
+  _ote_t=${_ote_t% UTC}
+  _ote_t=${_ote_t%Z}
+  date -u -d "$_ote_t" +%s 2>/dev/null \
+    || date -u -D "%Y-%m-%d %H:%M:%S" -d "$_ote_t" +%s 2>/dev/null \
+    || printf '0'
+  unset _ote_t
+}
+
+# True if injector.log has a TransactionFailed line within the lookback window.
+_omk_recent_transaction_failed() {
+  [ -f "$OMK_INJECTOR_LOG" ] || return 1
+  _ort_now=$(date -u +%s 2>/dev/null) || return 1
+  [ "$_ort_now" -gt 0 ] || { unset _ort_now; return 1; }
+  _ort_cutoff=$((_ort_now - OMK_HEAL_LOOKBACK_SEC))
+  _ort_hit=1
+  # Only parse TF lines (Life360-style floods can be thousands of rows).
+  while IFS= read -r _ort_line || [ -n "$_ort_line" ]; do
+    [ -z "$_ort_line" ] && continue
+    _ort_ts=$(printf '%s' "$_ort_line" | awk '{print $1" "$2}')
+    _ort_epoch=$(_omk_ts_to_epoch "$_ort_ts")
+    if [ "$_ort_epoch" -ge "$_ort_cutoff" ] 2>/dev/null; then
+      _ort_hit=0
+      break
+    fi
+  done <<EOF
+$(grep -F "TransactionFailed" "$OMK_INJECTOR_LOG" 2>/dev/null || true)
+EOF
+  unset _ort_now _ort_cutoff _ort_line _ort_ts _ort_epoch
+  return $_ort_hit
+}
+
+_omk_heal_cooldown_active() {
+  [ -f "$OMK_HEAL_STAMP" ] || return 1
+  _ohc_last=$(cat "$OMK_HEAL_STAMP" 2>/dev/null) || return 1
+  _ohc_now=$(date -u +%s 2>/dev/null) || return 1
+  case "$_ohc_last" in ''|*[!0-9]*) unset _ohc_last _ohc_now; return 1 ;; esac
+  [ "$((_ohc_now - _ohc_last))" -lt "$OMK_HEAL_COOLDOWN_SEC" ]
+  _ohc_rc=$?
+  unset _ohc_last _ohc_now
+  return $_ohc_rc
+}
+
+_omk_heal_stamp() {
+  mkdir -p "$(dirname "$OMK_HEAL_STAMP")" 2>/dev/null || true
+  date -u +%s > "$OMK_HEAL_STAMP" 2>/dev/null || true
+}
+
+# OMK heal: if daemons are dead/stale or injector.log shows a recent
+# TransactionFailed, call ksm_reload_full immediately (never deferred) —
+# rate-limited by OMK_HEAL_COOLDOWN_SEC. No-op when KSM is not omk, when
+# healthy, or while cooldown is active.
+ksm_heal_if_wedged() {
+  [ "$KSM" = "omk" ] || return 0
+  _omk_heal_cooldown_active && return 0
+  if _omk_daemons_alive && ! _omk_recent_transaction_failed; then
+    return 0
+  fi
+  log_i "OMK_HEAL" "Wedged or dead OMK detected, reloading"
+  _oh_prev="${SPECTER_KSM_RELOAD_DEFERRED:-0}"
+  SPECTER_KSM_RELOAD_DEFERRED=0
+  ksm_reload_full
+  SPECTER_KSM_RELOAD_DEFERRED="$_oh_prev"
+  _omk_heal_stamp
+  unset _oh_prev
+}
+
 # OMK's keymint/injector processes drop to uid 1017 (AID_KEYSTORE) and read
 # their files at mode 0600, so anything we write into the OMK data dir must be
 # owned by 1017 with a keystore-readable context — a plain mv/cp from

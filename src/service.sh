@@ -78,6 +78,9 @@ unset _bf _bf_default
 
 sh "$MODDIR/features/keystore_info.sh" >"$SPECTER_DIR/log/keystore_info.log" 2>&1 || true
 
+detect_keystore_manager
+ksm_heal_if_wedged || true
+
 log_i "SERVICE" "Boot-time features done"
 
 ensure_dir "$SPECTER_DIR/backup" 2>/dev/null || true

@@ -356,4 +356,94 @@ echo hi > "$_sec_file"
 ksm_secure "$_sec_file" 0600
 assert_file_exists "secure: TS leaves file in place" "$_sec_file"
 
+# ---------- ksm_heal_if_wedged helpers ----------
+_omk_mk_alive() {
+  mkdir -p "$OMK_RESTART_DIR" "$OMK_DIR"
+  printf '%s\n' "$$" > "$OMK_RESTART_DIR/keymint-daemon.pid"
+  printf '%s\n' "$$" > "$OMK_RESTART_DIR/injector-daemon.pid"
+}
+
+_omk_log_tf() {
+  _age="${1:-0}"
+  _now=$(date -u +%s)
+  _ts=$(date -u -d "@$((_now - _age))" +"%Y-%m-%d %H:%M:%S" 2>/dev/null \
+    || date -u -r "$((_now - _age))" +"%Y-%m-%d %H:%M:%S")
+  printf '%s UTC WARN uid=1 OMK getSecurityLevel failed: TransactionFailed / Unknown\n' "$_ts" \
+    > "$OMK_INJECTOR_LOG"
+  unset _age _now _ts
+}
+
+# ---------- heal: non-OMK is a no-op ----------
+bootstrap
+source_libs
+mk_module tricky_store "Tricky Store"
+detect_keystore_manager
+ksm_heal_if_wedged
+assert_file_not_exists "heal: TS creates no restart.all" "$OMK_RESTART_DIR/restart.all"
+
+# ---------- heal: healthy OMK (alive daemons, no TF) → no reload ----------
+bootstrap
+source_libs
+mk_module oh_my_keymint "OhMyKeymint"
+_omk_mk_alive
+: > "$OMK_INJECTOR_LOG"
+detect_keystore_manager
+ksm_heal_if_wedged
+assert_file_not_exists "heal: healthy omk → no restart.all" "$OMK_RESTART_DIR/restart.all"
+
+# ---------- heal: recent TransactionFailed → full reload ----------
+bootstrap
+source_libs
+mk_module oh_my_keymint "OhMyKeymint"
+_omk_mk_alive
+_omk_log_tf 0
+detect_keystore_manager
+ksm_heal_if_wedged
+assert_file_exists "heal: recent TF → restart.all" "$OMK_RESTART_DIR/restart.all"
+assert_file_exists "heal: recent TF → restart.keymint" "$OMK_RESTART_DIR/restart.keymint"
+assert_file_exists "heal: recent TF → restart.injector" "$OMK_RESTART_DIR/restart.injector"
+
+# ---------- heal: stale TransactionFailed (>5 min) → no reload ----------
+bootstrap
+source_libs
+mk_module oh_my_keymint "OhMyKeymint"
+_omk_mk_alive
+_omk_log_tf 600
+detect_keystore_manager
+ksm_heal_if_wedged
+assert_file_not_exists "heal: stale TF → no restart.all" "$OMK_RESTART_DIR/restart.all"
+
+# ---------- heal: dead daemons → full reload ----------
+bootstrap
+source_libs
+mk_module oh_my_keymint "OhMyKeymint"
+mkdir -p "$OMK_DIR" "$OMK_RESTART_DIR"
+: > "$OMK_INJECTOR_LOG"
+detect_keystore_manager
+ksm_heal_if_wedged
+assert_file_exists "heal: dead daemons → restart.all" "$OMK_RESTART_DIR/restart.all"
+
+# ---------- heal: cooldown blocks a second reload ----------
+bootstrap
+source_libs
+mk_module oh_my_keymint "OhMyKeymint"
+_omk_mk_alive
+_omk_log_tf 0
+detect_keystore_manager
+ksm_heal_if_wedged
+assert_file_exists "heal: cooldown setup reload" "$OMK_RESTART_DIR/restart.all"
+rm -f "$OMK_RESTART_DIR"/restart.*
+ksm_heal_if_wedged
+assert_file_not_exists "heal: cooldown blocks second reload" "$OMK_RESTART_DIR/restart.all"
+
+# ---------- heal: ignores deferred reload (immediate full restart) ----------
+bootstrap
+source_libs
+mk_module oh_my_keymint "OhMyKeymint"
+_omk_mk_alive
+_omk_log_tf 0
+detect_keystore_manager
+SPECTER_KSM_RELOAD_DEFERRED=1 ksm_heal_if_wedged
+assert_file_exists "heal: deferred ignored → restart.all now" "$OMK_RESTART_DIR/restart.all"
+
 done_testing

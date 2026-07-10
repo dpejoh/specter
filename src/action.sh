@@ -34,6 +34,9 @@ _first_boot=0
 {
   log_i "ACTION" "Running full integrity pipeline"
 
+  detect_keystore_manager
+  ksm_heal_if_wedged || true
+
   _feature_should_run "gms" && {
     log_u "ACTION" ""
     log_u "ACTION" "-> Play Store:"
