@@ -397,6 +397,6 @@
   "advance_export_logs": "Günlükleri Dışa Aktar",
   "advance_export_logs_desc": "Tüm günlükleri /sdcard/Download/ klasörüne kaydet",
   "tools_restart_omk": "OMK'yi Yeniden Başlat",
-  "tools_restart_omk_desc": "OhMyKeymint sıkışmışsa veya daemon'lar ölüyse yeniden yükle (5 dk bekleme)",
+  "tools_restart_omk_desc": "OhMyKeymint keymint ve injector daemon'larını yeniden başlatır",
   "tools_support_section": "Destek"
 }

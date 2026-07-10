@@ -203,7 +203,7 @@
   "theme_mode_light": "浅色",
   "theme_preset_monet": "系统",
   "tools_restart_omk": "重启 OMK",
-  "tools_restart_omk_desc": "在 OhMyKeymint 卡住或守护进程死亡时重新加载（5 分钟冷却）",
+  "tools_restart_omk_desc": "重启 OhMyKeymint 的 keymint 和 injector 守护进程",
   "tools_support_section": "支持",
   "tools_danger_zone": "危险区域",
   "tools_danger_zone_desc": "可能影响设备安全的破坏性操作",

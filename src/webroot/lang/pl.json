@@ -397,6 +397,6 @@
   "advance_export_logs": "Eksportuj logi",
   "advance_export_logs_desc": "Zapisz wszystkie logi debugowania Specter do /sdcard/Download/",
   "tools_restart_omk": "Restartuj OMK",
-  "tools_restart_omk_desc": "Przeładuj OhMyKeymint jeśli zablokowany lub demony nie działają (5 min cooldown)",
+  "tools_restart_omk_desc": "Restartuje demony keymint i injector OhMyKeymint",
   "tools_support_section": "Wsparcie"
 }

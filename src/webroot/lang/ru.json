@@ -206,7 +206,7 @@
   "theme_mode_light": "Светлая",
   "theme_preset_monet": "Система",
   "tools_restart_omk": "Перезапустить OMK",
-  "tools_restart_omk_desc": "Перезагрузить OhMyKeymint при зависании или мёртвых демонах (кулдаун 5 мин)",
+  "tools_restart_omk_desc": "Перезапускает демоны keymint и injector OhMyKeymint",
   "tools_support_section": "Поддержка",
   "tools_danger_zone": "Опасная зона",
   "tools_danger_zone_desc": "Разрушительные операции, которые могут повлиять на ваше устройство",
@@ -405,6 +405,6 @@
   "advance_export_logs": "Экспорт логов",
   "advance_export_logs_desc": "Сохранить все отладочные логи Specter в /sdcard/Download/",
   "tools_restart_omk": "Перезапустить OMK",
-  "tools_restart_omk_desc": "Перезагрузить OhMyKeymint при зависании или мёртвых демонах (кулдаун 5 мин)",
+  "tools_restart_omk_desc": "Перезапускает демоны keymint и injector OhMyKeymint",
   "tools_support_section": "Поддержка"
 }

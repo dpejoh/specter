@@ -397,6 +397,6 @@
   "advance_export_logs": "Export Logs",
   "advance_export_logs_desc": "Save all Specter debug logs to /sdcard/Download/",
   "tools_restart_omk": "Restart OMK",
-  "tools_restart_omk_desc": "Reload OhMyKeymint if wedged or daemons are dead (5 min cooldown)",
+  "tools_restart_omk_desc": "Restarts OhMyKeymint keymint and injector daemons",
   "tools_support_section": "Support"
 }

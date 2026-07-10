@@ -397,6 +397,6 @@
   "advance_export_logs": "Ekspor Log",
   "advance_export_logs_desc": "Simpan semua log debug Specter ke /sdcard/Download/",
   "tools_restart_omk": "Mulai Ulang OMK",
-  "tools_restart_omk_desc": "Muat ulang OhMyKeymint jika macet atau daemon mati (cooldown 5 menit)",
+  "tools_restart_omk_desc": "Memulai ulang daemon keymint dan injector OhMyKeymint",
   "tools_support_section": "Dukungan"
 }
