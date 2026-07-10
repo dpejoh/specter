@@ -202,6 +202,8 @@
   "theme_mode_amoled": "AMOLED",
   "theme_mode_light": "فاتح",
   "theme_preset_monet": "النظام",
+  "tools_restart_omk": "إعادة تشغيل OMK",
+  "tools_restart_omk_desc": "إعادة تحميل OhMyKeymint إذا كان عالقًا أو توقفت الخدمات (تهدئة 5 دقائق)",
   "tools_support_section": "الدعم",
   "tools_danger_zone": "المنطقة الخطرة",
   "tools_danger_zone_desc": "عمليات خطرة قد تؤثر على جهازك",

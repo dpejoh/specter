@@ -202,6 +202,8 @@
   "theme_mode_amoled": "AMOLED",
   "theme_mode_light": "Claro",
   "theme_preset_monet": "Sistema",
+  "tools_restart_omk": "Reiniciar OMK",
+  "tools_restart_omk_desc": "Recargar OhMyKeymint si está bloqueado o los demonios están muertos (enfriamiento 5 min)",
   "tools_support_section": "Soporte",
   "tools_danger_zone": "Zona de peligro",
   "tools_danger_zone_desc": "Operaciones destructivas que pueden afectar a su dispositivo",
