@@ -81,3 +81,45 @@ find_kmInstallKeybox() {
   echo "${_fk_bin:-}"
   unset _fk_abi _fk_lib_dir _fk_bin _fk_dir
 }
+
+# True if catalog entry for SOURCE/VERSION is softbanned.
+keybox_is_softbanned() {
+  echo "$1" | grep -o '"entries":\[[^]]*\]' | grep -o '{[^}]*"source":"'"$2"'"[^}]*"version":"'"$3"'"[^}]*}' | head -1 | grep -q '"softbanned":true'
+}
+
+# Prefer active (non-softbanned) candidates. stdin: one JSON object per line
+# with source/version. $1 = full catalog JSON. stdout: preferred pool.
+keybox_prefer_active() {
+  _kpa_hist="$1"
+  _kpa_active=""
+  _kpa_soft=""
+  while IFS= read -r _kpa_entry || [ -n "$_kpa_entry" ]; do
+    [ -z "$_kpa_entry" ] && continue
+    _kpa_src=$(echo "$_kpa_entry" | sed 's/.*"source":"\([^"]*\)".*/\1/')
+    _kpa_ver=$(echo "$_kpa_entry" | sed 's/.*"version":"\([^"]*\)".*/\1/')
+    if keybox_is_softbanned "$_kpa_hist" "$_kpa_src" "$_kpa_ver"; then
+      _kpa_soft="${_kpa_soft}${_kpa_entry}
+"
+    else
+      _kpa_active="${_kpa_active}${_kpa_entry}
+"
+    fi
+  done
+  if [ -n "$_kpa_active" ]; then
+    printf '%s' "$_kpa_active"
+  else
+    printf '%s' "$_kpa_soft"
+  fi
+  unset _kpa_hist _kpa_active _kpa_soft _kpa_entry _kpa_src _kpa_ver
+}
+
+# Latest version for PROVIDER from catalog, preferring non-softbanned.
+keybox_latest_for_provider() {
+  _klp_hist="$1"
+  _klp_prov="$2"
+  _klp_entries=$(echo "$_klp_hist" | grep -o '"entries":\[[^]]*\]' | grep -o '{[^}]*"source":"'"$_klp_prov"'"[^}]*}')
+  _klp_ver=$(printf '%s\n' "$_klp_entries" | grep -v '"softbanned":true' | sed 's/.*"version":"\([^"]*\)".*/\1/' | sort -rn | head -1)
+  [ -z "$_klp_ver" ] && _klp_ver=$(printf '%s\n' "$_klp_entries" | grep '"softbanned":true' | sed 's/.*"version":"\([^"]*\)".*/\1/' | sort -rn | head -1)
+  echo "$_klp_ver"
+  unset _klp_hist _klp_prov _klp_entries _klp_ver
+}
