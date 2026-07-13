@@ -7,7 +7,10 @@ import { escapeHtml, setFriendlyNames } from './utils.js';
 import { getTranslation } from './i18n.js';
 import { getFriendlyName } from './utils.js';
 
-async function confirmDestructive(friendlyName: string): Promise<boolean> {
+async function confirmDestructive(friendlyName: string, msgKey?: string): Promise<boolean> {
+  const msg = msgKey
+    ? (getTranslation(msgKey) || getTranslation('danger_confirm_msg') || 'This action may affect your device. Are you sure?')
+    : (getTranslation('danger_confirm_msg') || 'This action may affect your device. Are you sure?');
   return new Promise(resolve => {
     const dialog = document.createElement('md-dialog');
     dialog.className = 'danger-dialog';
@@ -18,7 +21,7 @@ async function confirmDestructive(friendlyName: string): Promise<boolean> {
         ${escapeHtml(friendlyName)}
       </div>
       <div slot="content">
-        <p class="danger-dialog-msg">${getTranslation('danger_confirm_msg') || 'This action may affect your device. Are you sure?'}</p>
+        <p class="danger-dialog-msg">${escapeHtml(msg)}</p>
       </div>
       <div slot="actions">
         <md-text-button id="danger-cancel">${getTranslation('dialog_cancel') || 'Cancel'}</md-text-button>
@@ -96,7 +99,7 @@ export function wireActions() {
       if (isDestructive) {
         const i18nKey = getFriendlyName(scriptName);
         const friendlyName = getTranslation(i18nKey) || i18nKey;
-        const confirmed = await confirmDestructive(friendlyName);
+        const confirmed = await confirmDestructive(friendlyName, el.dataset.confirmI18n);
         if (!confirmed) return;
       }
       const spinner = item.querySelector('.action-spinner') as HTMLElement | null;

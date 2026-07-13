@@ -46,14 +46,14 @@ export function wireSecurityPatch() {
     if (input) input.value = current || defaultDate;
 
     dialog.querySelector('#sp-fetch')!.addEventListener('click', async () => {
-      const fetchingToast = showToast(t('sp_fetching', 'Fetching latest security patch...'), { icon: 'info', type: 'info', autoCloseDelay: 10000 });
+      const fetchingToast = showToast(t('sp_fetching', 'Fetching from Pixel bulletin...'), { icon: 'info', type: 'info', autoCloseDelay: 10000 });
       try {
         const { stdout } = await exec(`sh ${scriptPath} --fetch 2>/dev/null || echo ""`);
         closeToast(fetchingToast);
         const date = stdout.trim();
         if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
           input!.value = date;
-          showToast(t('sp_fetched', 'Latest security patch fetched'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
+          showToast(t('sp_fetched', 'Fetched from Pixel bulletin'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
         } else {
           showToast(t('simple_toast_error', 'Failed'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
         }

@@ -61,11 +61,15 @@ ksm_available() {
   [ "$KSM" != "none" ] && [ -n "$KSM_DIR" ] && [ -d "$KSM_DIR" ]
 }
 
-# Triggers the active manager to pick up config changes. Tricky Store
-# watches its files directly (no-op here); OMK only reloads on these touches.
-# Touch all three triggers so both the keymint and injector daemons restart
-# regardless of which one is watching which file.
+# OMK keymint only — injector restart stops keystore2.
+# Explicit tools only; Hot apply covers Specter config writes.
 ksm_reload() {
+  [ "$KSM" = "omk" ] || return 0
+  mkdir -p "$OMK_RESTART_DIR" 2>/dev/null || true
+  touch "$OMK_RESTART_DIR/restart.keymint" 2>/dev/null
+}
+
+ksm_reload_full() {
   [ "$KSM" = "omk" ] || return 0
   mkdir -p "$OMK_RESTART_DIR" 2>/dev/null || true
   touch "$OMK_RESTART_DIR/restart.keymint" 2>/dev/null
@@ -147,14 +151,12 @@ ksm_commit_targets() {
       rm -f "$_kct_tmp"
       ksm_secure "$KSM_DIR" 0770
       ksm_secure "$KSM_TARGETS" 0600
-      ksm_reload
       unset _kct_line _kct_base _kct_tmp
       ;;
     *)
       rm -f "${KSM_TARGETS}.bak"
       [ -f "$KSM_TARGETS" ] && cp "$KSM_TARGETS" "${KSM_TARGETS}.bak"
       mv -f "$_kct_src" "$KSM_TARGETS"
-      ksm_reload
       ;;
   esac
   unset _kct_src
@@ -172,7 +174,6 @@ ksm_set_security_patch() {
       printf 'all=%s\n' "$_ksp_date" > "$KSM_SECURITY" || { unset _ksp_date; return 1; }
       ;;
   esac
-  ksm_reload
   unset _ksp_date
 }
 
@@ -189,7 +190,6 @@ ksm_install_keybox() {
   fi
   ksm_secure "$KSM_DIR" 0770
   ksm_secure "$KSM_KEYBOX" 0600
-  ksm_reload
   unset _kik_src _kik_mode
 }
 

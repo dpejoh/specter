@@ -201,6 +201,17 @@ if (typeof window.ksu === 'undefined') {
       }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
     }
 
+    if (u.includes('/json/keystore_manager.json')) {
+      return Promise.resolve(new Response(JSON.stringify({
+        id: 'omk',
+        name: 'OhMyKeymint',
+        format: 'toml',
+        dir: '/data/misc/keystore/omk',
+        targets: '/data/misc/keystore/omk/injector.toml',
+        security: '/data/misc/keystore/omk/config.toml',
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    }
+
     if (u.includes('rawbin.dpejoh.com/catalog')) {
       return Promise.resolve(new Response(JSON.stringify({
         entries: [

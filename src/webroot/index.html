@@ -244,7 +244,7 @@
             </div>
           </div>
 
-          <h2 class="list-title" data-i18n="menu_tricky_store">Tricky Store</h2>
+          <h2 class="list-title" data-i18n="menu_tricky_store">Keystore Management</h2>
           <div class="list-container list-container--tricky">
             <div class="list-item" id="target-apps-btn">
               <div class="li-icon"><md-icon aria-hidden="true">playlist_add_check</md-icon></div>
@@ -283,6 +283,17 @@
                 <span class="supporting-text" data-i18n="check_tee_bhash_desc">Run TEE check and extract boot hash from scratch</span>
               </div>
               <div class="spacer"></div>
+              <md-ripple></md-ripple>
+            </div>
+
+            <div class="list-item" id="omk-restart-keymint" data-script="omk_restart_keymint.sh" hidden>
+              <div class="li-icon"><md-icon aria-hidden="true">restart_alt</md-icon></div>
+              <div class="list-item-content">
+                <div class="toggle-text" data-i18n="tools_restart_omk_keymint">Restart OMK keymint</div>
+                <span class="supporting-text" data-i18n="tools_restart_omk_keymint_desc">Reload OhMyKeymint keymint without restarting the injector</span>
+              </div>
+              <div class="spacer"></div>
+              <md-circular-progress indeterminate class="action-spinner hidden"></md-circular-progress>
               <md-ripple></md-ripple>
             </div>
 
@@ -346,6 +357,17 @@
           <h2 class="list-title danger-zone-title" data-i18n="tools_danger_zone">Danger Zone</h2>
           <p class="danger-zone-desc" data-i18n="tools_danger_zone_desc">Destructive operations that may affect your device</p>
           <div class="list-container">
+            <div class="list-item" id="omk-restart-injector" data-script="omk_restart_injector.sh" data-destructive data-confirm-i18n="tools_restart_omk_injector_confirm" hidden>
+              <div class="li-icon"><md-icon aria-hidden="true">bolt</md-icon></div>
+              <div class="list-item-content">
+                <div class="toggle-text" data-i18n="tools_restart_omk_injector">Restart OMK injector</div>
+                <span class="supporting-text" data-i18n="tools_restart_omk_injector_desc">Full OMK restart: keymint, injector, and all daemons</span>
+              </div>
+              <div class="spacer"></div>
+              <md-circular-progress indeterminate class="action-spinner hidden"></md-circular-progress>
+              <md-ripple></md-ripple>
+            </div>
+
             <div class="list-item" data-script="cleanup.sh" data-destructive>
               <div class="li-icon"><md-icon aria-hidden="true">delete_sweep</md-icon></div>
               <div class="list-item-content">

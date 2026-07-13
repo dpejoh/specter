@@ -12,6 +12,8 @@ export interface InfoJson { android?: string; kernel?: string; root?: string; ro
 
 export interface KeyboxInfoJson { installed: boolean; source?: string; source_version?: string; text?: string; up_to_date?: boolean; revoked?: boolean; softbanned?: boolean; serial?: string; is_private?: boolean; }
 
+export interface KeystoreManagerJson { id: string; name?: string; format?: string; dir?: string; targets?: string; security?: string; }
+
 export interface DevEntry { name: string; role: string; github: string; avatar: string; }
 
 export interface CatalogEntry { source: string; version: string; text: string; revoked: boolean; softbanned: boolean; serial: string; last_checked: string; timestamp: string; }

@@ -6,16 +6,82 @@ MODDIR=${0%/*}
 
 detect_keystore_manager
 
+_read_patch_prop() {
+  _prop_name="$1"
+  shift
+
+  _val=$(getprop "$_prop_name" 2>/dev/null || echo "")
+  if [ -n "$_val" ]; then
+    printf '%s' "$_val"
+    unset _prop_name _val
+    return 0
+  fi
+
+  for _prop_file in "$@"; do
+    [ -f "$_prop_file" ] || continue
+    _val=$(grep "^${_prop_name}=" "$_prop_file" 2>/dev/null | head -1 | cut -d= -f2 | tr -d '[:space:]')
+    if [ -n "$_val" ]; then
+      printf '%s' "$_val"
+      unset _prop_name _val
+      return 0
+    fi
+  done
+
+  unset _prop_name _val
+  return 1
+}
+
+_validate_patch_date() {
+  case "$1" in
+    [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) printf '%s' "$1"; return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+_resolve_device_patch() {
+  _patch=$(_read_patch_prop "ro.build.version.security_patch" "/system/build.prop" "/system/system/build.prop") || _patch=""
+  if [ -n "$_patch" ] && _validate_patch_date "$_patch" >/dev/null; then
+    printf '%s' "$_patch"
+    unset _patch
+    return 0
+  fi
+
+  _patch=$(_read_patch_prop "ro.vendor.build.security_patch" "/vendor/build.prop") || _patch=""
+  if [ -n "$_patch" ] && _validate_patch_date "$_patch" >/dev/null; then
+    printf '%s' "$_patch"
+    unset _patch
+    return 0
+  fi
+
+  unset _patch
+  return 1
+}
+
+_fetch_pixel_patch() {
+  _fp=$(download "https://source.android.com/docs/security/bulletin/pixel" 2>/dev/null |
+    sed -n 's/.*<td>\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\)<\/td>.*/\1/p' |
+    head -n 1)
+  if [ -n "$_fp" ] && _validate_patch_date "$_fp" >/dev/null; then
+    printf '%s' "$_fp"
+    unset _fp
+    return 0
+  fi
+  unset _fp
+  return 1
+}
+
+_compute_fallback_patch() {
+  _year=$(date +%Y 2>/dev/null) || _year=$(getprop ro.build.version.release 2>/dev/null | cut -d. -f1) || _year="2026"
+  _month=$(date +%m 2>/dev/null) || _month="01"
+  printf '%s-%s-05' "$_year" "$_month"
+  unset _year _month
+}
+
 case "${1:-}" in
   --fetch)
-    _sp=$(download "https://source.android.com/docs/security/bulletin/pixel" 2>/dev/null |
-      sed -n 's/.*<td>\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\)<\/td>.*/\1/p' |
-      head -n 1)
-    if [ -n "$_sp" ]; then
-      echo "$_sp"
-      exit 0
-    fi
-    exit 1
+    # WebUI Fetch: bulletin, then synthetic. Action auto uses device props.
+    _fetch_pixel_patch || _compute_fallback_patch
+    exit 0
     ;;
   --get)
     [ -f "$KSM_SECURITY" ] || exit 1
@@ -39,22 +105,29 @@ esac
 
 ksm_available || die "No keystore manager (Tricky Store / OhMyKeymint) data directory found"
 
-# Try to fetch the real security patch date from source.android.com first.
-# Network may not be available yet at boot, so fall back to date computation.
-_patch=$(sh "$0" --fetch 2>/dev/null) || true
-
+_patch=$(_resolve_device_patch) || _patch=""
+_patch_source="device"
 if [ -z "$_patch" ]; then
-  current_year=$(date +%Y 2>/dev/null) || current_year=$(getprop ro.build.version.release 2>/dev/null | cut -d. -f1) || current_year="2026"
-  current_month=$(date +%m 2>/dev/null) || current_month="01"
-
-  patch_date="${current_year}-${current_month}-05"
-  log_w "SECURITY_PATCH" "Network unavailable, using computed date: $patch_date"
-else
-  patch_date="$_patch"
-  log_i "SECURITY_PATCH" "Fetched security patch date: $patch_date"
+  _patch=$(_fetch_pixel_patch) || _patch=""
+  _patch_source="pixel"
 fi
-unset _patch
+if [ -z "$_patch" ]; then
+  _patch=$(_compute_fallback_patch)
+  _patch_source="fallback"
+fi
 
-ksm_set_security_patch "$patch_date" || die "Failed to write $KSM_SECURITY"
-log_i "SECURITY_PATCH" "The security patch is written"
+_vendor_patch=$(_read_patch_prop "ro.vendor.build.security_patch" "/vendor/build.prop") || _vendor_patch="$_patch"
+[ -n "$_vendor_patch" ] || _vendor_patch="$_patch"
+_yyyymm=$(echo "$_patch" | cut -d'-' -f1-2 | tr -d '-')
+
+case "$KSM_FORMAT" in
+  toml)
+    ksm_set_security_patch "$_patch" || die "Failed to write $KSM_SECURITY"
+    ;;
+  *)
+    printf 'system=%s\nboot=%s\nvendor=%s\n' "$_yyyymm" "$_patch" "$_vendor_patch" > "$KSM_SECURITY" || die "Failed to write $KSM_SECURITY"
+    ;;
+esac
+
+log_i "SECURITY_PATCH" "Applied security patch (source: $_patch_source): system=$_yyyymm, boot=$_patch, vendor=$_vendor_patch"
 exit 0
