@@ -611,6 +611,10 @@ section:not([hidden]) {
   cursor: pointer;
 }
 
+.list-item[hidden] {
+  display: none;
+}
+
 .list-item:hover {
   background: color-mix(in srgb, var(--md-sys-color-surface-container-high), var(--md-sys-color-on-surface) 8%);
 }
