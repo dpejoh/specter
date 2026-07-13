@@ -15,7 +15,7 @@
   "home_status_offline": "离线",
   "menu_keybox": "Keybox",
   "menu_google_services": "Google 服务",
-  "menu_tricky_store": "Tricky Store",
+  "menu_tricky_store": "Keystore 管理",
   "menu_import_keybox": "安装 Keybox",
   "menu_import_keybox_desc": "下载并安装远程 keybox 到 Tricky Store",
   "menu_force_clear": "强制停止并清除 Play 商店",

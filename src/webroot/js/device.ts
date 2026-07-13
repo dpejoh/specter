@@ -43,8 +43,11 @@ export async function refreshKeystoreManager(): Promise<KeystoreManagerJson | nu
 }
 
 function applyKeystoreManager(data: KeystoreManagerJson) {
-  const block = document.getElementById('omk-restart-block');
-  if (block) block.hidden = data.id !== 'omk';
+  const show = data.id === 'omk';
+  for (const id of ['omk-restart-keymint', 'omk-restart-injector']) {
+    const el = document.getElementById(id);
+    if (el) el.hidden = !show;
+  }
 }
 
 function applyAllDeviceInfo(data: InfoJson) {

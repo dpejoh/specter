@@ -15,7 +15,7 @@
   "home_status_offline": "Offline",
   "menu_keybox": "Keybox",
   "menu_google_services": "Google Services",
-  "menu_tricky_store": "Tricky Store",
+  "menu_tricky_store": "Keystore Management",
   "menu_import_keybox": "Install Keybox",
   "menu_import_keybox_desc": "Downloads and installs remote keybox to Tricky Store",
   "menu_force_clear": "Force Stop & Clear Play Store",

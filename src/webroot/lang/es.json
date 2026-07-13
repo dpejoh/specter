@@ -15,7 +15,7 @@
   "home_status_offline": "Desconectado",
   "menu_keybox": "Keybox",
   "menu_google_services": "Servicios de Google",
-  "menu_tricky_store": "Tricky Store",
+  "menu_tricky_store": "Gestión de keystore",
   "menu_import_keybox": "Instalar Keybox",
   "menu_import_keybox_desc": "Descarga e instala keybox remoto en Tricky Store",
   "menu_force_clear": "Forzar detención y borrar datos de Play Store",
