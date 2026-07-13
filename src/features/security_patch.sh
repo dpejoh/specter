@@ -79,8 +79,7 @@ _compute_fallback_patch() {
 
 case "${1:-}" in
   --fetch)
-    # Explicit "latest" path for the WebUI: Pixel bulletin only, then
-    # current-month synthetic. Device props stay on the Action auto path.
+    # WebUI Fetch: bulletin, then synthetic. Action auto uses device props.
     _fetch_pixel_patch || _compute_fallback_patch
     exit 0
     ;;

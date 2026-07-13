@@ -63,9 +63,7 @@ ksm_available() {
 
 _KSM_RELOAD_PENDING="${SPECTER_DIR:-/data/adb/specter}/.ksm_reload_pending"
 
-# Triggers the active manager to pick up config changes. Tricky Store
-# watches its files directly (no-op here); OMK only reloads on these touches.
-# Only restart.keymint — injector restarts stop keystore2 per OMK daemon-injector.
+# OMK keymint only — injector restart stops keystore2.
 ksm_reload() {
   [ "$KSM" = "omk" ] || return 0
   if [ "${SPECTER_KSM_RELOAD_DEFERRED:-0}" = "1" ]; then
@@ -77,7 +75,6 @@ ksm_reload() {
   touch "$OMK_RESTART_DIR/restart.keymint" 2>/dev/null
 }
 
-# Full OMK restart including injector. Use sparingly.
 ksm_reload_full() {
   [ "$KSM" = "omk" ] || return 0
   if [ "${SPECTER_KSM_RELOAD_DEFERRED:-0}" = "1" ]; then
