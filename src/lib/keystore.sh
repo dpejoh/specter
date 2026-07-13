@@ -61,53 +61,20 @@ ksm_available() {
   [ "$KSM" != "none" ] && [ -n "$KSM_DIR" ] && [ -d "$KSM_DIR" ]
 }
 
-_KSM_RELOAD_PENDING="${SPECTER_DIR:-/data/adb/specter}/.ksm_reload_pending"
-
 # OMK keymint only — injector restart stops keystore2.
+# Explicit tools only; Hot apply covers Specter config writes.
 ksm_reload() {
   [ "$KSM" = "omk" ] || return 0
-  if [ "${SPECTER_KSM_RELOAD_DEFERRED:-0}" = "1" ]; then
-    ensure_dir "$(dirname "$_KSM_RELOAD_PENDING")"
-    printf '%s\n' "keymint" >> "$_KSM_RELOAD_PENDING"
-    return 0
-  fi
   mkdir -p "$OMK_RESTART_DIR" 2>/dev/null || true
   touch "$OMK_RESTART_DIR/restart.keymint" 2>/dev/null
 }
 
 ksm_reload_full() {
   [ "$KSM" = "omk" ] || return 0
-  if [ "${SPECTER_KSM_RELOAD_DEFERRED:-0}" = "1" ]; then
-    ensure_dir "$(dirname "$_KSM_RELOAD_PENDING")"
-    printf '%s\n' "full" >> "$_KSM_RELOAD_PENDING"
-    return 0
-  fi
   mkdir -p "$OMK_RESTART_DIR" 2>/dev/null || true
   touch "$OMK_RESTART_DIR/restart.keymint" 2>/dev/null
   touch "$OMK_RESTART_DIR/restart.injector" 2>/dev/null
   touch "$OMK_RESTART_DIR/restart.all" 2>/dev/null
-}
-
-ksm_reload_commit() {
-  [ "$KSM" = "omk" ] || return 0
-  [ -f "$_KSM_RELOAD_PENDING" ] || return 0
-  _needs_keymint=false
-  _needs_full=false
-  while IFS= read -r _line || [ -n "$_line" ]; do
-    case "$_line" in
-      keymint) _needs_keymint=true ;;
-      full) _needs_full=true ;;
-    esac
-  done < "$_KSM_RELOAD_PENDING"
-  rm -f "$_KSM_RELOAD_PENDING"
-  mkdir -p "$OMK_RESTART_DIR" 2>/dev/null || true
-  $_needs_keymint && touch "$OMK_RESTART_DIR/restart.keymint" 2>/dev/null
-  $_needs_full && {
-    touch "$OMK_RESTART_DIR/restart.keymint" 2>/dev/null
-    touch "$OMK_RESTART_DIR/restart.injector" 2>/dev/null
-    touch "$OMK_RESTART_DIR/restart.all" 2>/dev/null
-  }
-  unset _needs_keymint _needs_full _line
 }
 
 # OMK's keymint/injector processes drop to uid 1017 (AID_KEYSTORE) and read
@@ -223,7 +190,6 @@ ksm_install_keybox() {
   fi
   ksm_secure "$KSM_DIR" 0770
   ksm_secure "$KSM_KEYBOX" 0600
-  ksm_reload
   unset _kik_src _kik_mode
 }
 

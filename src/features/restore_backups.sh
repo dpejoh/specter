@@ -19,7 +19,6 @@ _restored=0
 if [ -f "$BACKUP_DIR/keybox.xml.bak" ] && [ -n "$KSM_KEYBOX" ]; then
   cp "$BACKUP_DIR/keybox.xml.bak" "$KSM_KEYBOX"
   log_i "RESTORE" "Restored keybox.xml"
-  _keybox_restored=1
   _restored=$((_restored + 1))
 fi
 
@@ -65,8 +64,6 @@ fi
 
 log_i "RESTORE" "Restored $_restored files"
 echo "Restored $_restored files from backup."
-
-[ "${_keybox_restored:-0}" = "1" ] && ksm_reload
 
 log_i "RESTORE" "Backup restoration complete"
 exit 0

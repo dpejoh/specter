@@ -38,7 +38,6 @@ FALLBACK_KEYBOXES="Yuri/8"
 : "${OMK_INJECTOR:=$OMK_DIR/injector.toml}"
 : "${OMK_CONFIG:=$OMK_DIR/config.toml}"
 : "${OMK_RESTART_DIR:=/data/adb/omk}"
-: "${OMK_INJECTOR_LOG:=$OMK_DIR/injector.log}"
 
 # -- Package lists --
 GMS_APPS="com.android.vending com.google.android.gsf com.google.android.gms com.google.android.contactkeys com.google.android.ims com.google.android.safetycore com.google.android.apps.walletnfcrel com.google.android.apps.nbu.paisa.user"

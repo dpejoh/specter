@@ -301,6 +301,20 @@ assert_file_not_exists "targets toml commit: no restart.keymint created" "$OMK_R
 assert_file_not_exists "targets toml commit: no restart.all created" "$OMK_RESTART_DIR/restart.all"
 assert_contains "targets toml commit: other sections preserved" "$(cat "$OMK_INJECTOR")" "[main]"
 
+# ---------- ksm_install_keybox: OMK does not touch restart markers ----------
+bootstrap
+source_libs
+mk_module oh_my_keymint "OhMyKeymint"
+mkdir -p "$OMK_DIR"
+detect_keystore_manager
+_kb_src="$TEST_ROOT/src_keybox.xml"
+printf '<AndroidAttestation/>\n' > "$_kb_src"
+ksm_install_keybox "$_kb_src" copy
+assert_file_exists "install keybox: keybox installed" "$KSM_KEYBOX"
+assert_file_not_exists "install keybox: no restart.keymint" "$OMK_RESTART_DIR/restart.keymint"
+assert_file_not_exists "install keybox: no restart.injector" "$OMK_RESTART_DIR/restart.injector"
+assert_file_not_exists "install keybox: no restart.all" "$OMK_RESTART_DIR/restart.all"
+
 # ---------- ksm_reload touches only the keymint restart trigger ----------
 bootstrap
 source_libs
@@ -322,20 +336,6 @@ ksm_reload_full
 assert_file_exists "full reload: restart.keymint created" "$OMK_RESTART_DIR/restart.keymint"
 assert_file_exists "full reload: restart.injector created" "$OMK_RESTART_DIR/restart.injector"
 assert_file_exists "full reload: restart.all created" "$OMK_RESTART_DIR/restart.all"
-
-# ---------- ksm_reload_commit batches deferred reloads ----------
-bootstrap
-source_libs
-mk_module oh_my_keymint "OhMyKeymint"
-mkdir -p "$OMK_DIR"
-detect_keystore_manager
-SPECTER_KSM_RELOAD_DEFERRED=1 SPECTER_DIR="$SPECTER_DIR" ksm_reload
-SPECTER_KSM_RELOAD_DEFERRED=1 SPECTER_DIR="$SPECTER_DIR" ksm_reload_full
-assert_file_not_exists "deferred: no immediate restart.keymint" "$OMK_RESTART_DIR/restart.keymint"
-SPECTER_KSM_RELOAD_DEFERRED=1 SPECTER_DIR="$SPECTER_DIR" ksm_reload_commit
-assert_file_exists "deferred commit: restart.keymint created" "$OMK_RESTART_DIR/restart.keymint"
-assert_file_exists "deferred commit: restart.injector created" "$OMK_RESTART_DIR/restart.injector"
-assert_file_exists "deferred commit: restart.all created" "$OMK_RESTART_DIR/restart.all"
 
 # ---------- ksm_reload is a no-op for Tricky Store ----------
 bootstrap

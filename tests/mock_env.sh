@@ -20,10 +20,9 @@ bootstrap() {
   OMK_INJECTOR="$OMK_DIR/injector.toml"
   OMK_CONFIG="$OMK_DIR/config.toml"
   OMK_RESTART_DIR="$TEST_ROOT/omk_restart"
-  OMK_INJECTOR_LOG="$OMK_DIR/injector.log"
   mkdir -p "$PROPS_DIR" "$LOGS_DIR" "$BIN_DIR" "$CONFIG_DIR/val" "$SPECTER_DIR" "$TRICKY_DIR" "$MODULES_BASE"
   export MOCK_DIR PROPS_DIR LOGS_DIR BIN_DIR CONFIG_DIR SPECTER_DIR TRICKY_DIR MODDIR
-  export MODULES_BASE OMK_MODULE OMK_DIR OMK_KEYBOX OMK_INJECTOR OMK_CONFIG OMK_RESTART_DIR OMK_INJECTOR_LOG
+  export MODULES_BASE OMK_MODULE OMK_DIR OMK_KEYBOX OMK_INJECTOR OMK_CONFIG OMK_RESTART_DIR
 
   cat > "$BIN_DIR/resetprop" << 'MOCK'
 #!/bin/sh
@@ -107,7 +106,6 @@ source_libs() {
   OMK_KEYBOX="$OMK_DIR/keybox.xml"
   OMK_INJECTOR="$OMK_DIR/injector.toml"
   OMK_CONFIG="$OMK_DIR/config.toml"
-  OMK_INJECTOR_LOG="$OMK_DIR/injector.log"
 }
 
 # Fakes an installed module by writing $MODULES_BASE/<id>/module.prop.

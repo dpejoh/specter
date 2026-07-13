@@ -7,7 +7,7 @@ const t = (key: string, fallback: string): string => getTranslation(key) || fall
 import type { InfoJson, KeyboxInfoJson, KeystoreManagerJson } from './types.js';
 
 export async function initDevice() {
-  await Promise.all([refreshDevice(), refreshKeyboxStatus()]);
+  await Promise.all([refreshDevice(), refreshKeyboxStatus(), refreshKeystoreManager()]);
 }
 
 export async function refreshDevice(): Promise<InfoJson | null> {
