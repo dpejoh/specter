@@ -37,6 +37,11 @@ export async function refreshKeyboxStatus(): Promise<KeyboxInfoJson | null> {
 }
 
 export async function refreshKeystoreManager(): Promise<KeystoreManagerJson | null> {
+  try {
+    await runScript('keystore_info.sh', 'feature');
+  } catch (e) {
+    console.warn('Keystore manager info script failed:', e);
+  }
   const data = await fetchJson<KeystoreManagerJson>(API_URLS.KEYSTORE_MANAGER!);
   if (data) applyKeystoreManager(data);
   return data;
