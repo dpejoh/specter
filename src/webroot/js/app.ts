@@ -73,6 +73,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   import('./boot-hash-ui.js').then(m => m.wireBootHash()).catch(() => {});
   import('./tee-bhash-ui.js').then(m => m.wireTeeHash()).catch(() => {});
   import('./font.js').then(m => m.wireFontToggles()).catch(() => {});
+  import('./omk-restart-ui.js').then(m => m.wireOmkRestart()).catch(() => {});
 
   initI18n().then(() => { loadContributors().catch(() => {}); }).catch(() => {});
   initDevice().catch(() => {});

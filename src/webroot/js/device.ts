@@ -4,7 +4,7 @@ import { appendToOutput } from './terminal.js';
 import { API_URLS } from './constants.js';
 import { getTranslation } from './i18n.js';
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
-import type { InfoJson, KeyboxInfoJson } from './types.js';
+import type { InfoJson, KeyboxInfoJson, KeystoreManagerJson } from './types.js';
 
 export async function initDevice() {
   await Promise.all([refreshDevice(), refreshKeyboxStatus()]);
@@ -34,6 +34,17 @@ export async function refreshKeyboxStatus(): Promise<KeyboxInfoJson | null> {
     : await fetchJson<KeyboxInfoJson>(API_URLS.KEYBOX_INFO!);
   if (diskData) applyKeyboxStatus(diskData);
   return diskData;
+}
+
+export async function refreshKeystoreManager(): Promise<KeystoreManagerJson | null> {
+  const data = await fetchJson<KeystoreManagerJson>(API_URLS.KEYSTORE_MANAGER!);
+  if (data) applyKeystoreManager(data);
+  return data;
+}
+
+function applyKeystoreManager(data: KeystoreManagerJson) {
+  const block = document.getElementById('omk-restart-block');
+  if (block) block.hidden = data.id !== 'omk';
 }
 
 function applyAllDeviceInfo(data: InfoJson) {

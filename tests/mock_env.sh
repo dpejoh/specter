@@ -108,7 +108,6 @@ source_libs() {
   OMK_INJECTOR="$OMK_DIR/injector.toml"
   OMK_CONFIG="$OMK_DIR/config.toml"
   OMK_INJECTOR_LOG="$OMK_DIR/injector.log"
-  OMK_HEAL_STAMP="$SPECTER_DIR/omk_heal_at"
 }
 
 # Fakes an installed module by writing $MODULES_BASE/<id>/module.prop.

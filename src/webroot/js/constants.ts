@@ -9,6 +9,7 @@ export const API_URLS: Record<string, string | undefined> = {
   KEY_CATALOG: 'https://rawbin.dpejoh.com/catalog',
   INFO: '/json/info.json',
   KEYBOX_INFO: '/json/keybox_info.json',
+  KEYSTORE_MANAGER: '/json/keystore_manager.json',
   GITHUB: 'https://github.com/dpejoh/specter',
   TELEGRAM: 'https://t.me/dpejoh',
 };

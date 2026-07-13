@@ -341,12 +341,25 @@
               <md-circular-progress indeterminate class="action-spinner hidden"></md-circular-progress>
               <md-ripple></md-ripple>
             </div>
+          </div>
 
-            <div class="list-item" data-script="omk_heal.sh">
+          <div id="omk-restart-block" class="list-container" hidden>
+            <div class="list-item" data-script="omk_restart_keymint.sh">
               <div class="li-icon"><md-icon aria-hidden="true">restart_alt</md-icon></div>
               <div class="list-item-content">
-                <div class="toggle-text" data-i18n="tools_restart_omk">Restart OMK</div>
-                <span class="supporting-text" data-i18n="tools_restart_omk_desc">Restarts OhMyKeymint keymint and injector daemons</span>
+                <div class="toggle-text" data-i18n="tools_restart_omk_keymint">Restart OMK keymint</div>
+                <span class="supporting-text" data-i18n="tools_restart_omk_keymint_desc">Reload OhMyKeymint keymint without restarting the injector</span>
+              </div>
+              <div class="spacer"></div>
+              <md-circular-progress indeterminate class="action-spinner hidden"></md-circular-progress>
+              <md-ripple></md-ripple>
+            </div>
+
+            <div class="list-item" data-script="omk_restart_injector.sh" data-destructive data-confirm-i18n="tools_restart_omk_injector_confirm">
+              <div class="li-icon"><md-icon aria-hidden="true">power_settings_new</md-icon></div>
+              <div class="list-item-content">
+                <div class="toggle-text" data-i18n="tools_restart_omk_injector">Restart OMK injector</div>
+                <span class="supporting-text" data-i18n="tools_restart_omk_injector_desc">Full OMK restart: keymint, injector, and all daemons</span>
               </div>
               <div class="spacer"></div>
               <md-circular-progress indeterminate class="action-spinner hidden"></md-circular-progress>
