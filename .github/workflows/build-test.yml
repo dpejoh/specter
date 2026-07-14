@@ -61,3 +61,10 @@ jobs:
       - name: Check no su -c in features
         run: |
           ! grep -rn "su -c" Module/features/ --include="*.sh" | grep -v "hma.sh"
+          
+      - name: Upload ci module as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.get_name.outputs.artifact_name }}
+          path: "Specter-*.zip"
+          retention-days: 7
