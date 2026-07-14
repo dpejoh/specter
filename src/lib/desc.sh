@@ -32,10 +32,7 @@ refresh_module_description() {
     [ -z "$_kb_src" ] && [ "$(cfg_get 'keybox_private' 'false')" = "true" ] && _kb_src="Private"
 
     _apps=$(ksm_read_targets 2>/dev/null | wc -l)
-    case "$KSM_FORMAT" in
-      toml) _patch=$(grep -E '^[ ]*security_patch[ ]*=' "$KSM_SECURITY" 2>/dev/null | head -1 | sed 's/.*=[ ]*"\([^"]*\)".*/\1/') ;;
-      *) _patch=$(grep -E '^(boot|all)=' "$KSM_SECURITY" 2>/dev/null | cut -d= -f2) ;;
-    esac
+    _patch=$(ksm_get_security_patch 2>/dev/null) || _patch=""
     [ -z "$_patch" ] && _patch="-"
 
     if [ -f "$KSM_KEYBOX" ] || [ -f "$KSM_LOCKED" ]; then

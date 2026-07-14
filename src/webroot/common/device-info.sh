@@ -20,10 +20,7 @@ _root_type="$ROOT_TYPE"
 # Security patch date, real system value + optional spoofed value
 detect_keystore_manager
 _build_patch=$(getprop ro.build.version.security_patch 2>/dev/null || echo "")
-case "$KSM_FORMAT" in
-  toml) _patch_date=$(grep -E '^[ ]*security_patch[ ]*=' "$KSM_SECURITY" 2>/dev/null | head -1 | sed 's/.*=[ ]*"\([^"]*\)".*/\1/') ;;
-  *) _patch_date=$(grep -E '^(boot|all)=' "$KSM_SECURITY" 2>/dev/null | cut -d= -f2) ;;
-esac
+_patch_date=$(ksm_get_security_patch 2>/dev/null) || _patch_date=""
 [ -z "$_patch_date" ] && _patch_date="$_build_patch"
 
 # Flags

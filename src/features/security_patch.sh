@@ -84,11 +84,7 @@ case "${1:-}" in
     exit 0
     ;;
   --get)
-    [ -f "$KSM_SECURITY" ] || exit 1
-    case "$KSM_FORMAT" in
-      toml) grep -E '^[ ]*security_patch[ ]*=' "$KSM_SECURITY" 2>/dev/null | head -1 | sed 's/.*=[ ]*"\([^"]*\)".*/\1/' ;;
-      *) grep -E '^(boot|all)=' "$KSM_SECURITY" 2>/dev/null | head -1 | cut -d= -f2 ;;
-    esac
+    ksm_get_security_patch || exit 1
     exit 0
     ;;
   --set)
@@ -116,18 +112,6 @@ if [ -z "$_patch" ]; then
   _patch_source="fallback"
 fi
 
-_vendor_patch=$(_read_patch_prop "ro.vendor.build.security_patch" "/vendor/build.prop") || _vendor_patch="$_patch"
-[ -n "$_vendor_patch" ] || _vendor_patch="$_patch"
-_yyyymm=$(echo "$_patch" | cut -d'-' -f1-2 | tr -d '-')
-
-case "$KSM_FORMAT" in
-  toml)
-    ksm_set_security_patch "$_patch" || die "Failed to write $KSM_SECURITY"
-    ;;
-  *)
-    printf 'system=%s\nboot=%s\nvendor=%s\n' "$_yyyymm" "$_patch" "$_vendor_patch" > "$KSM_SECURITY" || die "Failed to write $KSM_SECURITY"
-    ;;
-esac
-
-log_i "SECURITY_PATCH" "Applied security patch (source: $_patch_source): system=$_yyyymm, boot=$_patch, vendor=$_vendor_patch"
+ksm_set_security_patch "$_patch" || die "Failed to write $KSM_SECURITY"
+log_i "SECURITY_PATCH" "Applied security patch (source: $_patch_source): $_patch"
 exit 0

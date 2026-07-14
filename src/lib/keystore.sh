@@ -162,6 +162,23 @@ ksm_commit_targets() {
   unset _kct_src
 }
 
+ksm_get_security_patch() {
+  [ -f "$KSM_SECURITY" ] || return 1
+  case "$KSM_FORMAT" in
+    toml)
+      grep -E '^[ ]*security_patch[ ]*=' "$KSM_SECURITY" 2>/dev/null | head -1 |
+        sed 's/.*=[ ]*"\([^"]*\)".*/\1/'
+      ;;
+    *)
+      _kgsp=$(grep -E '^boot=' "$KSM_SECURITY" 2>/dev/null | head -1 | cut -d= -f2) || _kgsp=""
+      [ -n "$_kgsp" ] || _kgsp=$(grep -E '^all=' "$KSM_SECURITY" 2>/dev/null | head -1 | cut -d= -f2) || _kgsp=""
+      [ -n "$_kgsp" ] || { unset _kgsp; return 1; }
+      printf '%s\n' "$_kgsp"
+      unset _kgsp
+      ;;
+  esac
+}
+
 ksm_set_security_patch() {
   _ksp_date="$1"
   case "$KSM_FORMAT" in
@@ -171,7 +188,16 @@ ksm_set_security_patch() {
       ksm_secure "$KSM_SECURITY" 0600
       ;;
     *)
-      printf 'all=%s\n' "$_ksp_date" > "$KSM_SECURITY" || { unset _ksp_date; return 1; }
+      _ksp_vendor=$(getprop ro.vendor.build.security_patch 2>/dev/null || echo "")
+      if [ -z "$_ksp_vendor" ] && [ -f /vendor/build.prop ]; then
+        _ksp_vendor=$(grep '^ro.vendor.build.security_patch=' /vendor/build.prop 2>/dev/null |
+          head -1 | cut -d= -f2 | tr -d '[:space:]') || _ksp_vendor=""
+      fi
+      [ -n "$_ksp_vendor" ] || _ksp_vendor="$_ksp_date"
+      _ksp_yyyymm=$(printf '%s' "$_ksp_date" | cut -d'-' -f1-2 | tr -d '-')
+      printf 'system=%s\nboot=%s\nvendor=%s\n' "$_ksp_yyyymm" "$_ksp_date" "$_ksp_vendor" \
+        > "$KSM_SECURITY" || { unset _ksp_date _ksp_vendor _ksp_yyyymm; return 1; }
+      unset _ksp_vendor _ksp_yyyymm
       ;;
   esac
   unset _ksp_date

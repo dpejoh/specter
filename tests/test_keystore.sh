@@ -163,14 +163,41 @@ _toml_set_trust_key "$_cfg_toml3" security_patch '"2026-06-05"'
 assert_contains "trust key: creates [trust] section" "$(cat "$_cfg_toml3")" "[trust]"
 assert_contains "trust key: value set in new section" "$(cat "$_cfg_toml3")" 'security_patch = "2026-06-05"'
 
-# ---------- ksm_set_security_patch: Tricky Store (txt) ----------
+# ---------- ksm_set_security_patch: Tricky Store multi-line (vendor from prop) ----------
+bootstrap
+source_libs
+mk_module tricky_store "Tricky Store"
+detect_keystore_manager
+set_prop "ro.vendor.build.security_patch" "2026-06-01"
+ksm_set_security_patch "2026-06-05"
+assert_contains "security patch txt: system line" "$(cat "$KSM_SECURITY")" "system=202606"
+assert_contains "security patch txt: boot line" "$(cat "$KSM_SECURITY")" "boot=2026-06-05"
+assert_contains "security patch txt: vendor from prop" "$(cat "$KSM_SECURITY")" "vendor=2026-06-01"
+assert_file_not_exists "security patch txt: no restart.all created" "$OMK_RESTART_DIR/restart.all"
+
+# ---------- ksm_set_security_patch: Tricky Store vendor falls back to boot ----------
 bootstrap
 source_libs
 mk_module tricky_store "Tricky Store"
 detect_keystore_manager
 ksm_set_security_patch "2026-06-05"
-assert_file_eq "security patch txt: written as all=" "$KSM_SECURITY" "all=2026-06-05"
-assert_file_not_exists "security patch txt: no restart.all created" "$OMK_RESTART_DIR/restart.all"
+assert_contains "security patch txt: vendor falls back to boot" "$(cat "$KSM_SECURITY")" "vendor=2026-06-05"
+
+# ---------- ksm_get_security_patch: Tricky Store prefers boot= ----------
+bootstrap
+source_libs
+mk_module tricky_store "Tricky Store"
+detect_keystore_manager
+printf 'system=202606\nboot=2026-06-05\nvendor=2026-06-01\n' > "$KSM_SECURITY"
+assert_eq "security patch get txt: boot=" "2026-06-05" "$(ksm_get_security_patch)"
+
+# ---------- ksm_get_security_patch: Tricky Store legacy all= ----------
+bootstrap
+source_libs
+mk_module tricky_store "Tricky Store"
+detect_keystore_manager
+printf 'all=2026-05-05\n' > "$KSM_SECURITY"
+assert_eq "security patch get txt: legacy all=" "2026-05-05" "$(ksm_get_security_patch)"
 
 # ---------- ksm_set_security_patch: OMK (toml) ----------
 bootstrap
@@ -187,6 +214,19 @@ ksm_set_security_patch "2026-06-05"
 assert_contains "security patch toml: value set" "$(cat "$KSM_SECURITY")" 'security_patch = "2026-06-05"'
 assert_file_not_exists "security patch toml: no restart markers created" "$OMK_RESTART_DIR/restart.keymint"
 assert_file_not_exists "security patch toml: no restart.all created" "$OMK_RESTART_DIR/restart.all"
+
+# ---------- ksm_get_security_patch: OMK toml ----------
+bootstrap
+source_libs
+mk_module oh_my_keymint "OhMyKeymint"
+mkdir -p "$OMK_DIR"
+cat > "$OMK_CONFIG" << 'EOF'
+[trust]
+os_version = 17
+security_patch = "2026-06-05"
+EOF
+detect_keystore_manager
+assert_eq "security patch get toml" "2026-06-05" "$(ksm_get_security_patch)"
 
 # ---------- security_patch.sh --get: OMK returns current value ----------
 bootstrap
@@ -213,6 +253,16 @@ security_patch = "auto"
 EOF
 run_feature security_patch.sh --set 2026-07-05 >/dev/null
 assert_contains "security_patch.sh --set omk" "$(cat "$OMK_CONFIG")" 'security_patch = "2026-07-05"'
+
+# ---------- security_patch.sh --set: Tricky Store writes multi-line ----------
+bootstrap
+source_libs
+mk_module tricky_store "Tricky Store"
+set_prop "ro.vendor.build.security_patch" "2026-07-01"
+run_feature security_patch.sh --set 2026-07-05 >/dev/null
+assert_contains "security_patch.sh --set txt: system" "$(cat "$SECURITY_PATCH_FILE")" "system=202607"
+assert_contains "security_patch.sh --set txt: boot" "$(cat "$SECURITY_PATCH_FILE")" "boot=2026-07-05"
+assert_contains "security_patch.sh --set txt: vendor" "$(cat "$SECURITY_PATCH_FILE")" "vendor=2026-07-01"
 
 # ---------- security_patch.sh default: Tricky Store uses build.prop patch ----------
 bootstrap
