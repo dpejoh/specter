@@ -11,7 +11,7 @@ export const API_URLS: Record<string, string | undefined> = {
   KEYBOX_INFO: '/json/keybox_info.json',
   KEYSTORE_MANAGER: '/json/keystore_manager.json',
   GITHUB: 'https://github.com/dpejoh/specter',
-  TELEGRAM: 'https://t.me/dpejoh',
+  TELEGRAM: 'https://telegram.me/dpejoh',
 };
 
 
