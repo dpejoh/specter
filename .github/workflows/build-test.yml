@@ -62,9 +62,15 @@ jobs:
         run: |
           ! grep -rn "su -c" Module/features/ --include="*.sh" | grep -v "hma.sh"
           
+      - name: Get module version
+        id: get_name
+        run: |
+          VERSION=$(grep -oP '(?<=^version=).*' Module/module.prop)
+          echo "artifact_name=Specter-${VERSION}" >> "$GITHUB_OUTPUT"
+
       - name: Upload ci module as artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.get_name.outputs.artifact_name }}
-          path: "Specter-*.zip"
+          path: Module/
           retention-days: 7
