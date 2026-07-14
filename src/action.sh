@@ -116,4 +116,5 @@ if [ "$_first_boot" = "0" ]; then
   printf '{"script":"action.sh","output":"Full integrity pipeline completed","time":"%s","code":0}\n' "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" >> "$SPECTER_DIR/log/history.jsonl"
 fi
 
+echo "Action has ended, please exit"
 exit 0

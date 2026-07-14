@@ -66,6 +66,10 @@ export function wireBootHash() {
 
     dialog.querySelector('#boot-hash-cancel')!.addEventListener('click', () => dialog.close());
     dialog.querySelector('#boot-hash-clear')!.addEventListener('click', async () => {
+      const blockClose = (e: Event) => e.preventDefault();
+      dialog.addEventListener('cancel', blockClose);
+      const btn = dialog.querySelector('#boot-hash-clear') as HTMLButtonElement;
+      btn.disabled = true;
       try {
         await exec(`rm -f ${hashPath}`);
         await exec(`sh ${shellEscape(moddir + '/refresh_desc.sh')}`);
@@ -73,16 +77,23 @@ export function wireBootHash() {
         dialog.close();
       } catch {
         showToast(t('simple_toast_error', 'Failed'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
+      } finally {
+        dialog.removeEventListener('cancel', blockClose);
+        btn.disabled = false;
       }
     });
 
     dialog.querySelector('#boot-hash-save')!.addEventListener('click', async () => {
-      const val = input!.value.trim();
-      if (val && !/^[a-f0-9]{64}$/.test(val)) {
-        showToast(t('boot_hash_invalid', 'Invalid hash (must be 64 hex characters)'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
-        return;
-      }
+      const blockClose = (e: Event) => e.preventDefault();
+      dialog.addEventListener('cancel', blockClose);
+      const btn = dialog.querySelector('#boot-hash-save') as HTMLButtonElement;
+      btn.disabled = true;
       try {
+        const val = input!.value.trim();
+        if (val && !/^[a-f0-9]{64}$/.test(val)) {
+          showToast(t('boot_hash_invalid', 'Invalid hash (must be 64 hex characters)'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
+          return;
+        }
         if (val) {
           await exec(`mkdir -p ${shellEscape(cdir)} && printf '%s' ${shellEscape(val)} > ${hashPath}`);
           await exec(`su -c "resetprop -n ro.boot.vbmeta.digest ${shellEscape(val)}" 2>/dev/null || true`);
@@ -94,6 +105,9 @@ export function wireBootHash() {
         dialog.close();
       } catch {
         showToast(t('boot_hash_save_error', 'Failed to save'), { icon: 'error', type: 'error', autoCloseDelay: 4000 });
+      } finally {
+        dialog.removeEventListener('cancel', blockClose);
+        btn.disabled = false;
       }
     });
 

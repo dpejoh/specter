@@ -46,41 +46,53 @@ export function wireSecurityPatch() {
     if (input) input.value = current || defaultDate;
 
     dialog.querySelector('#sp-fetch')!.addEventListener('click', async () => {
-      const fetchingToast = showToast(t('sp_fetching', 'Fetching from Pixel bulletin...'), { icon: 'info', type: 'info', autoCloseDelay: 10000 });
+      const blockClose = (e: Event) => e.preventDefault();
+      dialog.addEventListener('cancel', blockClose);
       try {
-        const { stdout } = await exec(`sh ${scriptPath} --fetch 2>/dev/null || echo ""`);
-        closeToast(fetchingToast);
-        const date = stdout.trim();
-        if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
-          input!.value = date;
-          showToast(t('sp_fetched', 'Fetched from Pixel bulletin'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
-        } else {
+        const fetchingToast = showToast(t('sp_fetching', 'Fetching latest security patch...'), { icon: 'info', type: 'info', autoCloseDelay: 10000 });
+        try {
+          const { stdout } = await exec(`sh ${scriptPath} --fetch 2>/dev/null || echo ""`);
+          closeToast(fetchingToast);
+          const date = stdout.trim();
+          if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+            input!.value = date;
+            showToast(t('sp_fetched', 'Latest security patch fetched'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
+          } else {
+            showToast(t('simple_toast_error', 'Failed'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
+          }
+        } catch {
+          closeToast(fetchingToast);
           showToast(t('simple_toast_error', 'Failed'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
         }
-      } catch {
-        closeToast(fetchingToast);
-        showToast(t('simple_toast_error', 'Failed'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
+      } finally {
+        dialog.removeEventListener('cancel', blockClose);
       }
     });
 
     dialog.querySelector('#sp-cancel')!.addEventListener('click', () => dialog.close());
     dialog.querySelector('#sp-save')!.addEventListener('click', async () => {
-      const val = input!.value.trim();
-      if (!val || !/^\d{4}-\d{2}-\d{2}$/.test(val)) {
-        showToast(t('sp_invalid_date', 'Invalid date format (use YYYY-MM-DD)'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
-        return;
-      }
+      const blockClose = (e: Event) => e.preventDefault();
+      dialog.addEventListener('cancel', blockClose);
       try {
-        const { code, stderr } = await exec(`sh ${scriptPath} --set ${shellEscape(val)}`);
-        if (code !== 0) {
-          showToast(t('sp_save_error', stderr.trim() || 'Failed to save'), { icon: 'error', type: 'error', autoCloseDelay: 4000 });
+        const val = input!.value.trim();
+        if (!val || !/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+          showToast(t('sp_invalid_date', 'Invalid date format (use YYYY-MM-DD)'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
           return;
         }
-        await exec(`sh ${shellEscape(moddir + '/refresh_desc.sh')}`);
-        showToast(t('sp_saved', 'Security patch date saved'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
-        dialog.close();
-      } catch {
-        showToast(t('sp_save_error', 'Failed to save'), { icon: 'error', type: 'error', autoCloseDelay: 4000 });
+        try {
+          const { code, stderr } = await exec(`sh ${scriptPath} --set ${shellEscape(val)}`);
+          if (code !== 0) {
+            showToast(t('sp_save_error', stderr.trim() || 'Failed to save'), { icon: 'error', type: 'error', autoCloseDelay: 4000 });
+            return;
+          }
+          await exec(`sh ${shellEscape(moddir + '/refresh_desc.sh')}`);
+          showToast(t('sp_saved', 'Security patch date saved'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
+          dialog.close();
+        } catch {
+          showToast(t('sp_save_error', 'Failed to save'), { icon: 'error', type: 'error', autoCloseDelay: 4000 });
+        }
+      } finally {
+        dialog.removeEventListener('cancel', blockClose);
       }
     });
 

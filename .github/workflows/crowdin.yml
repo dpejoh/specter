@@ -25,7 +25,7 @@ jobs:
           upload_translations: false
           download_translations: false
           push_translations: false
-          create_pr: false
+          create_pull_request: false
         env:
           CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
           CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
@@ -36,12 +36,13 @@ jobs:
           upload_sources: false
           upload_translations: false
           download_translations: true
-          push_translations: false
-          create_pr: true
+          push_translations: true
+          create_pull_request: true
           localization_branch_name: l10n_crowdin
           commit_message: 'i18n: sync translations from Crowdin'
           pull_request_title: 'i18n: translation updates'
           pull_request_body: 'Automated translation sync from Crowdin.'
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
           CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}

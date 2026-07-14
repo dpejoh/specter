@@ -51,11 +51,16 @@ export function openAutopifDialog() {
     cancelBtn.addEventListener('click', () => dialog.close());
 
     saveBtn.addEventListener('click', () => {
-      const num = parseInt(intervalInput.value || String(DEFAULT_HOURS), 10);
-      const seconds = String(Math.max(1, num) * HOURS_TO_SECONDS);
-      cfgSet('autopif_interval', seconds);
-      showToast(t('autopif_saved', 'Auto PIF settings saved'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
-      dialog.close();
+      (saveBtn as HTMLButtonElement).disabled = true;
+      try {
+        const num = parseInt(intervalInput.value || String(DEFAULT_HOURS), 10);
+        const seconds = String(Math.max(1, num) * HOURS_TO_SECONDS);
+        cfgSet('autopif_interval', seconds);
+        showToast(t('autopif_saved', 'Auto PIF settings saved'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
+        dialog.close();
+      } finally {
+        (saveBtn as HTMLButtonElement).disabled = false;
+      }
     });
 
     dialog.show();

@@ -52,7 +52,7 @@ function applyTranslations() {
       if (el.hasAttribute('aria-label')) el.setAttribute('aria-label', val);
       continue;
     }
-    if (val.includes('<')) { el.innerHTML = val; } else { el.textContent = val; }
+    el.textContent = val;
   }
   for (const el of document.querySelectorAll('[data-i18n-aria]')) {
     const val = currentStrings[(el as HTMLElement).dataset.i18nAria!] || fallbackStrings[(el as HTMLElement).dataset.i18nAria!];

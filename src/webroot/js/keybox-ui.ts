@@ -173,55 +173,61 @@ export async function openCustomKeyboxDialog() {
   });
 
   applyBtn!.addEventListener('click', async () => {
-    const moddir = getModuleDir();
-    const text = urlInput.value.trim();
+    const blockClose = (e: Event) => e.preventDefault();
+    dialog.addEventListener('cancel', blockClose);
+    try {
+      const moddir = getModuleDir();
+      const text = urlInput.value.trim();
 
-    if (!text) {
-      showToast(t('toast_enter_url', 'Enter a URL or device path'), { icon: 'error', type: 'error', autoCloseDelay: 2500 });
-      return;
-    }
+      if (!text) {
+        showToast(t('toast_enter_url', 'Enter a URL or device path'), { icon: 'error', type: 'error', autoCloseDelay: 2500 });
+        return;
+      }
 
-    const privateChoice = await new Promise<boolean>(resolve => {
-      const pd = document.createElement('md-dialog');
-      pd.className = 'private-dialog';
-      pd.innerHTML = `
-        <div slot="headline">${t('custom_kb_title', 'Custom Keybox')}</div>
-        <div slot="content">
-          <p class="private-dialog-msg">${t('custom_keybox_private_ask', 'Is this a private keybox?')}</p>
-        </div>
-        <div slot="actions">
-          <md-text-button id="kb-pri-no" value="no">${t('custom_kb_no', 'No')}</md-text-button>
-          <md-text-button id="kb-pri-yes" value="yes">${t('custom_kb_yes', 'Yes')}</md-text-button>
-        </div>
-      `;
-      document.body.appendChild(pd);
-      pd.querySelector('#kb-pri-no')!.addEventListener('click', () => { pd.close(); resolve(false); });
-      pd.querySelector('#kb-pri-yes')!.addEventListener('click', () => { pd.close(); resolve(true); });
-      pd.addEventListener('close', () => document.body.removeChild(pd));
-      pd.show();
-    });
+      const privateChoice = await new Promise<boolean>(resolve => {
+        const pd = document.createElement('md-dialog');
+        pd.className = 'private-dialog';
+        pd.innerHTML = `
+          <div slot="headline">${t('custom_kb_title', 'Custom Keybox')}</div>
+          <div slot="content">
+            <p class="private-dialog-msg">${t('custom_keybox_private_ask', 'Is this a private keybox?')}</p>
+          </div>
+          <div slot="actions">
+            <md-text-button id="kb-pri-no" value="no">${t('custom_kb_no', 'No')}</md-text-button>
+            <md-text-button id="kb-pri-yes" value="yes">${t('custom_kb_yes', 'Yes')}</md-text-button>
+          </div>
+        `;
+        document.body.appendChild(pd);
+        pd.querySelector('#kb-pri-no')!.addEventListener('click', () => { pd.close(); resolve(false); });
+        pd.querySelector('#kb-pri-yes')!.addEventListener('click', () => { pd.close(); resolve(true); });
+        pd.addEventListener('close', () => document.body.removeChild(pd));
+        pd.show();
+      });
 
-    if (privateChoice) {
-      cfgSet('keybox_private', 'true');
-    } else {
-      cfgSet('keybox_private', '');
+      if (privateChoice) {
+        cfgSet('keybox_private', 'true');
+      } else {
+        cfgSet('keybox_private', '');
+      }
+      if (text.startsWith('http://') || text.startsWith('https://')) {
+        cfgSet('keybox_custom_type', 'url');
+      } else {
+        cfgSet('keybox_custom_type', 'path');
+      }
+      cfgSet('keybox_custom_value', text);
+      const result: any = await exec(`sh ${shellEscape(moddir + '/features/keybox.sh')}`);
+      if (result.code === 0) {
+        showToast(t('custom_kb_installed', 'Custom keybox installed'), { icon: 'check_circle', type: 'success', autoCloseDelay: 3000 });
+        await exec(`sh ${shellEscape(moddir + '/features/keybox_info.sh')}`).catch(() => {});
+        await exec(`sh ${shellEscape(moddir + '/refresh_desc.sh')}`).catch(() => {});
+        await refreshKeyboxStatus();
+      } else {
+        showToast(t('custom_kb_install_failed', 'Install failed'), { icon: 'error', type: 'error', autoCloseDelay: 5000 });
+      }
+      dialog.close();
+    } finally {
+      dialog.removeEventListener('cancel', blockClose);
     }
-    if (text.startsWith('http://') || text.startsWith('https://')) {
-      cfgSet('keybox_custom_type', 'url');
-    } else {
-      cfgSet('keybox_custom_type', 'path');
-    }
-    cfgSet('keybox_custom_value', text);
-    const result: any = await exec(`sh ${shellEscape(moddir + '/features/keybox.sh')}`);
-    if (result.code === 0) {
-      showToast(t('custom_kb_installed', 'Custom keybox installed'), { icon: 'check_circle', type: 'success', autoCloseDelay: 3000 });
-      await exec(`sh ${shellEscape(moddir + '/features/keybox_info.sh')}`).catch(() => {});
-      await exec(`sh ${shellEscape(moddir + '/refresh_desc.sh')}`).catch(() => {});
-      await refreshKeyboxStatus();
-    } else {
-      showToast(t('custom_kb_install_failed', 'Install failed'), { icon: 'error', type: 'error', autoCloseDelay: 5000 });
-    }
-    dialog.close();
   });
 
   dialog.addEventListener('close', () => {

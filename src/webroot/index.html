@@ -616,7 +616,8 @@
 
   </div>
 
-  <md-dialog id="progress-dialog">
+  <div id="dialog-blur-backdrop" class="dialog-blur-backdrop"></div>
+  <md-dialog id="progress-dialog" scrim-click-action="" escape-action="">
     <div slot="content" class="simple-progress">
       <md-circular-progress indeterminate></md-circular-progress>
       <p class="md-typescale-body-medium" id="progress-label"></p>

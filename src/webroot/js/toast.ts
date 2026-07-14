@@ -26,9 +26,12 @@ export function showToast(message: string, options: { action?: string; icon?: st
 }
 
 function close(toast: HTMLElement) {
+  if (toast.dataset.closing) return;
+  toast.dataset.closing = 'true';
   toast.classList.remove('md-toast--open');
-  toast.addEventListener('transitionend', () => toast.parentNode?.removeChild(toast), { once: true });
-  setTimeout(() => toast.parentNode?.removeChild(toast), 300);
+  const cleanup = () => toast.parentNode?.removeChild(toast);
+  toast.addEventListener('transitionend', cleanup, { once: true });
+  setTimeout(cleanup, 300);
 }
 
 export function closeToast(toast: HTMLElement) { close(toast); }

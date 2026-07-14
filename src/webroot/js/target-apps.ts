@@ -960,40 +960,47 @@ export async function openTargetAppsManager() {
   wireFilter('#ta-filter-selected', 'selected');
   wireFilter('#ta-filter-not-selected', 'not_selected');
 
-  overlay.querySelector('#ta-apply')!.addEventListener('click', async () => {
-    if (mode === 'blacklist') {
-      const bl = apps.filter(a => a.state === 'blacklisted').map(a => a.packageName).sort();
-      const content = bl.join('\n');
-      try {
-        const result = await exec(`printf '%s' ${shellEscape(content)} | base64 -w0`);
-        const b64 = result.stdout || '';
-        await exec(`mkdir -p ${specterDir()} && printf '%s' "${b64}" | base64 -d > ${specterDir()}/blacklist.txt`);
-        await exec(`mkdir -p ${specterDir()} && touch ${specterDir()}/blacklist_enabled`);
-        appendToOutput(`[TARGET] Wrote ${bl.length} entries to blacklist.txt`);
-        showToast(t('toast_blacklist_saved', 'Blacklist saved'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
-      } catch (e) {
-        appendToOutput(`[TARGET] Failed to save blacklist: ${e}`, true);
-      }
-      return;
-    }
-
-    const lines = apps
-      .filter(a => a.state !== 'unchecked')
-      .map(a => {
-        if (a.state === 'force') return a.packageName + '!';
-        if (a.state === 'conditional') return a.packageName + '?';
-        return a.packageName;
-      })
-      .sort();
-
-    const content = lines.join('\n');
+  const applyBtn = overlay.querySelector('#ta-apply') as HTMLButtonElement;
+  applyBtn.addEventListener('click', async () => {
+    if (applyBtn.disabled) return;
+    applyBtn.disabled = true;
     try {
-      await exec(`cat > ${TRICKY_DIR}/target.txt << 'TEOF'\n${content}\nTEOF`);
-      appendToOutput(`[TARGET] Wrote ${lines.length} entries to target.txt`);
-      showToast(t('ta_prompt_saved', 'Target list saved'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
-      await exec(`sh ${shellEscape(getModuleDir() + '/refresh_desc.sh')}`);
-    } catch (e) {
-      appendToOutput(`[TARGET] Failed to save target list: ${e}`, true);
+      if (mode === 'blacklist') {
+        const bl = apps.filter(a => a.state === 'blacklisted').map(a => a.packageName).sort();
+        const content = bl.join('\n');
+        try {
+          const result = await exec(`printf '%s' ${shellEscape(content)} | base64 -w0`);
+          const b64 = result.stdout || '';
+          await exec(`mkdir -p ${specterDir()} && printf '%s' "${b64}" | base64 -d > ${specterDir()}/blacklist.txt`);
+          await exec(`mkdir -p ${specterDir()} && touch ${specterDir()}/blacklist_enabled`);
+          appendToOutput(`[TARGET] Wrote ${bl.length} entries to blacklist.txt`);
+          showToast(t('toast_blacklist_saved', 'Blacklist saved'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
+        } catch (e) {
+          appendToOutput(`[TARGET] Failed to save blacklist: ${e}`, true);
+        }
+        return;
+      }
+
+      const lines = apps
+        .filter(a => a.state !== 'unchecked')
+        .map(a => {
+          if (a.state === 'force') return a.packageName + '!';
+          if (a.state === 'conditional') return a.packageName + '?';
+          return a.packageName;
+        })
+        .sort();
+
+      const content = lines.join('\n');
+      try {
+        await exec(`cat > ${TRICKY_DIR}/target.txt << 'TEOF'\n${content}\nTEOF`);
+        appendToOutput(`[TARGET] Wrote ${lines.length} entries to target.txt`);
+        showToast(t('ta_prompt_saved', 'Target list saved'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
+        await exec(`sh ${shellEscape(getModuleDir() + '/refresh_desc.sh')}`);
+      } catch (e) {
+        appendToOutput(`[TARGET] Failed to save target list: ${e}`, true);
+      }
+    } finally {
+      applyBtn.disabled = false;
     }
   });
 

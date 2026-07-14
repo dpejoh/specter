@@ -42,6 +42,7 @@ if [ -f "$TEE_STATUS" ]; then
 fi
 if [ -f "$TEE_TIER" ]; then
   _tee_tier=$(cat "$TEE_TIER" | tr -d ' \n')
+  [ -z "$_tee_tier" ] && _tee_tier="null"
 else
   _tee_tier="null"
 fi

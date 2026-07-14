@@ -65,7 +65,7 @@ function applyKeyboxStatus(data: KeyboxInfoJson) {
   const versionEl = document.getElementById('keybox-version')!;
   const statusEl = document.getElementById('keybox-status')!;
   const badgeEl = document.getElementById('kb-version-badge')!;
-  if (!source || !statusEl || !badgeEl) return;
+  if (!source || !versionEl || !statusEl || !badgeEl) return;
 
   if (!data.installed) {
     source.textContent = getTranslation('device_not_installed') || 'Not Installed';

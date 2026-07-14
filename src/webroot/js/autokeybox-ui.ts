@@ -51,11 +51,16 @@ export function openAutokeyboxDialog() {
     cancelBtn.addEventListener('click', () => dialog.close());
 
     saveBtn.addEventListener('click', () => {
-      const num = parseInt(intervalInput.value || String(DEFAULT_HOURS), 10);
-      const seconds = String(Math.max(1, num) * HOURS_TO_SECONDS);
-      cfgSet('autokeybox_interval', seconds);
-      showToast(t('autokeybox_saved', 'Auto Keybox settings saved'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
-      dialog.close();
+      (saveBtn as HTMLButtonElement).disabled = true;
+      try {
+        const num = parseInt(intervalInput.value || String(DEFAULT_HOURS), 10);
+        const seconds = String(Math.max(1, num) * HOURS_TO_SECONDS);
+        cfgSet('autokeybox_interval', seconds);
+        showToast(t('autokeybox_saved', 'Auto Keybox settings saved'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
+        dialog.close();
+      } finally {
+        (saveBtn as HTMLButtonElement).disabled = false;
+      }
     });
 
     dialog.show();

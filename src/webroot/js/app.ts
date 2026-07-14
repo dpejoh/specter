@@ -89,6 +89,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   import('./font.js').then(m => m.initFonts()).catch(() => {});
 
   wireConflictToggles().catch(() => {});
+
+  // Watch for dialog open/close to toggle blur class
+  const dialogObserver = new MutationObserver(() => {
+    document.body.classList.toggle('dialog-open', !!document.querySelector('md-dialog[open]'));
+  });
+  dialogObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['open'] });
+  document.getElementById('progress-dialog')?.addEventListener('cancel', (e: Event) => e.preventDefault());
 });
 
 async function wireConflictToggles() {

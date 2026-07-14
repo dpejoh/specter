@@ -214,9 +214,10 @@ async function extractMonetColor(): Promise<string | null> {
 
 function wireThemeControls() {
   const modeGroup = document.getElementById('theme-mode-group');
-  modeGroup?.addEventListener('segmented-button-set-selection', (e: Event) => {
+  if (!modeGroup) return;
+  modeGroup.addEventListener('segmented-button-set-selection', (e: Event) => {
     const idx = (e as CustomEvent).detail.index;
-    const btn = modeGroup!.querySelectorAll('md-outlined-segmented-button')[idx];
+    const btn = modeGroup.querySelectorAll('md-outlined-segmented-button')[idx];
     if (btn) applyMode(btn.getAttribute('value') || 'dark');
   });
 

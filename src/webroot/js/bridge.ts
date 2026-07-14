@@ -135,10 +135,12 @@ export function spawnScript(scriptName: string, type = 'feature'): ChildProcess 
   if (typeof window.ksu?.spawn === 'function') {
     const globalName = genCallbackName();
     setGlobal(globalName, child);
-    (child as any).on('exit', () => deleteGlobal(globalName));
-    (child as any).on('error', () => deleteGlobal(globalName));
+    const cleanup = () => deleteGlobal(globalName);
+    const timer = setTimeout(cleanup, EXEC_TIMEOUT_MS);
+    (child as any).on('exit', () => { clearTimeout(timer); cleanup(); });
+    (child as any).on('error', () => { clearTimeout(timer); cleanup(); });
     try { window.ksu.spawn('sh', JSON.stringify([scriptPath]), '{}', globalName); }
-    catch (e) { deleteGlobal(globalName); setTimeout(() => (child as any).emit('error', e)); }
+    catch (e) { clearTimeout(timer); cleanup(); setTimeout(() => (child as any).emit('error', e)); }
   } else {
     const cmd = `sh ${shellEscape(scriptPath)}`;
     let timedOut = false;

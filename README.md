@@ -28,8 +28,12 @@ Specter is a complete rewrite of what I originally built as Yurikey.
 
 ## Quick start
 
-1. Install [Tricky Store](https://github.com/5ec1cff/TrickyStore/releases/latest) or a fork
-2. Install any PIF fork
+1. Install [Tricky Store](https://github.com/5ec1cff/TrickyStore/releases/latest) /
+   [TEESimulator](https://github.com/JingMatrix/TEESimulator/releases/latest) /
+   [TEESimulator-RS](https://github.com/Enginex0/TEESimulator-RS/releases/latest)
+   (Specter auto-installs TEESimulator-RS if none found — skip if using OhMyKeymint)
+2. Install [Play Integrity Inject](https://github.com/KOWX712/PlayIntegrityFix/releases/latest)
+   or [Play Integrity Fork](https://github.com/osm0sis/PlayIntegrityFork/releases/latest)
 3. Install Specter via Magisk / KernelSU / APatch
 4. Reboot. First-boot runs backup, target, security patch, keybox.
 5. Open the WebUI
@@ -55,8 +59,13 @@ Specter is a complete rewrite of what I originally built as Yurikey.
 ## Requirements
 
 - Root access (Magisk / KernelSU / APatch)
-- Tricky Store or fork
-- Play Integrity Fix or fork (recommended)
+- [Tricky Store](https://github.com/5ec1cff/TrickyStore/releases/latest) /
+  [TEESimulator](https://github.com/JingMatrix/TEESimulator/releases/latest) /
+  [TEESimulator-RS](https://github.com/Enginex0/TEESimulator-RS/releases/latest) /
+  or OhMyKeymint
+  (Specter auto-installs TEESimulator-RS if none detected)
+- [Play Integrity Inject](https://github.com/KOWX712/PlayIntegrityFix/releases/latest)
+  or [Play Integrity Fork](https://github.com/osm0sis/PlayIntegrityFork/releases/latest)
 
 ## Build
 

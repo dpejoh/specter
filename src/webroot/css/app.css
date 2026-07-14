@@ -14,8 +14,22 @@ body {
   user-select: none;
   -webkit-touch-callout: none;
 }
-body:has(md-dialog[open]) {
+body.dialog-open {
   overflow: hidden;
+}
+
+.dialog-blur-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1001;
+  background: rgba(0, 0, 0, 0.32);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+body.dialog-open .dialog-blur-backdrop {
+  opacity: 1;
 }
 
 input, textarea, [contenteditable="true"] {
@@ -913,12 +927,6 @@ md-divider.settings-divider {
 }
 
 /* --- Floating Navigation Bar --- */
-
-body:has(md-dialog[open]) .nav-bar,
-body:has(.ta-overlay--open) .nav-bar {
-  display: none !important;
-}
-
 @media (pointer: coarse), (max-height: 600px) {
   body:has(input:focus, textarea:focus, [contenteditable="true"]:focus, md-outlined-text-field:focus-within) .nav-bar {
     display: none !important;

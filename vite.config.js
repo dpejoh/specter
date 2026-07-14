@@ -7,5 +7,6 @@ export default defineConfig({
     outDir: '../../Module/webroot',
     emptyOutDir: true,
     target: 'es2019',
+    cssTarget: ['chrome105'],
   },
 })
