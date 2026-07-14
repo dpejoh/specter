@@ -398,8 +398,8 @@
   "advance_export_logs_desc": "Tüm günlükleri /sdcard/Download/ klasörüne kaydet",
   "tools_restart_omk_keymint": "OMK keymint'i yeniden başlat",
   "tools_restart_omk_keymint_desc": "Injector'ı yeniden başlatmadan OhMyKeymint keymint'i yeniden yükler",
-  "tools_restart_omk_injector": "OMK injector'ı yeniden başlat",
-  "tools_restart_omk_injector_desc": "Tam OMK yeniden başlatma: keymint, injector ve tüm daemon'lar",
-  "tools_restart_omk_injector_confirm": "OMK injector daemon'u yeniden enjekte etmeden önce keystore2'ye SIGTERM/SIGKILL gönderir. Devam edilsin mi?",
+  "tools_restart_omk_full": "Tam OMK yeniden yükleme",
+  "tools_restart_omk_full_desc": "keymint, injector ve tüm daemon'ları yeniden başlatır",
+  "tools_restart_omk_full_confirm": "Tam OMK yeniden yükleme, yeniden enjekte etmeden önce injector yoluyla keystore2'ye SIGTERM/SIGKILL gönderir. Devam edilsin mi?",
   "tools_support_section": "Destek"
 }

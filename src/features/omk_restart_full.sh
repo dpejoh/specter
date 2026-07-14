@@ -10,5 +10,5 @@ if [ "$KSM" != "omk" ]; then
 fi
 
 ksm_reload_full
-log_i "OMK_RESTART" "Full OMK restart requested (keymint + injector)"
+log_i "OMK_RESTART" "Full OMK reload requested"
 exit 0

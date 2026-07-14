@@ -418,15 +418,15 @@ sh "$REPO_ROOT/src/features/omk_restart_keymint.sh" 2>/dev/null; _ork_rc=$?
 assert_exit_code "omk_restart_keymint: fails when not omk" 1 "$_ork_rc"
 assert_file_not_exists "omk_restart_keymint: no restart.keymint when not omk" "$OMK_RESTART_DIR/restart.keymint"
 
-# ---------- omk_restart_injector.sh: rejects non-OMK managers ----------
+# ---------- omk_restart_full.sh: rejects non-OMK managers ----------
 bootstrap
 source_libs
 detect_keystore_manager
 PATH="$BIN_DIR:/usr/bin:/bin" \
 SPECTER_DIR="$SPECTER_DIR" TRICKY_DIR="$TRICKY_DIR" MODULES_BASE="$MODULES_BASE" \
 OMK_RESTART_DIR="$OMK_RESTART_DIR" \
-sh "$REPO_ROOT/src/features/omk_restart_injector.sh" 2>/dev/null; _ori_rc=$?
-assert_exit_code "omk_restart_injector: fails when none" 1 "$_ori_rc"
+sh "$REPO_ROOT/src/features/omk_restart_full.sh" 2>/dev/null; _orf_rc=$?
+assert_exit_code "omk_restart_full: fails when none" 1 "$_orf_rc"
 
 # ---------- omk_restart_keymint.sh: touches restart.keymint only ----------
 bootstrap
@@ -443,7 +443,7 @@ assert_file_exists "omk_restart_keymint: restart.keymint created" "$OMK_RESTART_
 assert_file_not_exists "omk_restart_keymint: no restart.injector" "$OMK_RESTART_DIR/restart.injector"
 assert_file_not_exists "omk_restart_keymint: no restart.all" "$OMK_RESTART_DIR/restart.all"
 
-# ---------- omk_restart_injector.sh: touches all three restart triggers ----------
+# ---------- omk_restart_full.sh: touches all three restart triggers ----------
 bootstrap
 source_libs
 mk_module oh_my_keymint "OhMyKeymint"
@@ -452,10 +452,10 @@ detect_keystore_manager
 PATH="$BIN_DIR:/usr/bin:/bin" \
 SPECTER_DIR="$SPECTER_DIR" MODULES_BASE="$MODULES_BASE" OMK_DIR="$OMK_DIR" \
 OMK_RESTART_DIR="$OMK_RESTART_DIR" \
-sh "$REPO_ROOT/src/features/omk_restart_injector.sh" 2>/dev/null; _ori_ok=$?
-assert_exit_code "omk_restart_injector: succeeds when omk" 0 "$_ori_ok"
-assert_file_exists "omk_restart_injector: restart.keymint created" "$OMK_RESTART_DIR/restart.keymint"
-assert_file_exists "omk_restart_injector: restart.injector created" "$OMK_RESTART_DIR/restart.injector"
-assert_file_exists "omk_restart_injector: restart.all created" "$OMK_RESTART_DIR/restart.all"
+sh "$REPO_ROOT/src/features/omk_restart_full.sh" 2>/dev/null; _orf_ok=$?
+assert_exit_code "omk_restart_full: succeeds when omk" 0 "$_orf_ok"
+assert_file_exists "omk_restart_full: restart.keymint created" "$OMK_RESTART_DIR/restart.keymint"
+assert_file_exists "omk_restart_full: restart.injector created" "$OMK_RESTART_DIR/restart.injector"
+assert_file_exists "omk_restart_full: restart.all created" "$OMK_RESTART_DIR/restart.all"
 
 done_testing

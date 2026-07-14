@@ -49,7 +49,7 @@ export async function refreshKeystoreManager(): Promise<KeystoreManagerJson | nu
 
 function applyKeystoreManager(data: KeystoreManagerJson) {
   const show = data.id === 'omk';
-  for (const id of ['omk-restart-keymint', 'omk-restart-injector']) {
+  for (const id of ['omk-restart-keymint', 'omk-restart-full']) {
     const el = document.getElementById(id);
     if (el) el.hidden = !show;
   }
