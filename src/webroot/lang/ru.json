@@ -119,6 +119,7 @@
   "role_WebUI Contributor": "Контрибьютор веб-интерфейса",
   "role_Chinese Translator": "Переводчик (китайский)",
   "role_Turkish Translator": "",
+  "role_Backend Contributor": "Backend Contributor",
   "install_now": "Установить сейчас",
   "custom_kb_title": "Пользовательский Keybox",
   "custom_kb_file": "Импорт файла",
