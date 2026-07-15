@@ -77,20 +77,11 @@ ksm_reload_full() {
   touch "$OMK_RESTART_DIR/restart.all" 2>/dev/null
 }
 
-# OMK's keymint/injector processes drop to uid 1017 (AID_KEYSTORE) and read
-# their files at mode 0600, so anything we write into the OMK data dir must be
-# owned by 1017 with a keystore-readable context — a plain mv/cp from
-# /data/local/tmp leaves it root-owned and unreadable to the daemon. No-op for
-# Tricky Store, whose files just live under /data/adb. Dirs pass mode 0770.
-ksm_secure() {
-  [ "$KSM" = "omk" ] || return 0
-  _kse_path="$1" _kse_mode="${2:-0600}"
-  [ -e "$_kse_path" ] || { unset _kse_path _kse_mode; return 0; }
-  chown 1017:1017 "$_kse_path" 2>/dev/null || true
-  chmod "$_kse_mode" "$_kse_path" 2>/dev/null || true
-  chcon u:object_r:keystore_data_file:s0 "$_kse_path" 2>/dev/null \
-    || restorecon "$_kse_path" 2>/dev/null || true
-  unset _kse_path _kse_mode
+_ksm_inplace_from() {
+  _kif_src="$1" _kif_dst="$2"
+  [ -f "$_kif_dst" ] || { unset _kif_src _kif_dst; return 1; }
+  cat "$_kif_src" > "$_kif_dst" || { unset _kif_src _kif_dst; return 1; }
+  unset _kif_src _kif_dst
 }
 
 _ksm_strip_suffix() {
@@ -147,10 +138,12 @@ ksm_commit_targets() {
         _kct_base=$(_ksm_strip_suffix "$_kct_line")
         [ -n "$_kct_base" ] && printf '%s\n' "$_kct_base" >> "$_kct_tmp"
       done < "$_kct_src"
-      _toml_write_scoop "$KSM_TARGETS" < "$_kct_tmp"
+      _toml_write_scoop "$KSM_TARGETS" < "$_kct_tmp" || {
+        rm -f "$_kct_tmp"
+        unset _kct_line _kct_base _kct_tmp _kct_src
+        return 1
+      }
       rm -f "$_kct_tmp"
-      ksm_secure "$KSM_DIR" 0770
-      ksm_secure "$KSM_TARGETS" 0600
       unset _kct_line _kct_base _kct_tmp
       ;;
     *)
@@ -183,9 +176,10 @@ ksm_set_security_patch() {
   _ksp_date="$1"
   case "$KSM_FORMAT" in
     toml)
-      _toml_set_trust_key "$KSM_SECURITY" "security_patch" "\"$_ksp_date\""
-      ksm_secure "$KSM_DIR" 0770
-      ksm_secure "$KSM_SECURITY" 0600
+      _toml_set_trust_key "$KSM_SECURITY" "security_patch" "\"$_ksp_date\"" || {
+        unset _ksp_date
+        return 1
+      }
       ;;
     *)
       _ksp_vendor=$(getprop ro.vendor.build.security_patch 2>/dev/null || echo "")
@@ -203,19 +197,26 @@ ksm_set_security_patch() {
   unset _ksp_date
 }
 
-# Installs a keybox file for the active manager. MODE "copy" preserves SRC
-# (e.g. a user-provided custom keybox); default "move" consumes it (e.g. a
-# decoded download temp file).
+# MODE "copy" keeps SRC; default "move" consumes it.
 ksm_install_keybox() {
   _kik_src="$1" _kik_mode="${2:-move}"
-  mkdir -p "$(dirname "$KSM_KEYBOX")" 2>/dev/null
-  if [ "$_kik_mode" = "copy" ]; then
-    cp "$_kik_src" "$KSM_KEYBOX" || { unset _kik_src _kik_mode; return 1; }
-  else
-    mv "$_kik_src" "$KSM_KEYBOX" || { unset _kik_src _kik_mode; return 1; }
-  fi
-  ksm_secure "$KSM_DIR" 0770
-  ksm_secure "$KSM_KEYBOX" 0600
+  case "$KSM" in
+    omk)
+      _ksm_inplace_from "$_kik_src" "$KSM_KEYBOX" || {
+        unset _kik_src _kik_mode
+        return 1
+      }
+      [ "$_kik_mode" = "copy" ] || rm -f "$_kik_src"
+      ;;
+    *)
+      mkdir -p "$(dirname "$KSM_KEYBOX")" 2>/dev/null
+      if [ "$_kik_mode" = "copy" ]; then
+        cp "$_kik_src" "$KSM_KEYBOX" || { unset _kik_src _kik_mode; return 1; }
+      else
+        mv "$_kik_src" "$KSM_KEYBOX" || { unset _kik_src _kik_mode; return 1; }
+      fi
+      ;;
+  esac
   unset _kik_src _kik_mode
 }
 
@@ -248,11 +249,11 @@ _toml_read_scoop() {
   ' "$_trs_file"
 }
 
-# Reads packages (one per line) from stdin and rewrites the `scoop` array
-# in FILE, preserving everything else. Idempotent: re-running with the same
-# input reproduces the same output byte-for-byte.
+# stdin packages → rewrite scoop in FILE; leave other keys alone.
 _toml_write_scoop() {
   _tws_file="$1"
+  [ -f "$_tws_file" ] || { unset _tws_file; return 1; }
+
   _tws_block="${_tws_file}.block.$$"
   {
     printf 'scoop = [\n'
@@ -265,7 +266,7 @@ _toml_write_scoop() {
 
   _tws_tmp="${_tws_file}.new.$$"
 
-  if [ -f "$_tws_file" ] && grep -Eq '^[ ]*scoop[ ]*=' "$_tws_file"; then
+  if grep -Eq '^[ ]*scoop[ ]*=' "$_tws_file"; then
     awk -v blockfile="$_tws_block" '
       function emit(   line) { while ((getline line < blockfile) > 0) print line; close(blockfile) }
       {
@@ -278,7 +279,7 @@ _toml_write_scoop() {
         print
       }
     ' "$_tws_file" > "$_tws_tmp"
-  elif [ -f "$_tws_file" ] && grep -Eq '^[ ]*\[' "$_tws_file"; then
+  elif grep -Eq '^[ ]*\[' "$_tws_file"; then
     awk -v blockfile="$_tws_block" '
       function emit(   line) { while ((getline line < blockfile) > 0) print line; close(blockfile) }
       BEGIN { injected = 0 }
@@ -289,25 +290,29 @@ _toml_write_scoop() {
     ' "$_tws_file" > "$_tws_tmp"
   else
     cat "$_tws_block" > "$_tws_tmp"
-    if [ -f "$_tws_file" ] && [ -s "$_tws_file" ]; then
+    if [ -s "$_tws_file" ]; then
       printf '\n' >> "$_tws_tmp"
       cat "$_tws_file" >> "$_tws_tmp"
     fi
   fi
 
-  mv "$_tws_tmp" "$_tws_file"
-  rm -f "$_tws_block"
+  _ksm_inplace_from "$_tws_tmp" "$_tws_file" || {
+    rm -f "$_tws_tmp" "$_tws_block"
+    unset _tws_file _tws_block _tws_tmp _tws_pkg
+    return 1
+  }
+  rm -f "$_tws_tmp" "$_tws_block"
   unset _tws_file _tws_block _tws_tmp _tws_pkg
 }
 
-# Sets KEY = VALUE inside the [trust] table of FILE, creating the table (and
-# the file) if needed. VALUE must already be TOML-formatted (quoted string,
-# bare number/bool, etc). Idempotent.
+# VALUE must already be TOML-shaped (quoted string, bare number/bool, …).
 _toml_set_trust_key() {
   _tsk_file="$1" _tsk_key="$2" _tsk_val="$3"
+  [ -f "$_tsk_file" ] || { unset _tsk_file _tsk_key _tsk_val; return 1; }
+
   _tsk_tmp="${_tsk_file}.new.$$"
 
-  if [ -f "$_tsk_file" ] && grep -Eq '^\[trust\]' "$_tsk_file"; then
+  if grep -Eq '^\[trust\]' "$_tsk_file"; then
     awk -v key="$_tsk_key" -v val="$_tsk_val" '
       BEGIN { in_trust = 0; done = 0 }
       /^\[/ {
@@ -329,10 +334,15 @@ _toml_set_trust_key() {
       }
     ' "$_tsk_file" > "$_tsk_tmp"
   else
-    if [ -f "$_tsk_file" ]; then cat "$_tsk_file" > "$_tsk_tmp"; else : > "$_tsk_tmp"; fi
+    cat "$_tsk_file" > "$_tsk_tmp"
     printf '\n[trust]\n%s = %s\n' "$_tsk_key" "$_tsk_val" >> "$_tsk_tmp"
   fi
 
-  mv "$_tsk_tmp" "$_tsk_file"
+  _ksm_inplace_from "$_tsk_tmp" "$_tsk_file" || {
+    rm -f "$_tsk_tmp"
+    unset _tsk_file _tsk_key _tsk_val _tsk_tmp
+    return 1
+  }
+  rm -f "$_tsk_tmp"
   unset _tsk_file _tsk_key _tsk_val _tsk_tmp
 }

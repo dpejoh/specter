@@ -106,6 +106,11 @@ cp "$_toml_file" "${_toml_file}.snapshot"
 printf 'com.new.app\ncom.other.app\n' | _toml_write_scoop "$_toml_file"
 assert_eq "toml write: idempotent (same input -> same output)" "$(cat "${_toml_file}.snapshot")" "$(cat "$_toml_file")"
 
+_inode_before=$(stat -c %i "$_toml_file")
+printf 'com.new.app\ncom.other.app\n' | _toml_write_scoop "$_toml_file"
+_inode_after=$(stat -c %i "$_toml_file")
+assert_eq "toml write: in-place overwrite keeps inode" "$_inode_before" "$_inode_after"
+
 # ---------- _toml_write_scoop: missing scoop key gets injected before first section ----------
 bootstrap
 source_libs
@@ -118,6 +123,14 @@ printf 'pkg.one\n' | _toml_write_scoop "$_noscoop"
 assert_contains "toml write: injects scoop when absent" "$(cat "$_noscoop")" "scoop = ["
 _scoop_injected=$(_toml_read_scoop "$_noscoop")
 assert_eq "toml write: injected value readable" "pkg.one" "$_scoop_injected"
+
+# ---------- _toml_write_scoop: missing file fails closed (no create) ----------
+bootstrap
+source_libs
+_missing_toml="$TEST_ROOT/does-not-exist.toml"
+printf 'pkg.one\n' | _toml_write_scoop "$_missing_toml" 2>/dev/null; _tw_missing_rc=$?
+assert_exit_code "toml write: missing file fails" 1 "$_tw_missing_rc"
+assert_file_not_exists "toml write: missing file not created" "$_missing_toml"
 
 # ---------- _toml_set_trust_key: existing key replaced ----------
 bootstrap
@@ -139,6 +152,11 @@ assert_contains "trust key: other sections preserved" "$(cat "$_cfg_toml")" "[de
 cp "$_cfg_toml" "${_cfg_toml}.snapshot"
 _toml_set_trust_key "$_cfg_toml" security_patch '"2026-06-05"'
 assert_eq "trust key: idempotent" "$(cat "${_cfg_toml}.snapshot")" "$(cat "$_cfg_toml")"
+
+_inode_trust_before=$(stat -c %i "$_cfg_toml")
+_toml_set_trust_key "$_cfg_toml" security_patch '"2026-06-05"'
+_inode_trust_after=$(stat -c %i "$_cfg_toml")
+assert_eq "trust key: in-place overwrite keeps inode" "$_inode_trust_before" "$_inode_trust_after"
 
 # ---------- _toml_set_trust_key: section exists without the key ----------
 bootstrap
@@ -162,6 +180,14 @@ EOF
 _toml_set_trust_key "$_cfg_toml3" security_patch '"2026-06-05"'
 assert_contains "trust key: creates [trust] section" "$(cat "$_cfg_toml3")" "[trust]"
 assert_contains "trust key: value set in new section" "$(cat "$_cfg_toml3")" 'security_patch = "2026-06-05"'
+
+# ---------- _toml_set_trust_key: missing file fails closed (no create) ----------
+bootstrap
+source_libs
+_missing_cfg="$TEST_ROOT/missing-config.toml"
+_toml_set_trust_key "$_missing_cfg" security_patch '"2026-06-05"' 2>/dev/null; _tsk_missing_rc=$?
+assert_exit_code "trust key: missing file fails" 1 "$_tsk_missing_rc"
+assert_file_not_exists "trust key: missing file not created" "$_missing_cfg"
 
 # ---------- ksm_set_security_patch: Tricky Store multi-line (vendor from prop) ----------
 bootstrap
@@ -351,19 +377,62 @@ assert_file_not_exists "targets toml commit: no restart.keymint created" "$OMK_R
 assert_file_not_exists "targets toml commit: no restart.all created" "$OMK_RESTART_DIR/restart.all"
 assert_contains "targets toml commit: other sections preserved" "$(cat "$OMK_INJECTOR")" "[main]"
 
-# ---------- ksm_install_keybox: OMK does not touch restart markers ----------
+# ---------- ksm_install_keybox: OMK in-place overwrite, no restart markers ----------
+bootstrap
+source_libs
+mk_module oh_my_keymint "OhMyKeymint"
+mkdir -p "$OMK_DIR"
+printf '<old/>\n' > "$OMK_KEYBOX"
+detect_keystore_manager
+_kb_src="$TEST_ROOT/src_keybox.xml"
+printf '<AndroidAttestation/>\n' > "$_kb_src"
+_kb_inode_before=$(stat -c %i "$KSM_KEYBOX")
+ksm_install_keybox "$_kb_src" copy
+assert_file_exists "install keybox: keybox installed" "$KSM_KEYBOX"
+assert_contains "install keybox: content overwritten" "$(cat "$KSM_KEYBOX")" "<AndroidAttestation/>"
+assert_file_exists "install keybox: copy preserves src" "$_kb_src"
+assert_eq "install keybox: in-place overwrite keeps inode" "$_kb_inode_before" "$(stat -c %i "$KSM_KEYBOX")"
+assert_file_not_exists "install keybox: no restart.keymint" "$OMK_RESTART_DIR/restart.keymint"
+assert_file_not_exists "install keybox: no restart.injector" "$OMK_RESTART_DIR/restart.injector"
+assert_file_not_exists "install keybox: no restart.all" "$OMK_RESTART_DIR/restart.all"
+
+# ---------- ksm_install_keybox: OMK move consumes src ----------
+bootstrap
+source_libs
+mk_module oh_my_keymint "OhMyKeymint"
+mkdir -p "$OMK_DIR"
+printf '<old/>\n' > "$OMK_KEYBOX"
+detect_keystore_manager
+_kb_move_src="$TEST_ROOT/move_keybox.xml"
+printf '<Moved/>\n' > "$_kb_move_src"
+ksm_install_keybox "$_kb_move_src"
+assert_contains "install keybox move: content written" "$(cat "$KSM_KEYBOX")" "<Moved/>"
+assert_file_not_exists "install keybox move: src consumed" "$_kb_move_src"
+
+# ---------- ksm_install_keybox: OMK missing dest fails closed ----------
 bootstrap
 source_libs
 mk_module oh_my_keymint "OhMyKeymint"
 mkdir -p "$OMK_DIR"
 detect_keystore_manager
-_kb_src="$TEST_ROOT/src_keybox.xml"
-printf '<AndroidAttestation/>\n' > "$_kb_src"
-ksm_install_keybox "$_kb_src" copy
-assert_file_exists "install keybox: keybox installed" "$KSM_KEYBOX"
-assert_file_not_exists "install keybox: no restart.keymint" "$OMK_RESTART_DIR/restart.keymint"
-assert_file_not_exists "install keybox: no restart.injector" "$OMK_RESTART_DIR/restart.injector"
-assert_file_not_exists "install keybox: no restart.all" "$OMK_RESTART_DIR/restart.all"
+_kb_fail_src="$TEST_ROOT/fail_keybox.xml"
+printf '<Nope/>\n' > "$_kb_fail_src"
+ksm_install_keybox "$_kb_fail_src" copy 2>/dev/null; _kb_fail_rc=$?
+assert_exit_code "install keybox: missing dest fails" 1 "$_kb_fail_rc"
+assert_file_not_exists "install keybox: missing dest not created" "$KSM_KEYBOX"
+assert_file_exists "install keybox: src kept on fail" "$_kb_fail_src"
+
+# ---------- ksm_install_keybox: OMK missing dir fails closed (no mkdir) ----------
+bootstrap
+source_libs
+mk_module oh_my_keymint "OhMyKeymint"
+rm -rf "$OMK_DIR"
+detect_keystore_manager
+_kb_nodir_src="$TEST_ROOT/nodir_keybox.xml"
+printf '<Nope/>\n' > "$_kb_nodir_src"
+ksm_install_keybox "$_kb_nodir_src" copy 2>/dev/null; _kb_nodir_rc=$?
+assert_exit_code "install keybox: missing dir fails" 1 "$_kb_nodir_rc"
+assert_file_not_exists "install keybox: missing dir not created" "$OMK_DIR"
 
 # ---------- ksm_reload touches only the keymint restart trigger ----------
 bootstrap
@@ -395,16 +464,6 @@ detect_keystore_manager
 ksm_reload
 assert_file_not_exists "reload: TS creates no restart.keymint" "$OMK_RESTART_DIR/restart.keymint"
 assert_file_not_exists "reload: TS creates no restart.all" "$OMK_RESTART_DIR/restart.all"
-
-# ---------- ksm_secure is a no-op for Tricky Store (files stay untouched) ----------
-bootstrap
-source_libs
-mk_module tricky_store "Tricky Store"
-detect_keystore_manager
-_sec_file="$TEST_ROOT/plain.txt"
-echo hi > "$_sec_file"
-ksm_secure "$_sec_file" 0600
-assert_file_exists "secure: TS leaves file in place" "$_sec_file"
 
 # ---------- omk_restart_keymint.sh: rejects non-OMK managers ----------
 bootstrap
