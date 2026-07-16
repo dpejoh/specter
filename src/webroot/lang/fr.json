@@ -399,8 +399,8 @@
   "advance_export_logs_desc": "Enregistre tous les journaux de débogage de Specter dans le répertoire /sdcard/Download/",
   "tools_restart_omk_keymint": "Redémarrer le keymint d'OMK",
   "tools_restart_omk_keymint_desc": "Recharge le keymint d'OhMyKeymint sans redémarrer l'injecteur",
-  "tools_restart_omk_injector": "Redémarrer l'injecteur d'OMK",
-  "tools_restart_omk_injector_desc": "Redémarrage complet d'OMK : keymint, injecteur, et tous les démons",
-  "tools_restart_omk_injector_confirm": "Le démon injecteur d'OMK va envoyer un SIGTERM/SIGKILL à keystore2 avant d'injecter de nouveau. Confirmer ?",
+  "tools_restart_omk_full": "Redémarrer complètement OMK",
+  "tools_restart_omk_full_desc": "Redémarre le keymint, l'injecteur, et tous les démons",
+  "tools_restart_omk_full_confirm": "Le redémarrage complet d'OMK arrête keystore2 (SIGTERM/SIGKILL) via le chemin de l'injecteur avant de relancer l'injection. Confirmer ?",
   "tools_support_section": "Assistance"
 }
