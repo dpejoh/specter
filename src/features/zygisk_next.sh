@@ -29,8 +29,7 @@ esac
 
 ensure_dir "$ZN_DATA_DIR"
 
-printf '1' > "$ZN_DATA_DIR/denylist_enforce" && log_d "ZYGISK_NEXT" "denylist_enforce → 1"
-printf '1' > "$ZN_DATA_DIR/denylist_policy" && log_d "ZYGISK_NEXT" "denylist_policy → 1"
+printf '2' > "$ZN_DATA_DIR/denylist_enforce" && log_d "ZYGISK_NEXT" "denylist_enforce → 2"
 
 log_i "ZYGISK_NEXT" "Applied denylist config"
 log_i "ZYGISK_NEXT" "Zygisk Next config complete"
