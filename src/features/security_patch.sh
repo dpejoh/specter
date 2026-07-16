@@ -38,22 +38,19 @@ _validate_patch_date() {
   esac
 }
 
-_resolve_device_patch() {
-  _patch=$(_read_patch_prop "ro.build.version.security_patch" "/system/build.prop" "/system/system/build.prop") || _patch=""
-  if [ -n "$_patch" ] && _validate_patch_date "$_patch" >/dev/null; then
-    printf '%s' "$_patch"
-    unset _patch
-    return 0
-  fi
-
-  _patch=$(_read_patch_prop "ro.vendor.build.security_patch" "/vendor/build.prop") || _patch=""
-  if [ -n "$_patch" ] && _validate_patch_date "$_patch" >/dev/null; then
-    printf '%s' "$_patch"
-    unset _patch
-    return 0
-  fi
-
-  unset _patch
+_read_system_build_prop_patch() {
+  for _prop_file in ${SPECTER_SYSTEM_BUILD_PROP:-} /system/build.prop /system/system/build.prop; do
+    [ -n "$_prop_file" ] || continue
+    [ -f "$_prop_file" ] || continue
+    _val=$(grep '^ro.build.version.security_patch=' "$_prop_file" 2>/dev/null |
+      head -1 | cut -d= -f2 | tr -d '[:space:]') || _val=""
+    if [ -n "$_val" ] && _validate_patch_date "$_val" >/dev/null; then
+      printf '%s' "$_val"
+      unset _prop_file _val
+      return 0
+    fi
+  done
+  unset _prop_file _val
   return 1
 }
 
@@ -84,10 +81,8 @@ case "${1:-}" in
     exit 0
     ;;
   --device)
-    # WebUI: Device build security patch only (system prop / build.prop). No vendor.
-    _patch=$(_read_patch_prop "ro.build.version.security_patch" \
-      "/system/build.prop" "/system/system/build.prop") || _patch=""
-    if [ -n "$_patch" ] && _validate_patch_date "$_patch" >/dev/null; then
+    _patch=$(_read_system_build_prop_patch) || _patch=""
+    if [ -n "$_patch" ]; then
       printf '%s\n' "$_patch"
       unset _patch
       exit 0
@@ -113,17 +108,52 @@ esac
 
 ksm_available || die "No keystore manager (Tricky Store / OhMyKeymint) data directory found"
 
-_patch=$(_resolve_device_patch) || _patch=""
+_patch=$(_read_system_build_prop_patch) || _patch=""
 _patch_source="device"
+
+_sp_seed_only=0
+[ "$SPECTER_FIRST_BOOT" = "1" ] && _sp_seed_only=1
+[ "$SPECTER_HOT_INSTALL" = "1" ] && _sp_seed_only=1
+
+if [ "$_sp_seed_only" = "1" ]; then
+  _sp_ctx="First install"
+  [ "$SPECTER_HOT_INSTALL" = "1" ] && _sp_ctx="Hot install"
+  _existing=$(ksm_get_security_patch 2>/dev/null) || _existing=""
+  if [ -n "$_existing" ] && _validate_patch_date "$_existing" >/dev/null; then
+    log_i "SECURITY_PATCH" "$_sp_ctx: existing spoofed patch left unchanged ($_existing)"
+    unset _existing _sp_ctx _sp_seed_only
+    exit 0
+  fi
+  unset _existing
+  if [ -z "$_patch" ]; then
+    log_i "SECURITY_PATCH" "$_sp_ctx: no device patch, leaving existing value unchanged"
+    unset _sp_ctx _sp_seed_only
+    exit 0
+  fi
+  ksm_set_security_patch "$_patch" || die "Failed to write $KSM_SECURITY"
+  log_i "SECURITY_PATCH" "Applied security patch from $_patch_source: $_patch"
+  unset _sp_ctx _sp_seed_only
+  exit 0
+fi
+unset _sp_seed_only
+
+if [ -z "$_patch" ]; then
+  _patch=$(_read_patch_prop "ro.vendor.build.security_patch" "/vendor/build.prop") || _patch=""
+  if [ -n "$_patch" ] && _validate_patch_date "$_patch" >/dev/null; then
+    _patch_source="other"
+  else
+    _patch=""
+  fi
+fi
 if [ -z "$_patch" ]; then
   _patch=$(_fetch_pixel_patch) || _patch=""
-  _patch_source="pixel"
+  _patch_source="bulletin"
 fi
 if [ -z "$_patch" ]; then
   _patch=$(_compute_fallback_patch)
-  _patch_source="fallback"
+  _patch_source="other"
 fi
 
 ksm_set_security_patch "$_patch" || die "Failed to write $KSM_SECURITY"
-log_i "SECURITY_PATCH" "Applied security patch (source: $_patch_source): $_patch"
+log_i "SECURITY_PATCH" "Applied security patch from $_patch_source: $_patch"
 exit 0

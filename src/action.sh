@@ -51,7 +51,7 @@ _first_boot=0
   _feature_should_run "security_patch" && {
     log_u "ACTION" ""
     log_u "ACTION" "-> Security Patch:"
-    sh "$MODDIR/features/security_patch.sh" || true
+    SPECTER_FIRST_BOOT=$_first_boot sh "$MODDIR/features/security_patch.sh" || true
   }
 
   _feature_should_run "keybox" && {
