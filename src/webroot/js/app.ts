@@ -69,6 +69,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   import('./adb-disabler-ui.js').then(m => m.wireAdbDisabler()).catch(() => {});
   import('./prop-handler-ui.js').then(m => m.wirePropHandler()).catch(() => {});
   import('./gms-ui.js').then(m => m.wireGms()).catch(() => {});
+  import('./action-security-patch-ui.js').then(m => m.wireActionSecurityPatch()).catch(() => {});
   import('./security-patch-ui.js').then(m => m.wireSecurityPatch()).catch(() => {});
   import('./boot-hash-ui.js').then(m => m.wireBootHash()).catch(() => {});
   import('./tee-bhash-ui.js').then(m => m.wireTeeHash()).catch(() => {});

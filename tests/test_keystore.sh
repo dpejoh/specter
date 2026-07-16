@@ -353,7 +353,7 @@ SPECTER_FIRST_BOOT=1 run_feature security_patch.sh >/dev/null
 assert_contains "security patch first boot: spoofed boot kept" "$(cat "$KSM_SECURITY")" "boot=2026-01-05"
 assert_not_contains "security patch first boot: device not written" "$(cat "$KSM_SECURITY")" "2026-10-05"
 
-# ---------- security_patch.sh hot install: existing spoofed left alone ----------
+# ---------- security_patch.sh hot install: same walk as Action (may overwrite) ----------
 bootstrap
 source_libs
 mk_module tricky_store "Tricky Store"
@@ -363,10 +363,9 @@ export SPECTER_SYSTEM_BUILD_PROP="$TEST_ROOT/system/build.prop"
 detect_keystore_manager
 printf 'system=202603\nboot=2026-03-05\nvendor=2026-03-05\n' > "$KSM_SECURITY"
 SPECTER_HOT_INSTALL=1 run_feature security_patch.sh >/dev/null
-assert_contains "security patch hot install: bulletin boot kept" "$(cat "$KSM_SECURITY")" "boot=2026-03-05"
-assert_not_contains "security patch hot install: device not written" "$(cat "$KSM_SECURITY")" "2026-10-05"
+assert_contains "security patch hot install: device overwrites" "$(cat "$KSM_SECURITY")" "boot=2026-10-05"
 
-# ---------- security_patch.sh first boot: no device leaves existing ----------
+# ---------- security_patch.sh first boot: existing spoofed left alone (no device) ----------
 bootstrap
 source_libs
 mk_module tricky_store "Tricky Store"
@@ -377,6 +376,60 @@ unset SPECTER_SYSTEM_BUILD_PROP
 SPECTER_FIRST_BOOT=1 run_feature security_patch.sh >/dev/null
 assert_contains "security patch first boot: unchanged boot" "$(cat "$KSM_SECURITY")" "boot=2026-01-05"
 assert_contains "security patch first boot: unchanged vendor" "$(cat "$KSM_SECURITY")" "vendor=2026-01-05"
+
+# ---------- security_patch.sh: all Action sources off leaves spoofed unchanged ----------
+bootstrap
+source_libs
+mk_module tricky_store "Tricky Store"
+mkdir -p "$TEST_ROOT/system"
+printf 'ro.build.version.security_patch=2026-10-05\n' > "$TEST_ROOT/system/build.prop"
+export SPECTER_SYSTEM_BUILD_PROP="$TEST_ROOT/system/build.prop"
+detect_keystore_manager
+printf 'system=202603\nboot=2026-03-05\nvendor=2026-03-05\n' > "$KSM_SECURITY"
+set_cfg toggle_action_security_patch_device 0
+set_cfg toggle_action_security_patch_bulletin 0
+set_cfg toggle_action_security_patch_synthetic 0
+run_feature security_patch.sh >/dev/null
+assert_contains "security patch sources off: boot kept" "$(cat "$KSM_SECURITY")" "boot=2026-03-05"
+assert_not_contains "security patch sources off: device not written" "$(cat "$KSM_SECURITY")" "2026-10-05"
+
+# ---------- security_patch.sh: device source uses vendor when build.prop missing ----------
+bootstrap
+source_libs
+mk_module tricky_store "Tricky Store"
+detect_keystore_manager
+unset SPECTER_SYSTEM_BUILD_PROP
+set_prop "ro.vendor.build.security_patch" "2026-11-05"
+set_cfg toggle_action_security_patch_bulletin 0
+set_cfg toggle_action_security_patch_synthetic 0
+run_feature security_patch.sh >/dev/null
+assert_contains "security patch device vendor: boot" "$(cat "$KSM_SECURITY")" "boot=2026-11-05"
+
+# ---------- security_patch.sh: synthetic when device and bulletin off ----------
+bootstrap
+source_libs
+mk_module tricky_store "Tricky Store"
+detect_keystore_manager
+unset SPECTER_SYSTEM_BUILD_PROP
+set_cfg toggle_action_security_patch_device 0
+set_cfg toggle_action_security_patch_bulletin 0
+set_cfg toggle_action_security_patch_synthetic 1
+_sp_year=$(date +%Y)
+_sp_month=$(date +%m)
+run_feature security_patch.sh >/dev/null
+assert_contains "security patch synthetic: boot" "$(cat "$KSM_SECURITY")" "boot=${_sp_year}-${_sp_month}-05"
+
+# ---------- security_patch.sh first boot unset: walks device (vendor) ----------
+bootstrap
+source_libs
+mk_module tricky_store "Tricky Store"
+detect_keystore_manager
+unset SPECTER_SYSTEM_BUILD_PROP
+set_prop "ro.vendor.build.security_patch" "2026-12-05"
+set_cfg toggle_action_security_patch_bulletin 0
+set_cfg toggle_action_security_patch_synthetic 0
+SPECTER_FIRST_BOOT=1 run_feature security_patch.sh >/dev/null
+assert_contains "security patch first boot unset: vendor applied" "$(cat "$KSM_SECURITY")" "boot=2026-12-05"
 
 # ---------- ksm_read_targets / ksm_commit_targets: Tricky Store preserves suffixes+comments ----------
 bootstrap
