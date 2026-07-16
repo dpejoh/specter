@@ -264,6 +264,32 @@ assert_contains "security_patch.sh --set txt: system" "$(cat "$SECURITY_PATCH_FI
 assert_contains "security_patch.sh --set txt: boot" "$(cat "$SECURITY_PATCH_FILE")" "boot=2026-07-05"
 assert_contains "security_patch.sh --set txt: vendor" "$(cat "$SECURITY_PATCH_FILE")" "vendor=2026-07-01"
 
+# ---------- security_patch.sh --device: prints system patch only ----------
+bootstrap
+source_libs
+set_prop "ro.build.version.security_patch" "2026-04-05"
+set_prop "ro.vendor.build.security_patch" "2026-03-01"
+_sp_device_out=$(run_feature security_patch.sh --device)
+assert_eq "security_patch.sh --device: system prop" "2026-04-05" "$_sp_device_out"
+
+# ---------- security_patch.sh --device: ignores vendor-only ----------
+bootstrap
+source_libs
+set_prop "ro.vendor.build.security_patch" "2026-03-01"
+_sp_device_rc=0
+_sp_device_out=$(run_feature security_patch.sh --device) || _sp_device_rc=$?
+assert_eq "security_patch.sh --device: vendor-only exit" "1" "$_sp_device_rc"
+assert_eq "security_patch.sh --device: vendor-only empty" "" "$_sp_device_out"
+
+# ---------- security_patch.sh --device: rejects invalid date ----------
+bootstrap
+source_libs
+set_prop "ro.build.version.security_patch" "not-a-date"
+_sp_device_rc=0
+_sp_device_out=$(run_feature security_patch.sh --device) || _sp_device_rc=$?
+assert_eq "security_patch.sh --device: invalid exit" "1" "$_sp_device_rc"
+assert_eq "security_patch.sh --device: invalid empty" "" "$_sp_device_out"
+
 # ---------- security_patch.sh default: Tricky Store uses build.prop patch ----------
 bootstrap
 source_libs

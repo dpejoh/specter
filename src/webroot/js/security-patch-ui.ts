@@ -29,10 +29,15 @@ export function wireSecurityPatch() {
     dialog.innerHTML = `
       <div slot="headline">${t('sp_dialog_title', 'Set Security Patch')}</div>
       <div slot="content" style="min-height:0">
-        <md-outlined-text-field id="sp-input" type="text" label="${t('sp_dialog_label', 'Security Patch Date')}" placeholder="YYYY-MM-DD" data-i18n-placeholder="sp_placeholder" maxlength="10" autocapitalize="none" style="width:100%;--md-outlined-text-field-container-shape:14px">
-          <md-icon-button slot="trailing-icon" id="sp-fetch" aria-label="${t('sp_fetch', 'Fetch')}">
-            <md-icon>language</md-icon>
-          </md-icon-button>
+        <md-outlined-text-field id="sp-input" type="text" label="${t('sp_dialog_label', 'Security Patch Date')}" placeholder="YYYY-MM-DD" data-i18n-placeholder="sp_placeholder" maxlength="10" autocapitalize="none" style="width:100%;--md-outlined-text-field-container-shape:14px;--md-outlined-field-with-trailing-content-trailing-space:24px;overflow:hidden">
+          <div slot="trailing-icon" style="display:flex;align-items:center;gap:2px">
+            <md-icon-button id="sp-device" style="--md-icon-button-icon-size:18px;width:32px;height:32px" aria-label="${t('sp_device', 'Device')}">
+              <md-icon>smartphone</md-icon>
+            </md-icon-button>
+            <md-icon-button id="sp-fetch" style="--md-icon-button-icon-size:18px;width:32px;height:32px" aria-label="${t('sp_fetch', 'Fetch')}">
+              <md-icon>language</md-icon>
+            </md-icon-button>
+          </div>
         </md-outlined-text-field>
       </div>
       <div slot="actions">
@@ -44,6 +49,27 @@ export function wireSecurityPatch() {
 
     const input = dialog.querySelector('#sp-input') as MdOutlinedTextField | null;
     if (input) input.value = current || defaultDate;
+
+    dialog.querySelector('#sp-device')!.addEventListener('click', async () => {
+      const blockClose = (e: Event) => e.preventDefault();
+      dialog.addEventListener('cancel', blockClose);
+      try {
+        try {
+          const { stdout, code } = await exec(`sh ${scriptPath} --device 2>/dev/null`);
+          const date = stdout.trim();
+          if (code === 0 && date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+            input!.value = date;
+            showToast(t('sp_device_loaded', 'Loaded device security patch'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
+          } else {
+            showToast(t('sp_device_unavailable', 'Device security patch unavailable'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
+          }
+        } catch {
+          showToast(t('sp_device_unavailable', 'Device security patch unavailable'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
+        }
+      } finally {
+        dialog.removeEventListener('cancel', blockClose);
+      }
+    });
 
     dialog.querySelector('#sp-fetch')!.addEventListener('click', async () => {
       const blockClose = (e: Event) => e.preventDefault();

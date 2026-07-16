@@ -83,6 +83,18 @@ case "${1:-}" in
     _fetch_pixel_patch || _compute_fallback_patch
     exit 0
     ;;
+  --device)
+    # WebUI: Device build security patch only (system prop / build.prop). No vendor.
+    _patch=$(_read_patch_prop "ro.build.version.security_patch" \
+      "/system/build.prop" "/system/system/build.prop") || _patch=""
+    if [ -n "$_patch" ] && _validate_patch_date "$_patch" >/dev/null; then
+      printf '%s\n' "$_patch"
+      unset _patch
+      exit 0
+    fi
+    unset _patch
+    exit 1
+    ;;
   --get)
     ksm_get_security_patch || exit 1
     exit 0
