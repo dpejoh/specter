@@ -79,7 +79,7 @@ jobs:
         if: github.event_name != 'pull_request'
         run: |
           COMMIT_MSG=$(git log -1 --pretty=%s)
-          CAPTION=$(printf '/save latest_ci_build\n%s\n%s\n%s' "${{ steps.get_name.outputs.artifact_name }}" "$COMMIT_MSG" "${{ github.sha }}")
+          CAPTION=$(printf '%s\n%s\n%s' "${{ steps.get_name.outputs.artifact_name }}" "$COMMIT_MSG" "${{ github.sha }}")
           HTTP_CODE=$(curl -s -o response.json -w "%{http_code}" \
             -F chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
             -F document=@"${{ steps.get_name.outputs.artifact_name }}.zip" \
