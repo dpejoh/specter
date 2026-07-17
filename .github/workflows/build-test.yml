@@ -76,22 +76,22 @@ jobs:
           retention-days: 28
 
       - name: Send CI build to Telegram
-        if: github.event_name != 'pull_request'
-        run: |
-          COMMIT_MSG=$(git log -1 --pretty=%s | sed 's/`/'"'"'/g')
-          COMMIT_URL="https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
-          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          CAPTION=$(printf '```\n%s\n```\n[Commit](%s)\n[Workflow run](%s)' "$COMMIT_MSG" "$COMMIT_URL" "$RUN_URL")
-          HTTP_CODE=$(curl -s -o response.json -w "%{http_code}" \
-            -F chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
-            -F document=@"${{ steps.get_name.outputs.artifact_name }}.zip" \
-            -F caption="$CAPTION" \
-            -F parse_mode="Markdown" \
-            "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument")
-          cat response.json
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "Telegram send failed (HTTP $HTTP_CODE)"
-            exit 1
-          fi
+  if: github.event_name != 'pull_request'
+  run: |
+    COMMIT_MSG=$(git log -1 --pretty=%s | sed 's/`/'"'"'/g')
+    COMMIT_URL="https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
+    RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+    CAPTION=$(printf '```\n%s\n```\n[Commit](%s)\n[Workflow run](%s)' "$COMMIT_MSG" "$COMMIT_URL" "$RUN_URL")
+    HTTP_CODE=$(curl -s -o response.json -w "%{http_code}" \
+      -F chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+      -F document=@"${{ steps.get_name.outputs.artifact_name }}.zip" \
+      -F caption="$CAPTION" \
+      -F parse_mode="Markdown" \
+      "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument")
+    cat response.json
+    if [ "$HTTP_CODE" != "200" ]; then
+      echo "Telegram send failed (HTTP $HTTP_CODE)"
+      exit 1
+    fi
             exit 1
           fi
