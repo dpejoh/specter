@@ -17,9 +17,12 @@ detect_keystore_manager
 _restored=0
 
 if [ -f "$BACKUP_DIR/keybox.xml.bak" ] && [ -n "$KSM_KEYBOX" ]; then
-  cp "$BACKUP_DIR/keybox.xml.bak" "$KSM_KEYBOX"
-  log_i "RESTORE" "Restored keybox.xml"
-  _restored=$((_restored + 1))
+  if ksm_install_keybox "$BACKUP_DIR/keybox.xml.bak" copy; then
+    log_i "RESTORE" "Restored keybox.xml"
+    _restored=$((_restored + 1))
+  else
+    log_e "RESTORE" "Failed to restore keybox.xml"
+  fi
 fi
 
 case "$KSM_FORMAT" in
