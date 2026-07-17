@@ -88,10 +88,10 @@ jobs:
             -F caption="$CAPTION" \
             -F parse_mode="Markdown" \
             "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument")
-          HTTP_CODE=$(echo "$HTTP_CODE" | tr -d '[:space:]')
           cat response.json
-          echo "HTTP status: $HTTP_CODE"
           if [ "$HTTP_CODE" != "200" ]; then
             echo "Telegram send failed (HTTP $HTTP_CODE)"
+            exit 1
+          fi
             exit 1
           fi
