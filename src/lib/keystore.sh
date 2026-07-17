@@ -197,6 +197,34 @@ ksm_set_security_patch() {
   unset _ksp_date
 }
 
+ksm_get_trust_field() {
+  _kgt_key="$1"
+  case "$KSM_FORMAT" in
+    toml) _toml_get_trust_key "$KSM_SECURITY" "$_kgt_key" ;;
+    *) printf '' ;;
+  esac
+  unset _kgt_key
+}
+
+ksm_set_trust_field() {
+  _kst_key="$1" _kst_val="$2"
+  case "$KSM_FORMAT" in
+    toml)
+      case "$_kst_key" in
+        os_version)
+          _toml_set_trust_key "$KSM_SECURITY" "os_version" "$_kst_val"
+          ;;
+        vb_key|vb_hash)
+          _toml_set_trust_key "$KSM_SECURITY" "$_kst_key" "\"$_kst_val\""
+          ;;
+      esac
+      ksm_reload
+      ;;
+    *) return 1 ;;
+  esac
+  unset _kst_key _kst_val
+}
+
 # MODE "copy" keeps SRC; default "move" consumes it.
 ksm_install_keybox() {
   _kik_src="$1" _kik_mode="${2:-move}"
@@ -345,4 +373,12 @@ _toml_set_trust_key() {
   }
   rm -f "$_tsk_tmp"
   unset _tsk_file _tsk_key _tsk_val _tsk_tmp
+}
+
+_toml_get_trust_key() {
+  _tgk_file="$1" _tgk_key="$2"
+  [ -f "$_tgk_file" ] || return 1
+  grep -E '^[ ]*'"$_tgk_key"'[ ]*=' "$_tgk_file" 2>/dev/null \
+    | head -1 | sed 's/.*=[ ]*//; s/^"//; s/"$//; s/[[:space:]]*$//'
+  unset _tgk_file _tgk_key
 }
