@@ -75,7 +75,7 @@ jobs:
           path: Module/
           retention-days: 28
 
-- name: Send CI build to Telegram
+      - name: Send CI build to Telegram
         if: github.event_name != 'pull_request'
         run: |
           COMMIT_MSG=$(git log -1 --pretty=%s | sed 's/`/'"'"'/g')
