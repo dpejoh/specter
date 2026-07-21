@@ -141,63 +141,65 @@ async function resolvePackageNames(packages: string[]): Promise<Map<string, stri
 
 function buildOverlayHTML(): string {
   return `
-    <div class="ptr-indicator" id="ptr-indicator">
-      <div class="ptr-progress-wrap">
-        <md-icon id="ptr-arrow" class="ptr-arrow">refresh</md-icon>
+    <div class="ta-inner">
+      <div class="ptr-indicator" id="ptr-indicator">
+        <div class="ptr-progress-wrap">
+          <md-icon id="ptr-arrow" class="ptr-arrow">refresh</md-icon>
+        </div>
       </div>
-    </div>
-    <div class="ta-header">
-      <button id="ta-back" class="ta-back-btn">
-        <md-icon>arrow_back</md-icon>
-      </button>
-      <h2 class="ta-title">${t('ta_title', 'App Targeting')}</h2>
-      <button id="ta-menu-btn" class="ta-menu-btn" aria-label="More options" data-i18n-aria="ta_menu_more">
-        <md-icon>more_vert</md-icon>
-      </button>
-      <md-menu id="ta-menu" class="ta-menu" anchor="ta-menu-btn" positioning="fixed">
-        <md-menu-item id="ta-select-all" class="first">
-          <div slot="headline">${t('ta_select_all', 'Select All')}</div>
-        </md-menu-item>
-        <md-menu-item id="ta-deselect-all">
-          <div slot="headline">${t('ta_deselect_all', 'Deselect All')}</div>
-        </md-menu-item>
-        <md-menu-item id="ta-mode">
-          <div slot="headline">${t('ta_mode_menu', 'Default Mode')}</div>
-        </md-menu-item>
-        <md-menu-item id="ta-regenerate">
-          <div slot="headline">${t('ta_regenerate', 'Regenerate')}</div>
-        </md-menu-item>
-        <md-menu-item id="ta-toggle-system">
-          <div slot="headline">${t('ta_show_system', 'Show system apps')}</div>
-        </md-menu-item>
-        <md-menu-item id="ta-toggle-mode">
-          <div slot="headline">${t('ta_edit_blacklist', 'Edit blacklist')}</div>
-        </md-menu-item>
-        <md-menu-item id="ta-import-denylist" class="last">
-          <div slot="headline">${t('ta_import_denylist', 'Import from DenyList')}</div>
-        </md-menu-item>
-      </md-menu>
-    </div>
+      <div class="ta-header">
+        <button id="ta-back" class="ta-back-btn">
+          <md-icon>arrow_back</md-icon>
+        </button>
+        <h2 class="ta-title">${t('ta_title', 'App Targeting')}</h2>
+        <button id="ta-menu-btn" class="ta-menu-btn" aria-label="More options" data-i18n-aria="ta_menu_more">
+          <md-icon>more_vert</md-icon>
+        </button>
+        <md-menu id="ta-menu" class="ta-menu" anchor="ta-menu-btn" positioning="fixed">
+          <md-menu-item id="ta-select-all" class="first">
+            <div slot="headline">${t('ta_select_all', 'Select All')}</div>
+          </md-menu-item>
+          <md-menu-item id="ta-deselect-all">
+            <div slot="headline">${t('ta_deselect_all', 'Deselect All')}</div>
+          </md-menu-item>
+          <md-menu-item id="ta-mode">
+            <div slot="headline">${t('ta_mode_menu', 'Default Mode')}</div>
+          </md-menu-item>
+          <md-menu-item id="ta-regenerate">
+            <div slot="headline">${t('ta_regenerate', 'Regenerate')}</div>
+          </md-menu-item>
+          <md-menu-item id="ta-toggle-system">
+            <div slot="headline">${t('ta_show_system', 'Show system apps')}</div>
+          </md-menu-item>
+          <md-menu-item id="ta-toggle-mode">
+            <div slot="headline">${t('ta_edit_blacklist', 'Edit blacklist')}</div>
+          </md-menu-item>
+          <md-menu-item id="ta-import-denylist" class="last">
+            <div slot="headline">${t('ta_import_denylist', 'Import from DenyList')}</div>
+          </md-menu-item>
+        </md-menu>
+      </div>
 
-    <div class="ta-search-container">
-      <md-outlined-text-field id="ta-search" class="ta-search" placeholder="${t('ta_search_placeholder', 'Search apps')}">
-        <md-icon slot="leading-icon">search</md-icon>
-      </md-outlined-text-field>
-    </div>
+      <div class="ta-search-container">
+        <md-outlined-text-field id="ta-search" class="ta-search" placeholder="${t('ta_search_placeholder', 'Search apps')}">
+          <md-icon slot="leading-icon">search</md-icon>
+        </md-outlined-text-field>
+      </div>
 
-    <div class="ta-filters">
-      <md-filter-chip id="ta-filter-all" label="${t('ta_filter_all', 'All')}" selected>
-        <md-icon slot="icon">select_all</md-icon>
-      </md-filter-chip>
-      <md-filter-chip id="ta-filter-selected" label="${t('ta_filter_selected', 'Selected')}">
-        <md-icon slot="icon">check_circle</md-icon>
-      </md-filter-chip>
-      <md-filter-chip id="ta-filter-not-selected" label="${t('ta_filter_not_selected', 'Not Selected')}">
-        <md-icon slot="icon">radio_button_unchecked</md-icon>
-      </md-filter-chip>
-    </div>
+      <div class="ta-filters">
+        <md-filter-chip id="ta-filter-all" label="${t('ta_filter_all', 'All')}" selected>
+          <md-icon slot="icon">select_all</md-icon>
+        </md-filter-chip>
+        <md-filter-chip id="ta-filter-selected" label="${t('ta_filter_selected', 'Selected')}">
+          <md-icon slot="icon">check_circle</md-icon>
+        </md-filter-chip>
+        <md-filter-chip id="ta-filter-not-selected" label="${t('ta_filter_not_selected', 'Not Selected')}">
+          <md-icon slot="icon">radio_button_unchecked</md-icon>
+        </md-filter-chip>
+      </div>
 
-    <div class="ta-list" id="ta-list"></div>
+      <div class="ta-list" id="ta-list"></div>
+    </div>
 
     <div class="ta-loading" id="ta-loading">
       <md-circular-progress indeterminate></md-circular-progress>
