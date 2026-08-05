@@ -133,6 +133,7 @@
   "role_French Translator": "French Translator",
   "role_Polish Translator": "Polish Translator",
   "role_Backend Contributor": "Backend Contributor",
+  "role_WebUI & Backend Contributor": "WebUI & Backend Contributor",
   "install_now": "Install now",
   "custom_kb_title": "Custom Keybox",
   "custom_kb_file": "Import File",

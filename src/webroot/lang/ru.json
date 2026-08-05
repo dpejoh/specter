@@ -134,6 +134,7 @@
   "role_French Translator": "Французский переводчик",
   "role_Polish Translator": "Польский переводчик",
   "role_Backend Contributor": "Контрибьютор бэкенда",
+  "role_WebUI & Backend Contributor": "Контрибьютор веб-интерфейса и бэкенда",
   "install_now": "Установить сейчас",
   "custom_kb_title": "Пользовательский Keybox",
   "custom_kb_file": "Импорт файла",

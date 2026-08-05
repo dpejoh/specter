@@ -129,6 +129,7 @@
   "role_French Translator": "法语翻译",
   "role_Polish Translator": "波兰语翻译",
   "role_Backend Contributor": "Backend Contributor",
+  "role_WebUI & Backend Contributor": "WebUI 与 Backend 贡献者",
   "install_now": "立即安装",
   "custom_kb_title": "自定义 Keybox",
   "custom_kb_file": "导入文件",
