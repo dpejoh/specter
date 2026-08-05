@@ -47,7 +47,7 @@ function applyTranslations() {
     const val = currentStrings[key] || fallbackStrings[key];
     if (!val) continue;
     if (el.tagName === 'TITLE') { document.title = val; continue; }
-    if (el.tagName.startsWith('MD-')) {
+    if (el.tagName === 'MD-FILTER-CHIP') {
       (el as HTMLElement & { label: string }).label = val;
       if (el.hasAttribute('aria-label')) el.setAttribute('aria-label', val);
       continue;
