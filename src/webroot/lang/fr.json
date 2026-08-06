@@ -426,8 +426,8 @@
   "advance_export_logs": "Exportation des journaux",
   "advance_export_logs_desc": "Enregistre tous les journaux de débogage de Specter dans le répertoire /sdcard/Download/",
   "tools_restart_omk_keymint": "Redémarrage du keymint d'OMK",
-  "tools_restart_omk_keymint_desc": "Use after changing OMK OS version or boot key.",
+  "tools_restart_omk_keymint_desc": "Exécuter après un changement dans OMK de version d'Android ou de clé de démarrage",
   "tools_support_section": "Assistance",
-  "tools_restart_omk_injector": "Redémarrer l'injecteur OMK",
-  "tools_restart_omk_injector_desc": "Use if a target-app change didn't stick; then reopen the app."
+  "tools_restart_omk_injector": "Redémarrage de l'injecteur d'OMK",
+  "tools_restart_omk_injector_desc": "Exécuter en cas de modification de ciblage d'application non pris en compte, puis ouvrir de nouveau l'application"
 }
