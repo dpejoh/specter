@@ -84,4 +84,6 @@ for _pid_key in loop_prop_handler.pid loop_keybox_info.pid auto_target.pid; do
 done
 unset _pid_key _pid_path _old_pid
 
+pm uninstall "$SPECTER_PKG" >/dev/null 2>&1 || true
+
 exit 0

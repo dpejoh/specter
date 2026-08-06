@@ -342,6 +342,8 @@
   "restore_backups_desc": "استعادة ملفات Tricky Store الأصلية من النسخة الاحتياطية للإقلاع الأول",
   "check_tee_bhash": "TEE وتجزئة الإقلاع",
   "check_tee_bhash_desc": "تشغيل فحص TEE واستخراج تجزئة الإقلاع من البداية",
+  "install_helper_title": "تثبيت مساعد التصديق",
+  "install_helper_msg": "تثبيت تطبيق مساعد التصديق لـ Specter حتى يستخدم TEE وتجزئة الإقلاع هوية الحزمة الحقيقية؟ الرفض يستخدم المدقق الاحتياطي.",
   "tee_status_label": "حالة TEE",
   "tee_status_normal": "طبيعي",
   "tee_status_broken": "معطل",
@@ -429,5 +431,10 @@
   "sp_placeholder_omk": "auto, latest, or YYYY-MM-DD",
   "omk_vb_reboot_required": "Device reboot required for random→auto VB key",
   "tools_restart_omk_injector": "إعادة تشغيل injector OMK",
-  "tools_restart_omk_injector_desc": "Use if a target-app change didn't stick; then reopen the app."
+  "tools_restart_omk_injector_desc": "Use if a target-app change didn't stick; then reopen the app.",
+  "uninstall_helper_title": "إلغاء تثبيت مساعد التصديق",
+  "uninstall_helper_desc": "إزالة تطبيق مساعد Specter (com.dpejoh.specter)",
+  "uninstall_helper_msg": "إزالة تطبيق مساعد التصديق لـ Specter؟ سيستخدم TEE وتجزئة الإقلاع المدقق الاحتياطي حتى تثبيته مرة أخرى.",
+  "uninstall_helper_missing": "المساعد غير مثبت",
+  "uninstall_helper_done": "تم إلغاء تثبيت المساعد"
 }

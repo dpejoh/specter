@@ -1,52 +1,91 @@
-import { spawnScript } from './bridge.js';
+import { spawnScript, exec, getModuleDir } from './bridge.js';
 import { appendToOutput } from './terminal.js';
 import { getTranslation } from './i18n.js';
 import { showToast } from './toast.js';
 import { addEntry } from './history.js';
+import { showConfirm } from './dialog.js';
+import { shellEscape } from './utils.js';
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
+const HELPER_PKG = 'com.dpejoh.specter';
+
 export function wireTeeHash() {
-  const btn = document.getElementById('tee-hash-btn');
-  if (!btn) return;
+  document.getElementById('tee-hash-btn')?.addEventListener('click', () => { void runTeeHash(); });
+  document.getElementById('uninstall-helper-btn')?.addEventListener('click', () => { void uninstallHelper(); });
+}
 
-  btn.addEventListener('click', () => {
-    const progress = document.getElementById('progress-dialog') as MdDialog | null;
-    const label = document.getElementById('progress-label');
-    if (label) label.textContent = t('check_tee_bhash', 'TEE & Boot Hash');
-    progress?.show();
+async function uninstallHelper() {
+  try {
+    const { stdout } = await exec(`pm path ${HELPER_PKG} 2>/dev/null || true`);
+    if (!stdout.includes('package:')) {
+      showToast(t('uninstall_helper_missing', 'Helper not installed'), { icon: 'info', type: 'info', autoCloseDelay: 2500 });
+      return;
+    }
+    const ok = await showConfirm(
+      t('uninstall_helper_title', 'Uninstall attestation helper'),
+      t('uninstall_helper_msg', 'Remove the Specter attestation helper APK? TEE & Boot Hash will use the fallback checker until you install it again.'),
+    );
+    if (!ok) return;
+    await exec(`pm uninstall ${HELPER_PKG}`);
+    showToast(t('uninstall_helper_done', 'Helper uninstalled'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
+  } catch {
+    showToast(t('simple_toast_error', 'Failed'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
+  }
+}
 
-    const lines: string[] = [];
-    const child = spawnScript('check_tee_bhash.sh', 'common');
-    child.stdout.on('data', (line: string) => {
-      appendToOutput(line);
-      lines.push(line);
-    });
-    child.on('exit', (code: number) => {
-      progress?.close();
-      const clean = lines.filter(l => l.includes('='));
-      if (code !== 0 && !clean.length) {
-        showToast(t('simple_toast_error', 'Failed'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
-        addEntry('check_tee_bhash.sh', lines.join('\n'), code);
-        return;
-      }
-      const params: Record<string, string> = {};
-      for (const kv of clean) {
-        const m = kv.match(/^(\w+)=(.+)$/);
-        if (m) params[m[1]!] = m[2]!.trim();
-      }
-      showResultDialog(
-        params['tee_status'] || 'unknown',
-        params['tee_bhash'] || '',
-        params['boot_hash'] || '',
-        params['vbmeta_hash'] || '',
-        params['tee_tier'] || '',
+async function runTeeHash() {
+  const moddir = getModuleDir();
+  try {
+    const { stdout } = await exec(`pm path ${HELPER_PKG} 2>/dev/null || true`);
+    if (!stdout.includes('package:') && moddir) {
+      const ok = await showConfirm(
+        t('install_helper_title', 'Install attestation helper'),
+        t('install_helper_msg', 'Install the Specter attestation helper APK so TEE & Boot Hash can use real package identity? Declining uses the fallback checker.'),
       );
-      addEntry('check_tee_bhash.sh', lines.join('\n'), code);
-    });
-    child.on('error', () => {
-      progress?.close();
+      if (ok) {
+        await exec(`pm install -r ${shellEscape(moddir + '/deps/specter.apk')}`);
+      }
+    }
+  } catch {
+    // proceed with fallback path inside the script
+  }
+
+  const progress = document.getElementById('progress-dialog') as MdDialog | null;
+  const label = document.getElementById('progress-label');
+  if (label) label.textContent = t('check_tee_bhash', 'TEE & Boot Hash');
+  progress?.show();
+
+  const lines: string[] = [];
+  const child = spawnScript('check_tee_bhash.sh', 'common');
+  child.stdout.on('data', (line: string) => {
+    appendToOutput(line);
+    lines.push(line);
+  });
+  child.on('exit', (code: number) => {
+    progress?.close();
+    const clean = lines.filter(l => l.includes('='));
+    if (code !== 0 && !clean.length) {
       showToast(t('simple_toast_error', 'Failed'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
-    });
+      addEntry('check_tee_bhash.sh', lines.join('\n'), code);
+      return;
+    }
+    const params: Record<string, string> = {};
+    for (const kv of clean) {
+      const m = kv.match(/^(\w+)=(.+)$/);
+      if (m) params[m[1]!] = m[2]!.trim();
+    }
+    showResultDialog(
+      params['tee_status'] || 'unknown',
+      params['tee_bhash'] || '',
+      params['boot_hash'] || '',
+      params['vbmeta_hash'] || '',
+      params['tee_tier'] || '',
+    );
+    addEntry('check_tee_bhash.sh', lines.join('\n'), code);
+  });
+  child.on('error', () => {
+    progress?.close();
+    showToast(t('simple_toast_error', 'Failed'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
   });
 }
 

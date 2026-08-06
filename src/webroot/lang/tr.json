@@ -337,6 +337,8 @@
   "restore_backups_desc": "Specter ilk defa yüklenirken yedeklenen orijinal Tricky Store yedeğinizi geri yükler",
   "check_tee_bhash": "TEE & Boot Hash",
   "check_tee_bhash_desc": "TEE kontrolü çalıştırıp boot hash al",
+  "install_helper_title": "Attestation yardımcısını yükle",
+  "install_helper_msg": "TEE ve Boot Hash'in gerçek paket kimliğini kullanması için Specter attestation yardımcı APK'sını yüklemek ister misiniz? Reddederseniz yedek denetleyici kullanılır.",
   "tee_status_label": "TEE Durumu",
   "tee_status_normal": "Normal",
   "tee_status_broken": "Kırık",
@@ -429,5 +431,10 @@
   "sp_placeholder_omk": "auto, latest, or YYYY-MM-DD",
   "omk_vb_reboot_required": "Device reboot required for random→auto VB key",
   "tools_restart_omk_injector": "OMK injector'ı yeniden başlat",
-  "tools_restart_omk_injector_desc": "Use if a target-app change didn't stick; then reopen the app."
+  "tools_restart_omk_injector_desc": "Use if a target-app change didn't stick; then reopen the app.",
+  "uninstall_helper_title": "Attestation yardımcısını kaldır",
+  "uninstall_helper_desc": "Specter yardımcı APK'sını kaldır (com.dpejoh.specter)",
+  "uninstall_helper_msg": "Specter attestation yardımcı APK'sını kaldırmak ister misiniz? Yeniden yükleyene kadar TEE ve Boot Hash yedek denetleyiciyi kullanır.",
+  "uninstall_helper_missing": "Yardımcı yüklü değil",
+  "uninstall_helper_done": "Yardımcı kaldırıldı"
 }

@@ -337,6 +337,8 @@
   "restore_backups_desc": "Memulihkan file asli Tricky Store Anda dari cadangan boot pertama",
   "check_tee_bhash": "TEE & Boot Hash",
   "check_tee_bhash_desc": "Jalankan pemeriksaan TEE dan ekstrak boot hash dari awal",
+  "install_helper_title": "Pasang helper attestation",
+  "install_helper_msg": "Pasang APK helper attestation Specter agar TEE & Boot Hash memakai identitas paket yang sebenarnya? Menolak memakai pemeriksa cadangan.",
   "tee_status_label": "Status TEE",
   "tee_status_normal": "Normal",
   "tee_status_broken": "Rusak",
@@ -429,5 +431,10 @@
   "sp_placeholder_omk": "auto, latest, or YYYY-MM-DD",
   "omk_vb_reboot_required": "Device reboot required for random→auto VB key",
   "tools_restart_omk_injector": "Mulai Ulang injector OMK",
-  "tools_restart_omk_injector_desc": "Use if a target-app change didn't stick; then reopen the app."
+  "tools_restart_omk_injector_desc": "Use if a target-app change didn't stick; then reopen the app.",
+  "uninstall_helper_title": "Copot helper attestation",
+  "uninstall_helper_desc": "Hapus APK helper Specter (com.dpejoh.specter)",
+  "uninstall_helper_msg": "Hapus APK helper attestation Specter? TEE & Boot Hash memakai pemeriksa cadangan sampai dipasang lagi.",
+  "uninstall_helper_missing": "Helper belum terpasang",
+  "uninstall_helper_done": "Helper dicopot"
 }

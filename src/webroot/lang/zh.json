@@ -342,6 +342,8 @@
   "restore_backups_desc": "从首次启动的备份中恢复您原始的 Tricky Store 文件",
   "check_tee_bhash": "TEE 与启动哈希",
   "check_tee_bhash_desc": "运行 TEE 检查并从头提取启动哈希",
+  "install_helper_title": "安装认证助手",
+  "install_helper_msg": "安装 Specter 认证助手 APK，使 TEE 与启动哈希使用真实软件包身份？拒绝则使用备用检查。",
   "tee_status_label": "TEE 状态",
   "tee_status_normal": "正常",
   "tee_status_broken": "已损坏",
@@ -429,5 +431,10 @@
   "sp_placeholder_omk": "auto, latest, or YYYY-MM-DD",
   "omk_vb_reboot_required": "Device reboot required for random→auto VB key",
   "tools_restart_omk_injector": "重启 OMK injector",
-  "tools_restart_omk_injector_desc": "Use if a target-app change didn't stick; then reopen the app."
+  "tools_restart_omk_injector_desc": "Use if a target-app change didn't stick; then reopen the app.",
+  "uninstall_helper_title": "卸载认证助手",
+  "uninstall_helper_desc": "移除 Specter 助手 APK（com.dpejoh.specter）",
+  "uninstall_helper_msg": "移除 Specter 认证助手 APK？在再次安装前，TEE 与启动哈希将使用备用检查。",
+  "uninstall_helper_missing": "助手未安装",
+  "uninstall_helper_done": "助手已卸载"
 }

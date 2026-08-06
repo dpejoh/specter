@@ -342,6 +342,8 @@
   "restore_backups_desc": "Восстанавливает исходные файлы Tricky Store из резервной копии первой загрузки",
   "check_tee_bhash": "TEE и хэш загрузки",
   "check_tee_bhash_desc": "Запустить проверку TEE и извлечь хэш загрузки с нуля",
+  "install_helper_title": "Установить помощник аттестации",
+  "install_helper_msg": "Установить APK помощника аттестации Specter, чтобы TEE и Boot Hash использовали реальную идентичность пакета? При отказе будет использована резервная проверка.",
   "tee_status_label": "Состояние TEE",
   "tee_status_normal": "Нормальный",
   "tee_status_broken": "Сломан",
@@ -429,5 +431,10 @@
   "tools_restart_omk_keymint_desc": "Use after changing OMK OS version or boot key.",
   "tools_support_section": "Поддержка",
   "tools_restart_omk_injector": "Перезапустить injector OMK",
-  "tools_restart_omk_injector_desc": "Use if a target-app change didn't stick; then reopen the app."
+  "tools_restart_omk_injector_desc": "Use if a target-app change didn't stick; then reopen the app.",
+  "uninstall_helper_title": "Удалить помощник аттестации",
+  "uninstall_helper_desc": "Удалить APK помощника Specter (com.dpejoh.specter)",
+  "uninstall_helper_msg": "Удалить APK помощника аттестации Specter? TEE и Boot Hash будут использовать резервную проверку, пока вы не установите его снова.",
+  "uninstall_helper_missing": "Помощник не установлен",
+  "uninstall_helper_done": "Помощник удалён"
 }

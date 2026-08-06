@@ -342,6 +342,8 @@
   "restore_backups_desc": "Restaure les fichiers d'origine de l'outil de gestion du Keystore depuis la sauvegarde du premier démarrage",
   "check_tee_bhash": "TEE et Hachage de démarrage",
   "check_tee_bhash_desc": "Lance une vérification du TEE (Trusted Execution Environment) et extrait le hachage de démarrage à partir de zéro",
+  "install_helper_title": "Installer l'assistant d'attestation",
+  "install_helper_msg": "Installer l'APK d'assistance d'attestation Specter pour que TEE et Boot Hash utilisent la vraie identité du paquet ? Refuser utilise le vérificateur de secours.",
   "tee_status_label": "État du TEE",
   "tee_status_normal": "Normal",
   "tee_status_broken": "Non intègre",
@@ -429,5 +431,10 @@
   "tools_restart_omk_keymint_desc": "Exécuter après un changement dans OMK de version d'Android ou de clé de démarrage",
   "tools_support_section": "Assistance",
   "tools_restart_omk_injector": "Redémarrage de l'injecteur d'OMK",
-  "tools_restart_omk_injector_desc": "Exécuter en cas de modification de ciblage d'application non pris en compte, puis ouvrir de nouveau l'application"
+  "tools_restart_omk_injector_desc": "Exécuter en cas de modification de ciblage d'application non pris en compte, puis ouvrir de nouveau l'application",
+  "uninstall_helper_title": "Désinstaller l'assistant d'attestation",
+  "uninstall_helper_desc": "Supprimer l'APK d'assistance Specter (com.dpejoh.specter)",
+  "uninstall_helper_msg": "Supprimer l'APK d'assistance d'attestation Specter ? TEE et Boot Hash utiliseront le vérificateur de secours jusqu'à une nouvelle installation.",
+  "uninstall_helper_missing": "Assistant non installé",
+  "uninstall_helper_done": "Assistant désinstallé"
 }

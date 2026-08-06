@@ -337,6 +337,8 @@
   "restore_backups_desc": "Przywraca oryginalne pliki Tricky Store z pierwszego backupu",
   "check_tee_bhash": "TEE & Boot Hash",
   "check_tee_bhash_desc": "Uruchom test TEE i wyciągnij boot hash od zera",
+  "install_helper_title": "Zainstaluj pomocnika atestacji",
+  "install_helper_msg": "Zainstalować APK pomocnika atestacji Specter, aby TEE i Boot Hash używały prawdziwej tożsamości pakietu? Odrzucenie użyje sprawdzania zapasowego.",
   "tee_status_label": "Status TEE",
   "tee_status_normal": "Normalny",
   "tee_status_broken": "Uszkodzony",
@@ -429,5 +431,10 @@
   "sp_placeholder_omk": "auto, latest, or YYYY-MM-DD",
   "omk_vb_reboot_required": "Device reboot required for random→auto VB key",
   "tools_restart_omk_injector": "Restartuj injector OMK",
-  "tools_restart_omk_injector_desc": "Use if a target-app change didn't stick; then reopen the app."
+  "tools_restart_omk_injector_desc": "Use if a target-app change didn't stick; then reopen the app.",
+  "uninstall_helper_title": "Odinstaluj pomocnika atestacji",
+  "uninstall_helper_desc": "Usuń APK pomocnika Specter (com.dpejoh.specter)",
+  "uninstall_helper_msg": "Usunąć APK pomocnika atestacji Specter? TEE i Boot Hash użyją sprawdzania zapasowego, dopóki nie zainstalujesz go ponownie.",
+  "uninstall_helper_missing": "Pomocnik nie jest zainstalowany",
+  "uninstall_helper_done": "Pomocnik odinstalowany"
 }
