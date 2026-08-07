@@ -109,6 +109,11 @@ const MOCK_APP_CATALOG: Record<string, string> = {
 
 const APP_LABELS_CACHE_PATH = '/data/adb/specter/app_labels.json';
 
+const MOCK_PIF_DEVICES = JSON.stringify({
+  model: ['Pixel 6', 'Pixel 8 Pro', 'Pixel 9 Pro XL', 'Pixel 10 Pro XL'],
+  product: ['oriole_beta', 'husky_beta', 'komodo_beta', 'mustang_beta'],
+});
+
 if (typeof window.ksu === 'undefined') {
   const ksuMock = {
     exec(cmd: string, _opts: string, cbName: string) {
@@ -116,7 +121,11 @@ if (typeof window.ksu === 'undefined') {
         const cb = getGlobal<(...args: unknown[]) => void>(cbName);
         if (typeof cb !== 'function') return;
 
-        if (cmd.includes('target.txt')) {
+        if (cmd.includes('playintegrityfix/module.prop')) {
+          cb(0, 'name=Play Integrity Fix [INJECT]\n', '');
+        } else if (cmd.includes('autopif.sh') && cmd.includes('--list')) {
+          cb(0, MOCK_PIF_DEVICES, '');
+        } else if (cmd.includes('target.txt')) {
           cb(0, MOCK_TARGET_TXT, '');
         } else if (cmd.includes('pm list packages -3')) {
           cb(0, MOCK_USER_PKGS, '');

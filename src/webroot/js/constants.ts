@@ -47,6 +47,7 @@ export const FEATURE_I18N_KEYS: Record<string, string> = {
 };
 
 export const TRICKY_DIR = '/data/adb/tricky_store';
+export const PIF_DIR = '/data/adb/modules/playintegrityfix';
 
 export function defaultSecurityPatch(): string {
   const now = new Date();

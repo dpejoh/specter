@@ -25,6 +25,13 @@
   "menu_pif_title": "Play Bütünlüğü",
   "menu_pif_update": "Temiz parmak izi al",
   "menu_pif_update_desc": "PIF sürümünüze uygun olan yeni parmak izi yükler ",
+  "menu_pif_choose": "PIF Cihazı Seç",
+  "menu_pif_choose_desc": "Specter'ın getirebileceği Pixel Canary modellerini seçin",
+  "menu_pif_choose_random": "Rastgele",
+  "menu_pif_choose_current": "Geçerli: {0}",
+  "menu_pif_choose_loading": "Cihaz listesi yükleniyor…",
+  "menu_pif_choose_failed": "Cihaz listesi yüklenemedi",
+  "menu_pif_choose_saved": "PIF cihaz tercihi kaydedildi",
   "menu_custom_keybox": "Özel Keybox ayarla",
   "menu_custom_keybox_desc": "Kendi keybox.xml dosyanızı, dosyanın olduğu yolu ya da bağlantıyı kullanın.",
   "advance_menu_title_config": "Modül Ayarları",
@@ -429,5 +436,7 @@
   "sp_placeholder_omk": "auto, latest, or YYYY-MM-DD",
   "omk_vb_reboot_required": "Device reboot required for random→auto VB key",
   "tools_restart_omk_injector": "OMK injector'ı yeniden başlat",
-  "tools_restart_omk_injector_desc": "Use if a target-app change didn't stick; then reopen the app."
+  "tools_restart_omk_injector_desc": "Use if a target-app change didn't stick; then reopen the app.",
+  "menu_pif_choose_current_many": "Geçerli: {0} cihaz",
+  "menu_pif_choose_multi_hint": "Bir veya daha fazla cihaz seçin. Hiçbiri = rastgele."
 }

@@ -25,6 +25,13 @@
   "menu_pif_title": "Play Integrity",
   "menu_pif_update": "Pobierz nowy odcisk (fingerprint)",
   "menu_pif_update_desc": "Wykrywa wariant PIF i pobiera najnowszy fingerprint",
+  "menu_pif_choose": "Wybierz urządzenie PIF",
+  "menu_pif_choose_desc": "Wybierz modele Pixel Canary, które Specter może pobierać",
+  "menu_pif_choose_random": "Losowy",
+  "menu_pif_choose_current": "Obecnie: {0}",
+  "menu_pif_choose_loading": "Ładowanie listy urządzeń…",
+  "menu_pif_choose_failed": "Nie udało się załadować listy urządzeń",
+  "menu_pif_choose_saved": "Zapisano preferencję urządzenia PIF",
   "menu_custom_keybox": "Ustaw własny Keybox",
   "menu_custom_keybox_desc": "Użyj własnego pliku keybox, URL lub ścieżki na urządzeniu",
   "advance_menu_title_config": "Konfiguracja modułu",
@@ -429,5 +436,7 @@
   "sp_placeholder_omk": "auto, latest, or YYYY-MM-DD",
   "omk_vb_reboot_required": "Device reboot required for random→auto VB key",
   "tools_restart_omk_injector": "Restartuj injector OMK",
-  "tools_restart_omk_injector_desc": "Use if a target-app change didn't stick; then reopen the app."
+  "tools_restart_omk_injector_desc": "Use if a target-app change didn't stick; then reopen the app.",
+  "menu_pif_choose_current_many": "Obecnie: {0} urządzeń",
+  "menu_pif_choose_multi_hint": "Wybierz jedno lub więcej urządzeń. Brak = losowo."
 }
