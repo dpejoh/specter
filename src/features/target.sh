@@ -15,8 +15,27 @@ case "${1:-}" in
     ksm_read_targets
     exit 0
     ;;
+  --list-raw)
+    # Preserve !/? for the WebUI; drop [section] headers (not packages).
+    ksm_read_targets_raw | grep -v '^[[:space:]]*\[' || true
+    exit 0
+    ;;
   --set)
     [ -n "${2:-}" ] && [ -f "$2" ] || die "target.sh --set requires an existing file argument"
+    # Apply/WebUI rebuilds from pm -3 only; re-add FIXED_TARGETS missing by base name.
+    _set_bases="$SPECTER_DIR/.target_set_bases.$$"
+    : > "$_set_bases"
+    while IFS= read -r _set_line || [ -n "$_set_line" ]; do
+      [ -z "$_set_line" ] && continue
+      case "$_set_line" in \[*\]) continue ;; esac
+      printf '%s\n' "$(_normalize_pkg "$_set_line")" >> "$_set_bases"
+    done < "$2"
+    for _set_entry in $FIXED_TARGETS; do
+      grep -Fxq "$_set_entry" "$_set_bases" 2>/dev/null && continue
+      printf '%s\n' "$_set_entry" >> "$2"
+    done
+    rm -f "$_set_bases"
+    unset _set_bases _set_line _set_entry
     ksm_commit_targets "$2"
     log_i "TARGET" "Committed target list from $2"
     exit 0
