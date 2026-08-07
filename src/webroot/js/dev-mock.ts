@@ -108,11 +108,50 @@ const MOCK_APP_CATALOG: Record<string, string> = {
 };
 
 const APP_LABELS_CACHE_PATH = '/data/adb/specter/app_labels.json';
+const PIF_IMPORTED_DIR = '/data/adb/specter/pif_imported';
 
 const MOCK_PIF_DEVICES = JSON.stringify({
   model: ['Pixel 6', 'Pixel 8 Pro', 'Pixel 9 Pro XL', 'Pixel 10 Pro XL'],
   product: ['oriole_beta', 'husky_beta', 'komodo_beta', 'mustang_beta'],
 });
+
+const MOCK_VALID_PROP = [
+  'FINGERPRINT=google/blazer/blazer:17/CP2A.260705.006/15641320:user/release-keys',
+  'MANUFACTURER=Google',
+  'MODEL=Pixel 10 Pro',
+  'SECURITY_PATCH=2026-07-05',
+  'spoofBuild=true',
+  'spoofProps=false',
+  'spoofProvider=false',
+  'spoofSignature=false',
+  'spoofVendingBuild=true',
+  'spoofVendingSdk=false',
+  'DEBUG=false',
+].join('\n') + '\n';
+
+const MOCK_INVALID_PROP = 'MANUFACTURER=Google\nspoofBuild=true\n';
+
+const mockFs: Record<string, string> = {
+  '/sdcard/valid.prop': MOCK_VALID_PROP,
+  '/sdcard/invalid.prop': MOCK_INVALID_PROP,
+};
+
+function mockUnquote(s: string): string {
+  return s.replace(/^['"]|['"]$/g, '');
+}
+
+function mockListDir(path: string): string {
+  const norm = path.replace(/\/$/, '') || '/';
+  if (norm === '/sdcard') return 'Download/\nvalid.prop\ninvalid.prop\n';
+  if (norm === '/sdcard/Download') return '';
+  if (norm === PIF_IMPORTED_DIR) {
+    return Object.keys(mockFs)
+      .filter(p => p.startsWith(PIF_IMPORTED_DIR + '/') && p.endsWith('.prop'))
+      .map(p => p.slice(PIF_IMPORTED_DIR.length + 1))
+      .join('\n') + (Object.keys(mockFs).some(p => p.startsWith(PIF_IMPORTED_DIR + '/')) ? '\n' : '');
+  }
+  return '';
+}
 
 if (typeof window.ksu === 'undefined') {
   const ksuMock = {
@@ -139,6 +178,32 @@ if (typeof window.ksu === 'undefined') {
           cb(0, '', '');
         } else if (cmd.includes('blacklist.txt')) {
           cb(0, 'com.topjohnwu.magisk\ncom.scottyab.rootbeer\n', '');
+        } else if (/\bls -1p\b/.test(cmd)) {
+          const m = cmd.match(/ls -1p\s+((?:'[^']*'|"[^"]*"|\S+))/);
+          cb(0, mockListDir(mockUnquote(m?.[1] || '/sdcard')), '');
+        } else if (/\bls -1\b/.test(cmd) && cmd.includes('pif_imported') && cmd.includes('.prop')) {
+          const files = Object.keys(mockFs).filter(p => p.startsWith(PIF_IMPORTED_DIR + '/') && p.endsWith('.prop'));
+          cb(0, files.length ? files.join('\n') + '\n' : '', '');
+        } else if (/\bcp\b/.test(cmd) && cmd.includes('pif_imported')) {
+          const m = cmd.match(/\bcp\s+((?:'[^']*'|"[^"]*"|\S+))\s+((?:'[^']*'|"[^"]*"|\S+))/);
+          const src = mockUnquote(m?.[1] || '');
+          const dst = mockUnquote(m?.[2] || '');
+          if (src && dst && mockFs[src] !== undefined) {
+            mockFs[dst] = mockFs[src];
+            cb(0, '', '');
+          } else {
+            cb(1, '', 'cp failed');
+          }
+        } else if (/\brm -f\b/.test(cmd) && cmd.includes(PIF_IMPORTED_DIR)) {
+          const m = cmd.match(/rm -f\s+((?:'[^']*'|"[^"]*"|\S+))/);
+          const path = mockUnquote(m?.[1] || '');
+          delete mockFs[path];
+          cb(0, '', '');
+        } else if (/\bcat\b/.test(cmd) && !cmd.includes('cat >')) {
+          const m = cmd.match(/\bcat\s+((?:'[^']*'|"[^"]*"|\S+))/);
+          const path = mockUnquote(m?.[1] || '');
+          if (path && mockFs[path] !== undefined) cb(0, mockFs[path], '');
+          else cb(0, '', '');
         } else if (cmd.includes('mkdir')) {
           cb(0, '', '');
         } else if (cmd.includes('cat >')) {

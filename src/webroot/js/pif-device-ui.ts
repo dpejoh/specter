@@ -1,14 +1,37 @@
 import '@material/web/button/filled-button.js';
-import { exec } from './bridge.js';
+import '@material/web/iconbutton/icon-button.js';
+import '@material/web/icon/icon.js';
+import { exec, getDataDir } from './bridge.js';
 import { cfgGet, cfgSet } from './cfg.js';
 import { PIF_DIR } from './constants.js';
+import { openFileBrowser } from './file-browser.js';
+import { showConfirm } from './dialog.js';
 import { showToast } from './toast.js';
 import { escapeHtml, shellEscape } from './utils.js';
 import { getTranslation } from './i18n.js';
 
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
-type PifDevice = { model: string; product: string };
+const IMPORTED_PREFIX = 'imported:';
+
+type PifDevice = { model: string; product: string; imported?: boolean };
+
+function importedDir(): string {
+  return (getDataDir() || '/data/adb/specter') + '/pif_imported';
+}
+
+function propVal(text: string, key: string): string {
+  const re = new RegExp('^' + key + '=(.*)$', 'm');
+  const m = text.match(re);
+  return m?.[1]?.trim() || '';
+}
+
+function importId(content: string): string {
+  // ponytail: 32-bit content hash — collision overwrites same id; upgrade to sha256 if users hit collisions
+  let h = 0;
+  for (let i = 0; i < content.length; i++) h = ((h << 5) - h + content.charCodeAt(i)) | 0;
+  return Math.abs(h).toString(36);
+}
 
 function parseDeviceList(stdout: string): PifDevice[] {
   const start = stdout.indexOf('{');
@@ -32,16 +55,16 @@ function encodePreferred(devices: PifDevice[]): string {
 }
 
 function parsePreferred(raw: string): PifDevice[] {
-  return raw
-    .split('\n')
-    .map(line => line.trim())
-    .filter(Boolean)
-    .map(line => {
-      const i = line.indexOf('|');
-      if (i < 0) return null;
-      return { model: line.slice(0, i), product: line.slice(i + 1) };
-    })
-    .filter((d): d is PifDevice => !!d?.product);
+  const out: PifDevice[] = [];
+  for (const line of raw.split('\n').map(l => l.trim()).filter(Boolean)) {
+    const i = line.indexOf('|');
+    if (i < 0) continue;
+    const model = line.slice(0, i);
+    const product = line.slice(i + 1);
+    if (!product) continue;
+    out.push({ model, product, imported: product.startsWith(IMPORTED_PREFIX) });
+  }
+  return out;
 }
 
 async function loadPreferred(): Promise<PifDevice[]> {
@@ -57,6 +80,22 @@ async function isInjectInstalled(): Promise<boolean> {
     `grep '^name=' ${shellEscape(PIF_DIR + '/module.prop')} 2>/dev/null || true`
   );
   return /INJECT/i.test(stdout || '');
+}
+
+async function loadImported(): Promise<PifDevice[]> {
+  const dir = importedDir();
+  const { stdout } = await exec(`ls -1 ${shellEscape(dir)}/*.prop 2>/dev/null || true`);
+  const paths = (stdout || '').split('\n').map(s => s.trim()).filter(Boolean);
+  const out: PifDevice[] = [];
+  for (const path of paths) {
+    const base = path.split('/').pop() || '';
+    const id = base.replace(/\.prop$/, '');
+    if (!id) continue;
+    const { stdout: body } = await exec(`cat ${shellEscape(path)} 2>/dev/null || true`);
+    const model = propVal(body || '', 'MODEL') || id;
+    out.push({ model, product: IMPORTED_PREFIX + id, imported: true });
+  }
+  return out;
 }
 
 async function refreshChooseDesc() {
@@ -85,7 +124,9 @@ async function openPifDeviceDialog() {
     <div slot="content" id="pif-device-content" style="min-height:120px;max-height:50vh;overflow:auto">
       <p class="ap-dialog-desc">${t('menu_pif_choose_loading', 'Loading device list…')}</p>
     </div>
-    <div slot="actions">
+    <div slot="actions" class="fb-actions">
+      <md-text-button id="pif-dev-add">${t('menu_pif_choose_add_file', 'Add from file')}</md-text-button>
+      <div class="spacer"></div>
       <md-text-button id="pif-dev-cancel">${t('dialog_cancel', 'Cancel')}</md-text-button>
       <md-filled-button id="pif-dev-save" disabled>${t('dialog_save', 'Save')}</md-filled-button>
     </div>
@@ -110,28 +151,103 @@ async function openPifDeviceDialog() {
     return listed.filter(d => checked.has(d.product));
   };
 
+  const markDirty = () => {
+    dirty = true;
+    saveBtn.disabled = false;
+  };
+
   const render = (devices: PifDevice[]) => {
     listed = devices;
-    const rows = devices.map(
-      d => `<label class="list-item" style="cursor:pointer">
+    const rows = devices.map(d => {
+      const badge = d.imported
+        ? `<span class="supporting-text">${t('menu_pif_choose_imported', 'Imported')}</span>`
+        : `<span class="supporting-text">${escapeHtml(d.product)}</span>`;
+      const trash = d.imported
+        ? `<md-icon-button class="pif-dev-trash" data-id="${escapeHtml(d.product.slice(IMPORTED_PREFIX.length))}" aria-label="${t('menu_pif_choose_delete', 'Remove imported device')}"><md-icon>delete</md-icon></md-icon-button>`
+        : '';
+      return `<label class="list-item" style="cursor:pointer">
         <input type="checkbox" name="pif-dev" value="${escapeHtml(d.product)}"${
           savedProducts.has(d.product) ? ' checked' : ''
         } style="margin-inline-end:12px">
         <div class="list-item-content"><div class="toggle-text">${escapeHtml(d.model)}</div>
-        <span class="supporting-text">${escapeHtml(d.product)}</span></div>
-      </label>`
-    );
+        ${badge}</div>
+        ${trash}
+      </label>`;
+    });
     content.innerHTML = `
       <p class="ap-dialog-desc">${t('menu_pif_choose_multi_hint', 'Select one or more devices. None selected = random.')}</p>
-      ${rows.join('')}
+      ${rows.join('') || `<p class="ap-dialog-desc">${t('menu_pif_choose_empty', 'No devices yet. Add a pif.prop file or wait for the Canary list.')}</p>`}
     `;
     content.querySelectorAll('input[name="pif-dev"]').forEach(el => {
-      el.addEventListener('change', () => {
-        dirty = true;
-        saveBtn.disabled = false;
+      el.addEventListener('change', markDirty);
+    });
+    content.querySelectorAll('.pif-dev-trash').forEach(el => {
+      el.addEventListener('click', async ev => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const id = (el as HTMLElement).dataset.id;
+        if (!id) return;
+        const product = IMPORTED_PREFIX + id;
+        const path = `${importedDir()}/${id}.prop`;
+        await exec(`rm -f ${shellEscape(path)} 2>/dev/null || true`);
+        savedProducts.delete(product);
+        const stored = (await loadPreferred()).filter(d => d.product !== product);
+        cfgSet('pif_preferred_devices', encodePreferred(stored));
+        render(listed.filter(d => d.product !== product));
+        markDirty();
+        void refreshChooseDesc();
       });
     });
   };
+
+  const importFile = async (filePath: string) => {
+    const { stdout } = await exec(`cat ${shellEscape(filePath)} 2>/dev/null || true`);
+    const body = stdout || '';
+    const fp = propVal(body, 'FINGERPRINT');
+    let model = propVal(body, 'MODEL');
+    if (!fp || !model) {
+      const ok = await showConfirm(
+        t('menu_pif_choose_invalid_title', 'Invalid PIF file'),
+        t(
+          'menu_pif_choose_invalid_msg',
+          'This file is missing FINGERPRINT or MODEL. Import anyway?'
+        )
+      );
+      if (!ok) return;
+      if (!model) {
+        const base = filePath.split('/').pop() || 'imported';
+        model = base.replace(/\.prop$/i, '') || 'imported';
+      }
+    }
+    const id = importId(body || filePath);
+    const dest = `${importedDir()}/${id}.prop`;
+    const { code } = await exec(
+      `mkdir -p ${shellEscape(importedDir())} && cp ${shellEscape(filePath)} ${shellEscape(dest)}`
+    );
+    if (code !== 0) {
+      showToast(t('menu_pif_choose_import_failed', 'Failed to import file'), {
+        icon: 'error',
+        type: 'error',
+        autoCloseDelay: 2500,
+      });
+      return;
+    }
+    const product = IMPORTED_PREFIX + id;
+    savedProducts.add(product);
+    const next = listed.filter(d => d.product !== product);
+    next.unshift({ model, product, imported: true });
+    render(next);
+    markDirty();
+  };
+
+  dialog.querySelector('#pif-dev-add')!.addEventListener('click', () => {
+    openFileBrowser(path => {
+      void importFile(path);
+    }, {
+      extensions: ['.prop'],
+      emptyLabel: t('menu_pif_choose_fb_empty', 'No .prop files found'),
+    });
+  });
 
   saveBtn.addEventListener('click', () => {
     if (!dirty) return;
@@ -150,20 +266,22 @@ async function openPifDeviceDialog() {
 
   dialog.show();
 
-  try {
-    const { stdout } = await exec(`sh ${shellEscape(PIF_DIR + '/autopif.sh')} --list 2>/dev/null`);
-    const devices = parseDeviceList(stdout || '');
-    if (devices.length === 0) throw new Error('empty');
-    render(devices);
-  } catch {
-    content.innerHTML = `<p class="ap-dialog-desc">${t('menu_pif_choose_failed', 'Failed to load device list')}</p>`;
+  const imported = await loadImported();
+  let canary: PifDevice[] = [];
+  if (await isInjectInstalled()) {
+    try {
+      const { stdout } = await exec(`sh ${shellEscape(PIF_DIR + '/autopif.sh')} --list 2>/dev/null`);
+      canary = parseDeviceList(stdout || '');
+    } catch {
+      canary = [];
+    }
   }
+  render([...imported, ...canary]);
 }
 
 export async function wirePifDevice() {
   const row = document.getElementById('pif-choose-device');
   if (!row) return;
-  if (!(await isInjectInstalled())) return;
   row.hidden = false;
   await refreshChooseDesc();
   row.addEventListener('click', () => openPifDeviceDialog());
