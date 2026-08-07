@@ -46,8 +46,6 @@ export const FEATURE_I18N_KEYS: Record<string, string> = {
   boot_hash: 'prop_handler_boot_hash',
 };
 
-export const TRICKY_DIR = '/data/adb/tricky_store';
-
 export function defaultSecurityPatch(): string {
   const now = new Date();
   const m = now.getMonth();

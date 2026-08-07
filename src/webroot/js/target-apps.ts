@@ -7,7 +7,6 @@ import { shellEscape } from './utils.js';
 import { showToast } from './toast.js';
 import { getTranslation } from './i18n.js';
 import { appendToOutput } from './terminal.js';
-import { TRICKY_DIR } from './constants.js';
 
 type TargetState = 'unchecked' | 'bare' | 'conditional' | 'force';
 type BlacklistState = 'unchecked' | 'blacklisted';
@@ -73,6 +72,31 @@ const BLACKLIST_LABEL_KEYS: Record<string, string> = {
 };
 
 const specterDir = () => getDataDir() || '/data/adb/specter';
+
+// The target list lives in target.txt under Tricky Store and in injector.toml
+// under OhMyKeymint, so every read and write goes through targets.sh, which
+// resolves the active backend via detect_keystore_manager.
+function targetsScript(): string {
+  const moddir = getModuleDir();
+  if (!moddir) throw new Error('module dir unavailable');
+  return shellEscape(moddir + '/webroot/common/targets.sh');
+}
+
+async function readTargetList(): Promise<string> {
+  const { stdout } = await exec(`sh ${targetsScript()} get 2>/dev/null || echo ""`);
+  return stdout || '';
+}
+
+async function writeTargetList(content: string): Promise<void> {
+  const staging = `${specterDir()}/.target_staging`;
+  const encoded = await exec(`printf '%s' ${shellEscape(content)} | base64 -w0`);
+  const written = await exec(
+    `mkdir -p ${specterDir()} && printf '%s' "${encoded.stdout || ''}" | base64 -d > ${shellEscape(staging)}`
+  );
+  if (written.code !== 0) throw new Error(written.stderr || 'failed to stage target list');
+  const committed = await exec(`sh ${targetsScript()} set ${shellEscape(staging)}`);
+  if (committed.code !== 0) throw new Error(committed.stderr || 'failed to commit target list');
+}
 
 function t(key: string, fallback: string): string {
   return getTranslation(key) || fallback;
@@ -414,7 +438,7 @@ export async function openTargetAppsManager() {
     } else {
       setMode('target');
       appendToOutput('[TARGET] Reloading target states...');
-      exec(`cat ${TRICKY_DIR}/target.txt 2>/dev/null || echo ""`).then(({ stdout }) => {
+      readTargetList().then((stdout) => {
         const lines = stdout.split('\n').map(s => s.trim()).filter(Boolean);
         targetMap.clear();
         for (const line of lines) {
@@ -639,11 +663,11 @@ export async function openTargetAppsManager() {
       }
       defaultMode = (await cfgGet('target_default_mode', 'bare')) || 'bare';
       const [targetResult, pkgs] = await Promise.all([
-        exec(`cat ${TRICKY_DIR}/target.txt 2>/dev/null || echo ""`),
+        readTargetList(),
         fetchUserPackages(),
       ]);
 
-      const targetLines = targetResult.stdout.split('\n').map(s => s.trim()).filter(Boolean);
+      const targetLines = targetResult.split('\n').map(s => s.trim()).filter(Boolean);
       targetMap.clear();
       for (const line of targetLines) {
         if (line.endsWith('!')) targetMap.set(line.slice(0, -1), 'force');
@@ -673,11 +697,11 @@ export async function openTargetAppsManager() {
     try {
       defaultMode = (await cfgGet('target_default_mode', 'bare')) || 'bare';
       const [targetResult, pkgs] = await Promise.all([
-        exec(`cat ${TRICKY_DIR}/target.txt 2>/dev/null || echo ""`),
+        readTargetList(),
         fetchUserPackages(),
       ]);
 
-      const targetLines = targetResult.stdout.split('\n').map(s => s.trim()).filter(Boolean);
+      const targetLines = targetResult.split('\n').map(s => s.trim()).filter(Boolean);
       targetMap.clear();
       for (const line of targetLines) {
         if (line.endsWith('!')) targetMap.set(line.slice(0, -1), 'force');
@@ -1027,8 +1051,8 @@ export async function openTargetAppsManager() {
 
       const content = lines.join('\n');
       try {
-        await exec(`cat > ${TRICKY_DIR}/target.txt << 'TEOF'\n${content}\nTEOF`);
-        appendToOutput(`[TARGET] Wrote ${lines.length} entries to target.txt`);
+        await writeTargetList(content);
+        appendToOutput(`[TARGET] Wrote ${lines.length} entries to the target list`);
         showToast(t('ta_prompt_saved', 'Target list saved'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
         await exec(`sh ${shellEscape(getModuleDir() + '/refresh_desc.sh')}`);
       } catch (e) {

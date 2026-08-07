@@ -121,6 +121,11 @@ run_feature() {
   PATH="$BIN_DIR:/usr/bin:/bin" MODDIR="$TEST_ROOT" SPECTER_DIR="$SPECTER_DIR" CONFIG_DIR="$CONFIG_DIR" TRICKY_DIR="$TRICKY_DIR" sh "$REPO_ROOT/src/features/$_feature" "$@" 2>&1
 }
 
+run_common() {
+  _common="$1"; shift
+  PATH="$BIN_DIR:/usr/bin:/bin" SPECTER_DIR="$SPECTER_DIR" CONFIG_DIR="$CONFIG_DIR" TRICKY_DIR="$TRICKY_DIR" sh "$REPO_ROOT/src/webroot/common/$_common" "$@" 2>&1
+}
+
 source_feature() {
   PATH="$BIN_DIR:/usr/bin:/bin" MODDIR="$TEST_ROOT" SPECTER_DIR="$SPECTER_DIR" CONFIG_DIR="$CONFIG_DIR" . "$REPO_ROOT/src/features/$1" 2>/dev/null || true
 }
