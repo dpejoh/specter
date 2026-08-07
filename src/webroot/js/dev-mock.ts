@@ -116,9 +116,9 @@ if (typeof window.ksu === 'undefined') {
         const cb = getGlobal<(...args: unknown[]) => void>(cbName);
         if (typeof cb !== 'function') return;
 
-        if (cmd.includes('targets.sh set')) {
+        if (cmd.includes('target.sh --set')) {
           cb(0, '', '');
-        } else if (cmd.includes('targets.sh') || cmd.includes('target.txt')) {
+        } else if (cmd.includes('target.sh --list-raw') || cmd.includes('target.txt')) {
           cb(0, MOCK_TARGET_TXT, '');
         } else if (cmd.includes('pm list packages -3')) {
           cb(0, MOCK_USER_PKGS, '');

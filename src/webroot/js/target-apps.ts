@@ -19,20 +19,6 @@ interface TargetApp {
   state: AppState;
 }
 
-// Mirrors FIXED_TARGETS in lib/constants.sh; only used when that file cannot
-// be sourced. Keep in sync with the shell definition.
-const FIXED_TARGETS_FALLBACK = [
-  'android',
-  'com.android.vending',
-  'com.google.android.gsf',
-  'com.google.android.gms',
-  'com.google.android.contactkeys',
-  'com.google.android.ims',
-  'com.google.android.safetycore',
-  'com.google.android.apps.walletnfcrel',
-  'com.google.android.apps.nbu.paisa.user',
-];
-
 const ANDROID_PATH = 'M40-240q9-107 65.5-197T256-580l-74-128q-6-9-3-19t13-15q8-5 18-2t16 12l74 128q86-36 180-36t180 36l74-128q6-9 16-12t18 2q10 5 13 15t-3 19l-74 128q94 53 150.5 143T920-240H40Zm275.5-124.5Q330-379 330-400t-14.5-35.5Q301-450 280-450t-35.5 14.5Q230-421 230-400t14.5 35.5Q259-350 280-350t35.5-14.5Zm400 0Q730-379 730-400t-14.5-35.5Q701-450 680-450t-35.5 14.5Q630-421 630-400t14.5 35.5Q659-350 680-350t35.5-14.5Z';
 
 function themedFallbackIcon(): string {
@@ -73,17 +59,15 @@ const BLACKLIST_LABEL_KEYS: Record<string, string> = {
 
 const specterDir = () => getDataDir() || '/data/adb/specter';
 
-// The target list lives in target.txt under Tricky Store and in injector.toml
-// under OhMyKeymint, so every read and write goes through targets.sh, which
-// resolves the active backend via detect_keystore_manager.
-function targetsScript(): string {
+// target.txt (Tricky Store) / injector.toml (OhMyKeymint) — both via target.sh.
+function targetScript(): string {
   const moddir = getModuleDir();
   if (!moddir) throw new Error('module dir unavailable');
-  return shellEscape(moddir + '/webroot/common/targets.sh');
+  return shellEscape(moddir + '/features/target.sh');
 }
 
 async function readTargetList(): Promise<string> {
-  const { stdout } = await exec(`sh ${targetsScript()} get 2>/dev/null || echo ""`);
+  const { stdout } = await exec(`sh ${targetScript()} --list-raw 2>/dev/null || echo ""`);
   return stdout || '';
 }
 
@@ -94,8 +78,9 @@ async function writeTargetList(content: string): Promise<void> {
     `mkdir -p ${specterDir()} && printf '%s' "${encoded.stdout || ''}" | base64 -d > ${shellEscape(staging)}`
   );
   if (written.code !== 0) throw new Error(written.stderr || 'failed to stage target list');
-  const committed = await exec(`sh ${targetsScript()} set ${shellEscape(staging)}`);
+  const committed = await exec(`sh ${targetScript()} --set ${shellEscape(staging)}`);
   if (committed.code !== 0) throw new Error(committed.stderr || 'failed to commit target list');
+  await exec(`rm -f ${shellEscape(staging)}`);
 }
 
 function t(key: string, fallback: string): string {
@@ -1027,32 +1012,14 @@ export async function openTargetAppsManager() {
           if (a.state === 'force') return a.packageName + '!';
           if (a.state === 'conditional') return a.packageName + '?';
           return a.packageName;
-        });
+        })
+        .sort();
 
-      // FIXED_TARGETS (`android` plus the GMS/wallet family) are system
-      // packages that never show up in the user-app list, so this full
-      // overwrite silently drops them. Mirror features/target.sh: read
-      // FIXED_TARGETS from lib/constants.sh and re-add any entry the list
-      // does not already carry, bare, exactly as the shell does.
-      let fixed: string[] = [];
-      const moddir = getModuleDir();
-      if (moddir) {
-        try {
-          const r = await exec(`. ${shellEscape(moddir + '/lib/constants.sh')} 2>/dev/null; printf '%s' "$FIXED_TARGETS"`);
-          fixed = (r.stdout || '').trim().split(/\s+/).filter(Boolean);
-        } catch { /* fall through to the fallback below */ }
-      }
-      if (fixed.length === 0) fixed = FIXED_TARGETS_FALLBACK;
-
-      // Compare on the base name so an existing mode suffix is left alone.
-      const present = new Set(lines.map(l => l.replace(/[?!]$/, '')));
-      for (const pkg of fixed) if (!present.has(pkg)) lines.push(pkg);
-      lines.sort();
-
+      // FIXED_TARGETS are re-added by target.sh --set (pm -3 never lists them).
       const content = lines.join('\n');
       try {
         await writeTargetList(content);
-        appendToOutput(`[TARGET] Wrote ${lines.length} entries to the target list`);
+        appendToOutput(`[TARGET] Wrote target list (${lines.length} selected + FIXED_TARGETS)`);
         showToast(t('ta_prompt_saved', 'Target list saved'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
         await exec(`sh ${shellEscape(getModuleDir() + '/refresh_desc.sh')}`);
       } catch (e) {
