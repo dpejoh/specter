@@ -119,10 +119,11 @@ async function refreshChooseDesc() {
 
 async function openPifDeviceDialog() {
   const dialog = document.createElement('md-dialog');
+  dialog.className = 'pif-device-dialog';
   dialog.innerHTML = `
     <div slot="headline">${t('menu_pif_choose', 'Choose PIF Device')}</div>
-    <div slot="content" id="pif-device-content" style="min-height:120px;max-height:50vh;overflow:auto">
-      <p class="ap-dialog-desc">${t('menu_pif_choose_loading', 'Loading device list…')}</p>
+    <div slot="content" id="pif-device-content" class="pif-device-content pif-device-loading">
+      <md-circular-progress indeterminate></md-circular-progress>
     </div>
     <div slot="actions" class="fb-actions">
       <md-text-button id="pif-dev-add">${t('menu_pif_choose_add_file', 'Add from file')}</md-text-button>
@@ -158,6 +159,7 @@ async function openPifDeviceDialog() {
 
   const render = (devices: PifDevice[]) => {
     listed = devices;
+    content.classList.remove('pif-device-loading');
     const rows = devices.map(d => {
       const badge = d.imported
         ? `<span class="supporting-text">${t('menu_pif_choose_imported', 'Imported')}</span>`

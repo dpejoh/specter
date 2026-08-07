@@ -156,6 +156,8 @@ function mockListDir(path: string): string {
 if (typeof window.ksu === 'undefined') {
   const ksuMock = {
     exec(cmd: string, _opts: string, cbName: string) {
+      const delay =
+        cmd.includes('autopif.sh') && cmd.includes('--list') ? 3000 : 50;
       setTimeout(() => {
         const cb = getGlobal<(...args: unknown[]) => void>(cbName);
         if (typeof cb !== 'function') return;
@@ -211,7 +213,7 @@ if (typeof window.ksu === 'undefined') {
         } else {
           cb(0, '', '');
         }
-      }, 50);
+      }, delay);
     },
     spawn(_cmd: string, _argsJson: string, _opts: string, spName: string) {
       const child = getGlobal<{ stdout?: { emit: (ev: string, data: string) => void }; emit?: (ev: string, code: number) => void }>(spName);
