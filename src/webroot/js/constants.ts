@@ -46,6 +46,8 @@ export const FEATURE_I18N_KEYS: Record<string, string> = {
   boot_hash: 'prop_handler_boot_hash',
 };
 
+export const PIF_DIR = '/data/adb/modules/playintegrityfix';
+
 export function defaultSecurityPatch(): string {
   const now = new Date();
   const m = now.getMonth();

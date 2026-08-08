@@ -20,6 +20,7 @@ const t = (key: string, fallback: string): string => getTranslation(key) || fall
 let _homeInitialized = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
+  if ((import.meta as { env?: { DEV?: boolean } }).env?.DEV) await import('./dev-mock.js');
   const coreMWC = import('./material-core.js');
   try {
     await initBridge();
@@ -64,6 +65,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   import('./target-apps.js').then(m => m.wireTargetApps()).catch(() => {});
   import('./auto-target-ui.js').then(m => m.wireAutoTarget()).catch(() => {});
   import('./autopif-ui.js').then(m => m.wireAutopif()).catch(() => {});
+  import('./pif-device-ui.js').then(m => m.wirePifDevice()).catch(() => {});
   import('./autokeybox-ui.js').then(m => m.wireAutokeybox()).catch(() => {});
   import('./rom-fingerprint-ui.js').then(m => m.wireRomFingerprint()).catch(() => {});
   import('./adb-disabler-ui.js').then(m => m.wireAdbDisabler()).catch(() => {});

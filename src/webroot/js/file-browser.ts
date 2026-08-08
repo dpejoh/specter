@@ -8,15 +8,22 @@ interface FsEntry {
   path: string;
 }
 
-export async function openFileBrowser(onSelect: (path: string) => void) {
+export async function openFileBrowser(
+  onSelect: (path: string) => void,
+  opts?: { extensions?: string[]; emptyLabel?: string }
+) {
   const t = (key: string, fallback: string) => getTranslation(key) || fallback;
   let currentPath = '/sdcard';
   let entries: FsEntry[] = [];
   let selectedFile: string | null = null;
   let allFiles = false;
+  const extensions = opts?.extensions || ['.xml', '.bak'];
+  const emptyLabel = opts?.emptyLabel || getTranslation('file_browser_empty') || 'No XML files found';
 
   const dialog = document.createElement('md-dialog');
   dialog.className = 'fb-dialog';
+
+  const matchesExt = (name: string) => extensions.some(ext => name.endsWith(ext));
 
   function rowHTML(path: string, icon: string, name: string, isFolder: boolean, isSelected: boolean): string {
     const cls = 'fb-row' + (isFolder ? '' : ' fb-row--file') + (isSelected ? ' fb-row--selected' : '');
@@ -32,7 +39,7 @@ export async function openFileBrowser(onSelect: (path: string) => void) {
 
   function render() {
     const dirs = entries.filter(e => e.isFolder);
-    const files = entries.filter(e => !e.isFolder && (allFiles || e.name.endsWith('.xml') || e.name.endsWith('.bak')));
+    const files = entries.filter(e => !e.isFolder && (allFiles || matchesExt(e.name)));
     dialog.innerHTML = `
       <div slot="headline" class="fb-headline">
         ${currentPath !== '/sdcard' ? '<md-icon-button id="fb-back" class="fb-back-btn"><md-icon>arrow_back</md-icon></md-icon-button>' : ''}
@@ -41,7 +48,7 @@ export async function openFileBrowser(onSelect: (path: string) => void) {
       <div slot="content" class="fb-content">
         ${currentPath !== '/' && currentPath !== '/sdcard' ? rowHTML('..', 'folder_open', '..', true, false) : ''}
         ${dirs.map(d => rowHTML(d.path, 'folder', d.name, true, false)).join('')}
-        ${files.length === 0 && dirs.length === 0 ? '<div class="fb-empty">' + (getTranslation('file_browser_empty') || 'No XML files found') + '</div>' : ''}
+        ${files.length === 0 && dirs.length === 0 ? '<div class="fb-empty">' + emptyLabel + '</div>' : ''}
         ${files.map(f => rowHTML(f.path, 'description', f.name, false, selectedFile === f.path)).join('')}
         ${!allFiles && files.length < entries.length ? '<div class="fb-show-all"><span id="fb-show-all">' + (getTranslation('file_browser_show_all') || 'Show all files') + '</span></div>' : ''}
       </div>

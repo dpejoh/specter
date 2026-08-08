@@ -1237,6 +1237,32 @@ md-dialog {
   --md-filled-button-container-shape: 9999px;
 }
 
+.pif-device-dialog {
+  width: 400px;
+  max-width: calc(100vw - 32px);
+}
+
+.pif-device-dialog [slot="content"].pif-device-content {
+  padding: 4px 16px 8px;
+}
+
+.pif-device-pane {
+  box-sizing: border-box;
+  height: 380px;
+  overflow-y: auto;
+}
+
+.pif-device-pane.pif-device-loading {
+  overflow: hidden;
+}
+
+.pif-device-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
 .private-dialog [slot="content"] {
   display: flex;
   flex-direction: column;
