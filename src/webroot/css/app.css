@@ -1242,17 +1242,25 @@ md-dialog {
   max-width: calc(100vw - 32px);
 }
 
-.pif-device-content {
+.pif-device-dialog [slot="content"].pif-device-content {
   padding: 4px 16px 8px;
+}
+
+.pif-device-pane {
+  box-sizing: border-box;
   height: 380px;
   overflow-y: auto;
 }
 
-.pif-device-content.pif-device-loading {
+.pif-device-pane.pif-device-loading {
+  overflow: hidden;
+}
+
+.pif-device-spinner {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 48px 20px;
+  height: 100%;
 }
 
 .private-dialog [slot="content"] {

@@ -122,8 +122,12 @@ async function openPifDeviceDialog() {
   dialog.className = 'pif-device-dialog';
   dialog.innerHTML = `
     <div slot="headline">${t('menu_pif_choose', 'Choose PIF Device')}</div>
-    <div slot="content" id="pif-device-content" class="pif-device-content pif-device-loading">
-      <md-circular-progress indeterminate></md-circular-progress>
+    <div slot="content" class="pif-device-content">
+      <div id="pif-device-pane" class="pif-device-pane pif-device-loading" style="height:380px">
+        <div class="pif-device-spinner">
+          <md-circular-progress indeterminate></md-circular-progress>
+        </div>
+      </div>
     </div>
     <div slot="actions" class="fb-actions">
       <md-text-button id="pif-dev-add">${t('menu_pif_choose_add_file', 'Add from file')}</md-text-button>
@@ -133,6 +137,7 @@ async function openPifDeviceDialog() {
     </div>
   `;
   document.body.appendChild(dialog);
+  dialog.quick = true;
   dialog.addEventListener('close', () => document.body.removeChild(dialog));
   dialog.querySelector('#pif-dev-cancel')!.addEventListener('click', () => dialog.close());
 
@@ -140,7 +145,7 @@ async function openPifDeviceDialog() {
   const savedProducts = new Set(saved.map(d => d.product));
   let dirty = false;
   let listed: PifDevice[] = [];
-  const content = dialog.querySelector('#pif-device-content') as HTMLElement;
+  const content = dialog.querySelector('#pif-device-pane') as HTMLElement;
   const saveBtn = dialog.querySelector('#pif-dev-save') as HTMLButtonElement;
 
   const selectedFromDom = (): PifDevice[] => {
