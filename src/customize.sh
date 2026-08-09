@@ -7,7 +7,7 @@ MODDIR="$MODPATH"
 rm -rf /data/adb/modules/Specter /data/adb/Specter
 
 ui_print ""
-ui_print "____                  _            "
+ui_print " ____                  _            "
 ui_print "/ ___| _ __   ___  ___| |_ ___ _ __ "
 ui_print "\\___ \\| '_ \\ / _ \\/ __| __/ _ \\ '__|"
 ui_print " ___) | |_) |  __/ (__| ||  __/ |   "
