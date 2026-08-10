@@ -13,12 +13,14 @@ const t = (key: string, fallback: string): string => getTranslation(key) || fall
 
 const IMPORTED_PREFIX = 'imported:';
 
-// Keep in sync with src/lib/pif_preferred.sh PIF_BOT_MIRRORS
-const DEVICE_LIST_URLS = [
-  'https://fastly.jsdelivr.net/gh/KOWX712/PlayIntegrityFix@bot/device_list.json',
-  'https://raw.githubusercontent.com/KOWX712/PlayIntegrityFix/bot/device_list.json',
-  'https://gh.sevencdn.com/https://raw.githubusercontent.com/KOWX712/PlayIntegrityFix/bot/device_list.json',
+// Keep in sync with src/lib/pif_preferred.sh pif_bot_mirror_urls
+const PIF_REPO = 'KOWX712/PlayIntegrityFix';
+const pifBotUrls = (path: string): string[] => [
+  `https://fastly.jsdelivr.net/gh/${PIF_REPO}@${path}`,
+  `https://raw.githubusercontent.com/${PIF_REPO}/${path}`,
+  `https://gh.sevencdn.com/https://raw.githubusercontent.com/${PIF_REPO}/${path}`,
 ];
+const DEVICE_LIST_URLS = pifBotUrls('bot/device_list.json');
 
 type PifDevice = { model: string; product: string; imported?: boolean };
 
