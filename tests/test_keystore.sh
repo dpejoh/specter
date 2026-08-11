@@ -288,6 +288,8 @@ detect_keystore_manager
 ksm_set_mode patch
 assert_eq "teesim: mode on default" "patch" "$(ksm_get_mode)"
 assert_not_contains "teesim: no specter profile" "$(cat "$TEESIM_CONFIG")" '"specter"'
+_before_set=$(ksm_get_security_patch) || _before_set=""
+assert_eq "teesim: sentinel boot not a date" "" "$_before_set"
 ksm_set_security_patch "2026-03-05"
 assert_eq "teesim: patch on default" "2026-03-05" "$(ksm_get_security_patch)"
 printf 'android\ncom.google.android.gms!\ncom.new.app\n' > "$TEST_ROOT/staging_teesim.txt"
@@ -327,6 +329,7 @@ cat > "$MODULES_BASE/teesim/config.default.json" << 'EOF'
 }
 EOF
 rm -f "$TEESIM_CONFIG"
+_teesim_repair_config "$TEESIM_CONFIG"
 assert_contains "teesim repair: missing→seed" "$(ksm_read_targets)" "com.google.android.gms"
 printf '%s\n' '{"version":1,"profiles":{"other":{"keybox":"keybox.xml","mode":"generation","patchLevel":{"system":"today","vendor":"YYYY-MM-05","boot":"YYYY-MM-05"},"osVersion":"","brand":"","device":"","product":"","manufacturer":"","model":"","serial":"","imei":"","meid":"","imei2":"","apps":["com.example.app"]}}}' > "$TEESIM_CONFIG"
 _teesim_repair_config "$TEESIM_CONFIG"

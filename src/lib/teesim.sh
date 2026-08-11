@@ -241,6 +241,9 @@ _teesim_repair_config() {
     return 0
   fi
 
+  [ -s "$_trc_cfg" ] || { unset _trc_cfg _trc_seed; return 0; }
+  grep -q '"profiles"' "$_trc_cfg" 2>/dev/null || { unset _trc_cfg _trc_seed; return 0; }
+
   _teesim_to_ir "$_trc_cfg" 2>/dev/null | grep -q '^P default$' && {
     unset _trc_cfg _trc_seed
     return 0
@@ -279,26 +282,17 @@ _teesim_write_ir() {
     unset _twi_file _twi_ir _twi_tmp
     return 1
   }
-  if [ -f "$_twi_file" ]; then
-    cat "$_twi_tmp" > "$_twi_file" || {
-      rm -f "$_twi_tmp"
-      unset _twi_file _twi_ir _twi_tmp
-      return 1
-    }
+  mv -f "$_twi_tmp" "$_twi_file" || {
     rm -f "$_twi_tmp"
-  else
-    mv -f "$_twi_tmp" "$_twi_file" || {
-      unset _twi_file _twi_ir _twi_tmp
-      return 1
-    }
-  fi
+    unset _twi_file _twi_ir _twi_tmp
+    return 1
+  }
   unset _twi_file _twi_ir _twi_tmp
 }
 
 _teesim_read_apps() {
   _tra_file="$1"
-  _teesim_repair_config "$_tra_file"
-  [ -f "$_tra_file" ] || return 0
+  [ -f "$_tra_file" ] && [ -s "$_tra_file" ] || { unset _tra_file; return 0; }
   _teesim_to_ir "$_tra_file" | awk '/^A / { print substr($0, 3) }' | sort -u
   unset _tra_file
 }
@@ -347,26 +341,19 @@ _teesim_commit_apps() {
 
 _teesim_get_boot_patch() {
   _tgp_file="$1"
-  [ -f "$_tgp_file" ] || return 1
-  _tgp_ir="${_tgp_file}.ir.$$"
-  _teesim_load_ir "$_tgp_file" "$_tgp_ir" || {
-    rm -f "$_tgp_ir"
-    unset _tgp_file _tgp_ir
-    return 1
-  }
-  _tgp_val=$(awk '
+  [ -f "$_tgp_file" ] && [ -s "$_tgp_file" ] || return 1
+  _tgp_val=$(_teesim_to_ir "$_tgp_file" | awk '
     /^P / { cur = $2 }
     cur == "default" && /^B / { print substr($0, 3); exit }
-  ' "$_tgp_ir") || _tgp_val=""
-  rm -f "$_tgp_ir"
+  ') || _tgp_val=""
   case "$_tgp_val" in
     [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9])
       printf '%s\n' "$_tgp_val"
-      unset _tgp_file _tgp_ir _tgp_val
+      unset _tgp_file _tgp_val
       return 0
       ;;
   esac
-  unset _tgp_file _tgp_ir _tgp_val
+  unset _tgp_file _tgp_val
   return 1
 }
 

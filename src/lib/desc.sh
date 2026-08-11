@@ -33,6 +33,10 @@ refresh_module_description() {
 
     _apps=$(ksm_read_targets 2>/dev/null | sort -u | wc -l)
     _patch=$(ksm_get_security_patch 2>/dev/null) || _patch=""
+    if [ "$KSM_FORMAT" = "json" ] && [ "${_apps:-0}" -eq 0 ]; then
+      unset _problems _cf _new_desc _escaped _kb_info _kb_src _kb_ver _kb_rev _kb_soft _apps _patch _title _ksud
+      return 0
+    fi
     [ -z "$_patch" ] && _patch="-"
 
     if [ -f "$KSM_KEYBOX" ] || [ -f "$KSM_LOCKED" ]; then
