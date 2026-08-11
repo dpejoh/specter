@@ -69,7 +69,9 @@ _installed_list=$(pm list packages -3 2>/dev/null | cut -d: -f2 | sort -u)
 _bl_set=""
 [ -f "$BLACKLIST_ENABLED" ] && [ -s "$BLACKLIST" ] && _bl_set=$(cat "$BLACKLIST")
 _TMP_CLEAN="$SPECTER_DIR/.auto_target_clean.$$"
+_SEEN="$SPECTER_DIR/.auto_target_seen.$$"
 : > "$_TMP_CLEAN"
+: > "$_SEEN"
 
 _cleaned=0
 while IFS= read -r _line || [ -n "$_line" ]; do
@@ -77,6 +79,12 @@ while IFS= read -r _line || [ -n "$_line" ]; do
   case "$_line" in \[*\]) echo "$_line" >> "$_TMP_CLEAN"; continue ;; esac
   _base="$_line"
   case "$_base" in *\!) _base=${_base%!} ;; *\?) _base=${_base%\?} ;; esac
+  # Skip duplicate bases (overlapping scans can re-append the same pkgs).
+  if grep -Fxq "$_base" "$_SEEN" 2>/dev/null; then
+    _cleaned=$((_cleaned + 1))
+    continue
+  fi
+  echo "$_base" >> "$_SEEN"
   _keep=false
   for _fixed in $FIXED_TARGETS; do
     [ "$_base" = "$_fixed" ] && { _keep=true; break; }
@@ -99,6 +107,6 @@ ksm_commit_targets "$_TMP_CLEAN"
 unset _installed_list _bl_set _cleaned _fixed _keep _base
 
 cp "$TEMP_LIST" "$KNOWN_PKGS" 2>/dev/null || true
-rm -f "$TEMP_LIST" "$_EXISTING" "$_STAGING"
+rm -f "$TEMP_LIST" "$_EXISTING" "$_STAGING" "$_SEEN"
 log_i "AUTO_TARGET" "Auto-target scan complete"
 exit 0

@@ -110,11 +110,6 @@ const MOCK_APP_CATALOG: Record<string, string> = {
 const APP_LABELS_CACHE_PATH = '/data/adb/specter/app_labels.json';
 const PIF_IMPORTED_DIR = '/data/adb/specter/pif_imported';
 
-const MOCK_PIF_DEVICES = JSON.stringify({
-  model: ['Pixel 6', 'Pixel 8 Pro', 'Pixel 9 Pro XL', 'Pixel 10 Pro XL'],
-  product: ['oriole_beta', 'husky_beta', 'komodo_beta', 'mustang_beta'],
-});
-
 const MOCK_VALID_PROP = [
   'FINGERPRINT=google/blazer/blazer:17/CP2A.260705.006/15641320:user/release-keys',
   'MANUFACTURER=Google',
@@ -156,16 +151,12 @@ function mockListDir(path: string): string {
 if (typeof window.ksu === 'undefined') {
   const ksuMock = {
     exec(cmd: string, _opts: string, cbName: string) {
-      const delay =
-        cmd.includes('autopif.sh') && cmd.includes('--list') ? 3000 : 50;
       setTimeout(() => {
         const cb = getGlobal<(...args: unknown[]) => void>(cbName);
         if (typeof cb !== 'function') return;
 
         if (cmd.includes('playintegrityfix/module.prop')) {
           cb(0, 'name=Play Integrity Fix [INJECT]\n', '');
-        } else if (cmd.includes('autopif.sh') && cmd.includes('--list')) {
-          cb(0, MOCK_PIF_DEVICES, '');
         } else if (cmd.includes('target.sh --set')) {
           cb(0, '', '');
         } else if (cmd.includes('target.sh --list-raw') || cmd.includes('target.txt')) {
@@ -215,7 +206,7 @@ if (typeof window.ksu === 'undefined') {
         } else {
           cb(0, '', '');
         }
-      }, delay);
+      }, 50);
     },
     spawn(_cmd: string, _argsJson: string, _opts: string, spName: string) {
       const child = getGlobal<{ stdout?: { emit: (ev: string, data: string) => void }; emit?: (ev: string, code: number) => void }>(spName);

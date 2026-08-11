@@ -31,7 +31,7 @@ refresh_module_description() {
     [ -z "$_kb_src" ] && _kb_src=$(cfg_get 'keybox_provider' '')
     [ -z "$_kb_src" ] && [ "$(cfg_get 'keybox_private' 'false')" = "true" ] && _kb_src="Private"
 
-    _apps=$(ksm_read_targets 2>/dev/null | wc -l)
+    _apps=$(ksm_read_targets 2>/dev/null | sort -u | wc -l)
     _patch=$(ksm_get_security_patch 2>/dev/null) || _patch=""
     [ -z "$_patch" ] && _patch="-"
 
