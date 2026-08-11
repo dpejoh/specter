@@ -230,6 +230,33 @@ _teesim_empty_ir() {
   unset _tei_f
 }
 
+_teesim_repair_config() {
+  _trc_cfg="${1:-$TEESIM_CONFIG}"
+  _trc_seed="${MODULES_BASE}/teesim/config.default.json"
+  mkdir -p "$(dirname "$_trc_cfg")" 2>/dev/null || true
+  [ -f "$_trc_seed" ] || { unset _trc_cfg _trc_seed; return 0; }
+
+  if [ ! -f "$_trc_cfg" ]; then
+    cp "$_trc_seed" "$_trc_cfg" 2>/dev/null || true
+    unset _trc_cfg _trc_seed
+    return 0
+  fi
+
+  _teesim_to_ir "$_trc_cfg" 2>/dev/null | grep -q '^P default$' && {
+    unset _trc_cfg _trc_seed
+    return 0
+  }
+
+  _trc_ir="${_trc_cfg}.repair.$$"
+  _teesim_to_ir "$_trc_seed" | awk '/^P / { k = ($2 == "default"); if (k) print; next } k' > "$_trc_ir"
+  if [ -s "$_trc_ir" ]; then
+    _teesim_to_ir "$_trc_cfg" >> "$_trc_ir"
+    _teesim_write_ir "$_trc_cfg" "$_trc_ir" || true
+  fi
+  rm -f "$_trc_ir"
+  unset _trc_cfg _trc_seed _trc_ir
+}
+
 _teesim_ensure_specter_ir() {
   _tes_ir="$1"
   if grep -q "^P ${TEESIM_PROFILE}\$" "$_tes_ir" 2>/dev/null; then
@@ -259,6 +286,7 @@ _teesim_ensure_specter_ir() {
 
 _teesim_load_ir() {
   _tli_file="$1" _tli_out="$2"
+  _teesim_repair_config "$_tli_file"
   if [ -f "$_tli_file" ]; then
     _teesim_to_ir "$_tli_file" > "$_tli_out" || { unset _tli_file _tli_out; return 1; }
   else
@@ -295,6 +323,7 @@ _teesim_write_ir() {
 
 _teesim_read_apps() {
   _tra_file="$1"
+  _teesim_repair_config "$_tra_file"
   [ -f "$_tra_file" ] || return 0
   _teesim_to_ir "$_tra_file" | awk '/^A / { print substr($0, 3) }' | sort -u
   unset _tra_file
@@ -386,7 +415,7 @@ _teesim_set_patch() {
     unset _tsp_cfg _tsp_date _tsp_ir
     return 1
   }
-  _tsp_yyyymm=$(printf '%s' "$_tsp_date" | cut -d'-' -f1-2 | tr -d '-')
+  _tsp_yyyymm=$(printf '%s' "$_tsp_date" | cut -d'-' -f1-2)
   awk -v neu="$TEESIM_PROFILE" -v sys="$_tsp_yyyymm" -v boot="$_tsp_date" -v vend="$_tsp_date" '
     BEGIN { cur = "" }
     /^P / { cur = $2; print; next }

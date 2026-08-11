@@ -296,11 +296,37 @@ assert_not_contains "teesim: gms moved off default" "$(awk '/"default"/,/^    \}
 assert_contains "teesim: vending stays on default" "$_cfg" "com.android.vending"
 ksm_set_security_patch "2026-06-05"
 assert_eq "teesim: patch" "2026-06-05" "$(ksm_get_security_patch)"
+assert_contains "teesim: system YYYY-MM" "$(cat "$TEESIM_CONFIG")" '"system": "2026-06"'
 ksm_set_mode generation
 assert_eq "teesim: mode set" "generation" "$(ksm_get_mode)"
 printf '<AndroidAttestation/>\n' > "$TEST_ROOT/teesim_kb.xml"
 ksm_install_keybox "$TEST_ROOT/teesim_kb.xml" copy
 assert_contains "teesim: keybox" "$(cat "$TEESIM_KEYBOX")" "<AndroidAttestation/>"
+
+mkdir -p "$MODULES_BASE/teesim"
+cat > "$MODULES_BASE/teesim/config.default.json" << 'EOF'
+{
+  "version": 1,
+  "profiles": {
+    "default": {
+      "keybox": "keybox.xml",
+      "mode": "patch",
+      "patchLevel": { "system": "today", "vendor": "YYYY-MM-05", "boot": "YYYY-MM-05" },
+      "osVersion": "",
+      "brand": "", "device": "", "product": "", "manufacturer": "", "model": "",
+      "serial": "", "imei": "", "meid": "", "imei2": "",
+      "apps": ["com.google.android.gms", "com.android.vending"]
+    }
+  }
+}
+EOF
+rm -f "$TEESIM_CONFIG"
+assert_contains "teesim repair: missing→seed" "$(ksm_read_targets)" "com.google.android.gms"
+printf '%s\n' '{"version":1,"profiles":{"specter":{"keybox":"keybox.xml","mode":"generation","patchLevel":{"system":"today","vendor":"YYYY-MM-05","boot":"YYYY-MM-05"},"osVersion":"","brand":"","device":"","product":"","manufacturer":"","model":"","serial":"","imei":"","meid":"","imei2":"","apps":[]}}}' > "$TEESIM_CONFIG"
+_teesim_repair_config "$TEESIM_CONFIG"
+assert_contains "teesim repair: default restored" "$(cat "$TEESIM_CONFIG")" '"default"'
+assert_contains "teesim repair: specter mode kept" "$(cat "$TEESIM_CONFIG")" '"mode": "generation"'
+assert_contains "teesim repair: seed apps" "$(ksm_read_targets)" "com.android.vending"
 
 # ---------- keybox install: in-place overwrite; fail-closed ----------
 bootstrap
