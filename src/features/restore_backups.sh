@@ -26,7 +26,7 @@ if [ -f "$BACKUP_DIR/keybox.xml.bak" ] && [ -n "$KSM_KEYBOX" ]; then
 fi
 
 case "$KSM_FORMAT" in
-  toml)
+  toml|json)
     if [ -f "$BACKUP_DIR/targets.list.bak" ]; then
       _rb_tmp="$SPECTER_DIR/.restore_targets.$$"
       cp "$BACKUP_DIR/targets.list.bak" "$_rb_tmp"

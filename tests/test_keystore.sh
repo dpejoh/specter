@@ -35,6 +35,30 @@ assert_eq "detect: both -> trickystore" "trickystore" "$KSM"
 
 bootstrap
 source_libs
+mk_module teesim "TEESimulator"
+mkdir -p "$TEESIM_DIR"
+detect_keystore_manager
+assert_eq "detect: teesim" "teesim" "$KSM"
+assert_eq "detect: format json" "json" "$KSM_FORMAT"
+
+bootstrap
+source_libs
+mk_module tricky_store "Tricky Store"
+mk_module teesim "TEESimulator"
+mkdir -p "$TEESIM_DIR"
+detect_keystore_manager
+assert_eq "detect: ts+teesim -> trickystore" "trickystore" "$KSM"
+
+bootstrap
+source_libs
+mk_module teesim "TEESimulator"
+mkdir -p "$TEESIM_DIR"
+set_cfg "keystore_manager" "teesim"
+detect_keystore_manager
+assert_eq "detect: override=teesim" "teesim" "$KSM"
+
+bootstrap
+source_libs
 mk_module tricky_store "Tricky Store"
 mk_module oh_my_keymint "OhMyKeymint"
 set_cfg "keystore_manager" "omk"
@@ -237,6 +261,46 @@ assert_not_contains "targets toml: suffix stripped" "$_kt_out2" "com.new.app!"
 assert_contains "targets toml: other.app" "$_kt_out2" "com.other.app"
 assert_contains "targets toml: siblings kept" "$(cat "$OMK_INJECTOR")" "[main]"
 assert_file_not_exists "targets toml: no restart" "$OMK_RESTART_DIR/restart.keymint"
+
+# ---------- teesim json ----------
+bootstrap
+source_libs
+mk_module teesim "TEESimulator"
+mkdir -p "$TEESIM_DIR"
+cat > "$TEESIM_CONFIG" << 'EOF'
+{
+  "version": 1,
+  "profiles": {
+    "default": {
+      "keybox": "keybox.xml",
+      "mode": "generation",
+      "patchLevel": { "system": "today", "vendor": "YYYY-MM-05", "boot": "YYYY-MM-05" },
+      "osVersion": "",
+      "brand": "google",
+      "device": "", "product": "", "manufacturer": "", "model": "",
+      "serial": "", "imei": "", "meid": "", "imei2": "",
+      "apps": ["com.google.android.gms", "com.android.vending"]
+    }
+  }
+}
+EOF
+detect_keystore_manager
+printf 'android\ncom.google.android.gms!\ncom.new.app\n' > "$TEST_ROOT/staging_teesim.txt"
+ksm_commit_targets "$TEST_ROOT/staging_teesim.txt"
+_cfg=$(cat "$TEESIM_CONFIG")
+assert_contains "teesim: specter profile" "$_cfg" '"specter"'
+assert_contains "teesim: mode patch on create" "$_cfg" '"mode": "patch"'
+assert_contains "teesim: seeded brand" "$_cfg" '"brand": "google"'
+assert_contains "teesim: apps on specter" "$(ksm_read_targets)" "com.new.app"
+assert_not_contains "teesim: gms moved off default" "$(awk '/"default"/,/^    \}/' "$TEESIM_CONFIG")" "com.google.android.gms"
+assert_contains "teesim: vending stays on default" "$_cfg" "com.android.vending"
+ksm_set_security_patch "2026-06-05"
+assert_eq "teesim: patch" "2026-06-05" "$(ksm_get_security_patch)"
+ksm_set_mode generation
+assert_eq "teesim: mode set" "generation" "$(ksm_get_mode)"
+printf '<AndroidAttestation/>\n' > "$TEST_ROOT/teesim_kb.xml"
+ksm_install_keybox "$TEST_ROOT/teesim_kb.xml" copy
+assert_contains "teesim: keybox" "$(cat "$TEESIM_KEYBOX")" "<AndroidAttestation/>"
 
 # ---------- keybox install: in-place overwrite; fail-closed ----------
 bootstrap

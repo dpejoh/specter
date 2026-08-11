@@ -27,12 +27,20 @@ else
   ui_print "- Zygisk: none"
 fi
 
-# Tricky Store / TEESimulator version
+# Tricky Store / TEESimulator-RS (id=tricky_store)
 _ts_name=$(_ts_prop)
 if [ -n "$_ts_name" ]; then
   ui_print "- $_ts_name"
 else
   ui_print "- Tricky Store: none"
+fi
+
+# JingMatrix TEESimulator 4.0 (id=teesim)
+_teesim_name=$(_teesim_prop)
+if [ -n "$_teesim_name" ]; then
+  ui_print "- $_teesim_name"
+else
+  ui_print "- TEESimulator: none"
 fi
 
 # OhMyKeymint version
@@ -63,20 +71,20 @@ ui_print ""
 
 unset _zygisk_name
 
-# Install missing: TEESimulator-RS (skip entirely if OMK is present — OMK is
-# its own keystore implementation and doesn't need/use Tricky Store or a
-# TEE simulator fork)
-if [ -z "$_ts_name" ] && [ -z "$_omk_name" ]; then
+# Auto-install TEESimulator-RS only when no keystore backend is present.
+if [ -z "$_ts_name" ] && [ -z "$_teesim_name" ] && [ -z "$_omk_name" ]; then
   ui_print "- Installing TEESimulator-RS.."
   if install_module_from_github "Enginex0/TEESimulator-RS" "TEESimulator-RS"; then
     ui_print "- TEESimulator-RS installed"
   else
     ui_print "- TEESimulator-RS not available"
   fi
+elif [ -n "$_teesim_name" ]; then
+  ui_print "- TEESimulator detected, skipping TEESimulator-RS"
 elif [ -n "$_omk_name" ]; then
   ui_print "- OhMyKeymint detected, skipping TEESimulator-RS"
 fi
-unset _ts_name _omk_name
+unset _ts_name _teesim_name _omk_name
 
 # Mark first-boot setup as pending (runs once after reboot in service.sh)
 mkdir -p "$SPECTER_DIR"

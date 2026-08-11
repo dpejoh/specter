@@ -9,7 +9,7 @@ log_d "KEYBOX" "Starting keybox fetch/install"
 check_network || { log_e "KEYBOX" "No internet connection"; exit 1; }
 
 detect_keystore_manager
-ksm_available || die "No keystore manager (Tricky Store / OhMyKeymint) data directory found"
+ksm_available || die "No keystore manager (Tricky Store / TEESimulator / OhMyKeymint) data directory found"
 
 DECODE_FILE="/data/local/tmp/keybox_decode.$$"
 TEMP_FILE="/data/local/tmp/keybox.tmp.$$"

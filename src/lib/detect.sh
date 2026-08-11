@@ -59,6 +59,11 @@ _omk_prop() {
   module_detect "${OMK_MODULE##*/}" && return 0
 }
 
+_teesim_prop() {
+  module_detect "teesim"
+}
+
+# TrickyStore-layout TEESimulator / TEESimulator-RS only (locked.xml path).
 _is_teesimulator() {
   case "$(_ts_prop)" in
     *TEESimulator*) return 0 ;;
