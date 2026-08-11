@@ -285,15 +285,21 @@ cat > "$TEESIM_CONFIG" << 'EOF'
 }
 EOF
 detect_keystore_manager
+ksm_set_mode patch
+assert_eq "teesim: mode on default" "patch" "$(ksm_get_mode)"
+assert_not_contains "teesim: no specter profile" "$(cat "$TEESIM_CONFIG")" '"specter"'
+ksm_set_security_patch "2026-03-05"
+assert_eq "teesim: patch on default" "2026-03-05" "$(ksm_get_security_patch)"
 printf 'android\ncom.google.android.gms!\ncom.new.app\n' > "$TEST_ROOT/staging_teesim.txt"
 ksm_commit_targets "$TEST_ROOT/staging_teesim.txt"
 _cfg=$(cat "$TEESIM_CONFIG")
-assert_contains "teesim: specter profile" "$_cfg" '"specter"'
-assert_contains "teesim: mode patch on create" "$_cfg" '"mode": "patch"'
-assert_contains "teesim: seeded brand" "$_cfg" '"brand": "google"'
-assert_contains "teesim: apps on specter" "$(ksm_read_targets)" "com.new.app"
-assert_not_contains "teesim: gms moved off default" "$(awk '/"default"/,/^    \}/' "$TEESIM_CONFIG")" "com.google.android.gms"
-assert_contains "teesim: vending stays on default" "$_cfg" "com.android.vending"
+assert_contains "teesim: only default profile" "$_cfg" '"default"'
+assert_not_contains "teesim: still no specter" "$_cfg" '"specter"'
+assert_contains "teesim: mode preserved" "$_cfg" '"mode": "patch"'
+assert_contains "teesim: brand preserved" "$_cfg" '"brand": "google"'
+assert_contains "teesim: new.app on default" "$(ksm_read_targets)" "com.new.app"
+assert_contains "teesim: gms on default" "$(ksm_read_targets)" "com.google.android.gms"
+assert_not_contains "teesim: vending removed" "$(ksm_read_targets)" "com.android.vending"
 ksm_set_security_patch "2026-06-05"
 assert_eq "teesim: patch" "2026-06-05" "$(ksm_get_security_patch)"
 assert_contains "teesim: system YYYY-MM" "$(cat "$TEESIM_CONFIG")" '"system": "2026-06"'
@@ -322,10 +328,10 @@ cat > "$MODULES_BASE/teesim/config.default.json" << 'EOF'
 EOF
 rm -f "$TEESIM_CONFIG"
 assert_contains "teesim repair: missing→seed" "$(ksm_read_targets)" "com.google.android.gms"
-printf '%s\n' '{"version":1,"profiles":{"specter":{"keybox":"keybox.xml","mode":"generation","patchLevel":{"system":"today","vendor":"YYYY-MM-05","boot":"YYYY-MM-05"},"osVersion":"","brand":"","device":"","product":"","manufacturer":"","model":"","serial":"","imei":"","meid":"","imei2":"","apps":[]}}}' > "$TEESIM_CONFIG"
+printf '%s\n' '{"version":1,"profiles":{"other":{"keybox":"keybox.xml","mode":"generation","patchLevel":{"system":"today","vendor":"YYYY-MM-05","boot":"YYYY-MM-05"},"osVersion":"","brand":"","device":"","product":"","manufacturer":"","model":"","serial":"","imei":"","meid":"","imei2":"","apps":["com.example.app"]}}}' > "$TEESIM_CONFIG"
 _teesim_repair_config "$TEESIM_CONFIG"
 assert_contains "teesim repair: default restored" "$(cat "$TEESIM_CONFIG")" '"default"'
-assert_contains "teesim repair: specter mode kept" "$(cat "$TEESIM_CONFIG")" '"mode": "generation"'
+assert_contains "teesim repair: other kept" "$(cat "$TEESIM_CONFIG")" '"other"'
 assert_contains "teesim repair: seed apps" "$(ksm_read_targets)" "com.android.vending"
 
 # ---------- keybox install: in-place overwrite; fail-closed ----------

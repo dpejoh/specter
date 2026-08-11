@@ -486,7 +486,7 @@ export async function openTargetAppsManager() {
     d.innerHTML = `
       <div slot="headline">${t('ta_teesim_mode_title', 'Operation Mode')}</div>
       <div slot="content" class="ta-mode-content">
-        <p class="supporting-text ta-mode-desc">${t('ta_teesim_mode_desc', 'Applies to all apps in Specter TEESimulator profile')}</p>
+        <p class="supporting-text ta-mode-desc">${t('ta_teesim_mode_desc', 'Applies to all apps in the TEESimulator default profile')}</p>
         <md-outlined-segmented-button-set id="ta-teesim-mode-set">
           <md-outlined-segmented-button value="patch" selected label="${t('ta_teesim_mode_patch', 'Patch')}"></md-outlined-segmented-button>
           <md-outlined-segmented-button value="generation" label="${t('ta_teesim_mode_generation', 'Generation')}"></md-outlined-segmented-button>

@@ -1,14 +1,6 @@
 # shellcheck shell=sh
-# JingMatrix TEESimulator (id=teesim) — Specter owns profiles.specter in config.json.
-#
-# Nested JSON is awkward to edit in shell, so we flatten to one fact per line (IR),
-# edit that, then write JSON back. Letter codes:
+# JingMatrix TEESimulator — profiles.default in config.json via IR (awk; shell was too slow):
 #   P id | K keybox | M mode | O osVersion | S/V/B patch | I field val | A pkg
-# JSON↔IR stays in awk — a pure-shell round-trip was much slower on-device.
-
-: "${TEESIM_PROFILE:=specter}"
-
-_teesim_identity_keys="brand device product manufacturer model serial imei meid imei2"
 
 _teesim_to_ir() {
   _tti_file="$1"
@@ -189,11 +181,18 @@ _teesim_from_ir() {
       next
     }
     END {
+      nkeep = 0
+      for (p = 1; p <= nprof; p++) {
+        id = order[p]
+        if (napps[id] < 1) continue
+        keep[++nkeep] = id
+      }
+      if (nkeep < 1) exit 1
       print "{"
       print "  \"version\": 1,"
       print "  \"profiles\": {"
-      for (p = 1; p <= nprof; p++) {
-        id = order[p]
+      for (p = 1; p <= nkeep; p++) {
+        id = keep[p]
         printf "    \"%s\": {\n", jesc(id)
         printf "      \"keybox\": \"%s\",\n", jesc(keybox[id])
         printf "      \"mode\": \"%s\",\n", jesc(mode[id])
@@ -212,7 +211,7 @@ _teesim_from_ir() {
           printf "        \"%s\"%s\n", jesc(apps[id, a]), comma
         }
         printf "      ]\n"
-        if (p < nprof) print "    },"
+        if (p < nkeep) print "    },"
         else print "    }"
       }
       print "  }"
@@ -227,11 +226,7 @@ _teesim_from_ir() {
 }
 
 _teesim_empty_ir() {
-  printf 'P %s\nK keybox.xml\nM patch\nO \nS today\nV YYYY-MM-05\nB YYYY-MM-05\n' "$TEESIM_PROFILE"
-  for _tei_f in $_teesim_identity_keys; do
-    printf 'I %s \n' "$_tei_f"
-  done
-  unset _tei_f
+  printf 'P default\nK keybox.xml\nM patch\nO \nS today\nV YYYY-MM-05\nB YYYY-MM-05\n'
 }
 
 _teesim_repair_config() {
@@ -261,33 +256,6 @@ _teesim_repair_config() {
   unset _trc_cfg _trc_seed _trc_ir
 }
 
-_teesim_ensure_specter_ir() {
-  _tes_ir="$1"
-  if grep -q "^P ${TEESIM_PROFILE}\$" "$_tes_ir" 2>/dev/null; then
-    unset _tes_ir
-    return 0
-  fi
-  {
-    cat "$_tes_ir"
-    if grep -q '^P default$' "$_tes_ir" 2>/dev/null; then
-      awk -v want=default -v neu="$TEESIM_PROFILE" '
-        BEGIN { copy = 0 }
-        /^P / {
-          if (copy) exit
-          if ($2 == want) { copy = 1; print "P " neu; next }
-        }
-        copy && /^A / { next }
-        copy && /^M / { print "M patch"; next }
-        copy { print }
-      ' "$_tes_ir"
-    else
-      _teesim_empty_ir
-    fi
-  } > "${_tes_ir}.new"
-  mv -f "${_tes_ir}.new" "$_tes_ir"
-  unset _tes_ir
-}
-
 _teesim_load_ir() {
   _tli_file="$1" _tli_out="$2"
   _teesim_repair_config "$_tli_file"
@@ -296,7 +264,9 @@ _teesim_load_ir() {
   else
     _teesim_empty_ir > "$_tli_out"
   fi
-  _teesim_ensure_specter_ir "$_tli_out"
+  if ! grep -q '^P default$' "$_tli_out" 2>/dev/null; then
+    _teesim_empty_ir >> "$_tli_out"
+  fi
   unset _tli_file _tli_out
 }
 
@@ -351,29 +321,18 @@ _teesim_commit_apps() {
     [ -n "$_tca_base" ] && printf '%s\n' "$_tca_base" >> "$_tca_pkgs"
   done < "$_tca_src"
 
-  awk -v neu="$TEESIM_PROFILE" -v pkgsfile="$_tca_pkgs" '
-    BEGIN {
-      while ((getline p < pkgsfile) > 0) if (p != "") move[p] = 1
-      close(pkgsfile)
-      cur = ""; in_neu = 0
-    }
+  awk -v pkgsfile="$_tca_pkgs" '
+    BEGIN { in_def = 0 }
     /^P / {
-      if (in_neu) flush_neu()
-      cur = $2
-      in_neu = (cur == neu)
+      if (in_def) flush_def()
+      in_def = ($2 == "default")
       print
       next
     }
-    /^A / {
-      pkg = substr($0, 3)
-      if (in_neu) next
-      if (pkg in move) next
-      print
-      next
-    }
+    /^A / { next }
     { print }
-    END { if (in_neu) flush_neu() }
-    function flush_neu(   p) {
+    END { if (in_def) flush_def() }
+    function flush_def(   p) {
       while ((getline p < pkgsfile) > 0) if (p != "") print "A " p
       close(pkgsfile)
     }
@@ -395,9 +354,9 @@ _teesim_get_boot_patch() {
     unset _tgp_file _tgp_ir
     return 1
   }
-  _tgp_val=$(awk -v neu="$TEESIM_PROFILE" '
+  _tgp_val=$(awk '
     /^P / { cur = $2 }
-    cur == neu && /^B / { print substr($0, 3); exit }
+    cur == "default" && /^B / { print substr($0, 3); exit }
   ' "$_tgp_ir") || _tgp_val=""
   rm -f "$_tgp_ir"
   case "$_tgp_val" in
@@ -420,12 +379,12 @@ _teesim_set_patch() {
     return 1
   }
   _tsp_yyyymm=$(printf '%s' "$_tsp_date" | cut -d'-' -f1-2)
-  awk -v neu="$TEESIM_PROFILE" -v sys="$_tsp_yyyymm" -v boot="$_tsp_date" -v vend="$_tsp_date" '
+  awk -v sys="$_tsp_yyyymm" -v boot="$_tsp_date" -v vend="$_tsp_date" '
     BEGIN { cur = "" }
     /^P / { cur = $2; print; next }
-    cur == neu && /^S / { print "S " sys; next }
-    cur == neu && /^V / { print "V " vend; next }
-    cur == neu && /^B / { print "B " boot; next }
+    cur == "default" && /^S / { print "S " sys; next }
+    cur == "default" && /^V / { print "V " vend; next }
+    cur == "default" && /^B / { print "B " boot; next }
     { print }
   ' "$_tsp_ir" > "${_tsp_ir}.out"
   _teesim_write_ir "$_tsp_cfg" "${_tsp_ir}.out"
@@ -445,9 +404,9 @@ _teesim_get_mode() {
     unset _tgm_file _tgm_ir
     return 0
   }
-  _tgm_val=$(awk -v neu="$TEESIM_PROFILE" '
+  _tgm_val=$(awk '
     /^P / { cur = $2 }
-    cur == neu && /^M / { print substr($0, 3); exit }
+    cur == "default" && /^M / { print substr($0, 3); exit }
   ' "$_tgm_ir") || _tgm_val=""
   rm -f "$_tgm_ir"
   case "$_tgm_val" in
@@ -470,10 +429,10 @@ _teesim_set_mode() {
     unset _tsm_cfg _tsm_mode _tsm_ir
     return 1
   }
-  awk -v neu="$TEESIM_PROFILE" -v mode="$_tsm_mode" '
+  awk -v mode="$_tsm_mode" '
     BEGIN { cur = "" }
     /^P / { cur = $2; print; next }
-    cur == neu && /^M / { print "M " mode; next }
+    cur == "default" && /^M / { print "M " mode; next }
     { print }
   ' "$_tsm_ir" > "${_tsm_ir}.out"
   _teesim_write_ir "$_tsm_cfg" "${_tsm_ir}.out"
@@ -491,10 +450,10 @@ _teesim_ensure_keybox_field() {
     unset _tek_cfg _tek_ir
     return 1
   }
-  awk -v neu="$TEESIM_PROFILE" '
+  awk '
     BEGIN { cur = "" }
     /^P / { cur = $2; print; next }
-    cur == neu && /^K / { print "K keybox.xml"; next }
+    cur == "default" && /^K / { print "K keybox.xml"; next }
     { print }
   ' "$_tek_ir" > "${_tek_ir}.out"
   _teesim_write_ir "$_tek_cfg" "${_tek_ir}.out"
