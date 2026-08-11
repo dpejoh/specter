@@ -1,6 +1,10 @@
 # shellcheck shell=sh
-# JingMatrix TEESimulator (id=teesim) config.json — Specter owns profiles.specter.
-# IR: P id | K keybox | M mode | O osVersion | S/V/B patch | I field val | A pkg
+# JingMatrix TEESimulator (id=teesim) — Specter owns profiles.specter in config.json.
+#
+# Nested JSON is awkward to edit in shell, so we flatten to one fact per line (IR),
+# edit that, then write JSON back. Letter codes:
+#   P id | K keybox | M mode | O osVersion | S/V/B patch | I field val | A pkg
+# JSON↔IR stays in awk — a pure-shell round-trip was much slower on-device.
 
 : "${TEESIM_PROFILE:=specter}"
 
