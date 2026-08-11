@@ -13,6 +13,7 @@ export function openRomFingerprintDialog() {
       cfgGet('toggle_rom_fingerprint_prefix', '1').then(pref => {
         cfgGet('toggle_rom_fingerprint_pif', '1').then(pif => {
         cfgGet('toggle_rom_fingerprint_build_type', '1').then(spoof => {
+        cfgGet('toggle_custom_rom_props', '1').then(crom => {
         const banner = enabled ? '' : `<div style="display:flex;align-items:center;gap:8px;padding:12px 16px;background:var(--md-sys-color-surface-variant);border-radius:12px;margin:0 0 12px 0;color:var(--md-sys-color-on-surface-variant);font-size:0.875rem;"><md-icon>info</md-icon><span>${t('feature_disabled_desc', 'Feature is disabled, enable it in Control to configure')}</span></div>`;
         dialog.innerHTML = `
         <div slot="headline">
@@ -33,6 +34,16 @@ export function openRomFingerprintDialog() {
               </div>
               <div class="spacer"></div>
               <md-switch icons id="rf-hexpatch" ${hex === '1' ? 'selected' : ''} ${enabled ? '' : 'disabled'}></md-switch>
+            </div>
+
+            <div class="list-item list-item--toggle">
+              <div class="li-icon"><md-icon aria-hidden="true">delete_sweep</md-icon></div>
+              <div class="list-item-content">
+                <div class="toggle-text">${t('rom_fingerprint_custom_props', 'Custom ROM Props')}</div>
+                <span class="supporting-text">${t('rom_fingerprint_custom_props_desc', 'Delete custom ROM identity props at boot (can break ROM OTAs)')}</span>
+              </div>
+              <div class="spacer"></div>
+              <md-switch icons id="rf-crom" ${crom === '1' ? 'selected' : ''} ${enabled ? '' : 'disabled'}></md-switch>
             </div>
 
             <div class="list-item list-item--toggle">
@@ -84,10 +95,12 @@ export function openRomFingerprintDialog() {
         saveBtn.disabled = true;
         try {
           const h = dialog.querySelector('#rf-hexpatch') as MdSwitch;
+          const cromSw = dialog.querySelector('#rf-crom') as MdSwitch;
           const p = dialog.querySelector('#rf-prefix') as MdSwitch;
           const pif = dialog.querySelector('#rf-pif') as MdSwitch;
           const sp = dialog.querySelector('#rf-spoof') as MdSwitch;
           cfgSet('toggle_rom_fingerprint_names', h.selected ? '1' : '0');
+          cfgSet('toggle_custom_rom_props', cromSw.selected ? '1' : '0');
           cfgSet('toggle_rom_fingerprint_prefix', p.selected ? '1' : '0');
           cfgSet('toggle_rom_fingerprint_pif', pif.selected ? '1' : '0');
           cfgSet('toggle_rom_fingerprint_build_type', sp.selected ? '1' : '0');
@@ -102,6 +115,7 @@ export function openRomFingerprintDialog() {
 
       dialog.show();
     });
+  });
   });
   });
   });

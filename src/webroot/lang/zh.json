@@ -260,6 +260,8 @@
   "control_toggle_adb_disabler_desc": "启动时禁用 USB 调试、开发人员选项和 OEM 解锁",
   "control_toggle_rom_fingerprint": "ROM 指纹",
   "control_toggle_rom_fingerprint_desc": "启动时从构建属性中清除自定义 ROM 标识",
+  "rom_fingerprint_custom_props": "自定义 ROM 属性",
+  "rom_fingerprint_custom_props_desc": "启动时删除自定义 ROM 身份属性（可能影响 ROM OTA）",
   "adb_disabler_dialog_desc": "选择要在启动时禁用的开发人员设置。",
   "adb_disabler_dev_options": "禁用开发者选项",
   "adb_disabler_dev_options_desc": "禁用“设置”中的开发者选项切换",

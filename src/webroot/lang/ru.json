@@ -260,6 +260,8 @@
   "control_toggle_adb_disabler_desc": "Отключите отладку по USB, параметры разработчика и разблокировку OEM при загрузке.",
   "control_toggle_rom_fingerprint": "Отпечаток прошивки",
   "control_toggle_rom_fingerprint_desc": "Очистить идентификатор кастомной прошивки из свойств сборки при загрузке",
+  "rom_fingerprint_custom_props": "Свойства кастомной прошивки",
+  "rom_fingerprint_custom_props_desc": "Удаляет свойства идентичности кастомной прошивки при загрузке (может ломать OTA)",
   "adb_disabler_dialog_desc": "Выберите, какие настройки разработчика отключить при загрузке.",
   "adb_disabler_dev_options": "Отключить параметры разработчика",
   "adb_disabler_dev_options_desc": "Отключает переключатель параметров разработчика в настройках.",

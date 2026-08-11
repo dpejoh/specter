@@ -255,6 +255,8 @@
   "control_toggle_adb_disabler_desc": "Mengunci ADB, USB debugging, opsi pengembang, dan OEM unlock",
   "control_toggle_rom_fingerprint": "Pembersih ROM",
   "control_toggle_rom_fingerprint_desc": "Hapus nama ROM kustom, jejak build debug, dan properti modul PIF",
+  "rom_fingerprint_custom_props": "Properti ROM Kustom",
+  "rom_fingerprint_custom_props_desc": "Hapus properti identitas ROM kustom saat boot (bisa merusak OTA ROM)",
   "adb_disabler_dialog_desc": "Pilih pengaturan pengembang mana yang akan dinonaktifkan saat boot.",
   "adb_disabler_dev_options": "Nonaktifkan Opsi Pengembang",
   "adb_disabler_dev_options_desc": "Menonaktifkan tombol opsi pengembang di Pengaturan",

@@ -260,6 +260,8 @@
   "control_toggle_adb_disabler_desc": "Deshabilite la depuración de USB, las opciones de desarrollador y el desbloqueo OEM en el arranque",
   "control_toggle_rom_fingerprint": "Huella digital ROM",
   "control_toggle_rom_fingerprint_desc": "Limpiar la identidad de ROM personalizada de las propiedades de compilación en el arranque",
+  "rom_fingerprint_custom_props": "Props de ROM personalizada",
+  "rom_fingerprint_custom_props_desc": "Elimina props de identidad de ROM personalizada al arrancar (puede romper OTAs)",
   "adb_disabler_dialog_desc": "Elija qué configuración de desarrollador deshabilitar en el arranque.",
   "adb_disabler_dev_options": "Deshabilitar opciones de desarrollador",
   "adb_disabler_dev_options_desc": "Desactiva la opción de opciones de desarrollador en Ajustes",

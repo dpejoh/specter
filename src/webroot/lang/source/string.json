@@ -262,6 +262,8 @@
   "control_toggle_adb_disabler_desc": "Lock down ADB, USB debugging, dev options, and OEM unlock",
   "control_toggle_rom_fingerprint": "ROM Cleaner",
   "control_toggle_rom_fingerprint_desc": "Strip custom ROM names, debug build traces, and PIF module properties",
+  "rom_fingerprint_custom_props": "Custom ROM Props",
+  "rom_fingerprint_custom_props_desc": "Delete custom ROM identity props at boot (can break ROM OTAs)",
   "adb_disabler_dialog_desc": "Choose which developer settings to disable at boot.",
   "adb_disabler_dev_options": "Disable Developer Options",
   "adb_disabler_dev_options_desc": "Disables developer options toggle in Settings",

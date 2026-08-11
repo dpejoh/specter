@@ -255,6 +255,8 @@
   "control_toggle_adb_disabler_desc": "Cihaz açılırken USB hata ayıklama ve OEM kilit açma seçeneklerini görünüşte devre dışıymış gibi göster",
   "control_toggle_rom_fingerprint": "Yazılım Parmak izi",
   "control_toggle_rom_fingerprint_desc": "Açılış sırasında Özel Yazılım proplarını gizler",
+  "rom_fingerprint_custom_props": "Özel ROM Propları",
+  "rom_fingerprint_custom_props_desc": "Açılışta özel ROM kimlik proplarını siler (OTA'yı bozabilir)",
   "adb_disabler_dialog_desc": "Hangi geliştirici seçeneklerinin devre dışı bırakılacağını seçin",
   "adb_disabler_dev_options": "Geliştirici Seçeneklerini devre dışı bırak",
   "adb_disabler_dev_options_desc": "Ayarlardaki geliştirici seçeneklerini kapatır",
