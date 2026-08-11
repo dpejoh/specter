@@ -307,6 +307,10 @@ assert_eq "teesim: patch" "2026-06-05" "$(ksm_get_security_patch)"
 assert_contains "teesim: system YYYY-MM" "$(cat "$TEESIM_CONFIG")" '"system": "2026-06"'
 ksm_set_mode generation
 assert_eq "teesim: mode set" "generation" "$(ksm_get_mode)"
+printf '%s\n' '{"version":1,"profiles":{"default":{"keybox":"keybox.xml","mode":"patch","patchLevel":{"system":"today","vendor":"YYYY-MM-05","boot":"YYYY-MM-05"},"osVersion":"","brand":"","device":"","product":"","manufacturer":"","model":"","serial":"","imei":"","meid":"","imei2":"","apps":["com.google.android.gms"]},"specter":{"keybox":"keybox.xml","mode":"patch","patchLevel":{"system":"today","vendor":"YYYY-MM-05","boot":"YYYY-MM-05"},"osVersion":"","brand":"","device":"","product":"","manufacturer":"","model":"","serial":"","imei":"","meid":"","imei2":"","apps":["com.eltavine.duckdetector"]}}}' > "$TEESIM_CONFIG"
+ksm_set_mode generation
+assert_not_contains "teesim: mode on every profile" "$(cat "$TEESIM_CONFIG")" '"mode": "patch"'
+
 printf '<AndroidAttestation/>\n' > "$TEST_ROOT/teesim_kb.xml"
 ksm_install_keybox "$TEST_ROOT/teesim_kb.xml" copy
 assert_contains "teesim: keybox" "$(cat "$TEESIM_KEYBOX")" "<AndroidAttestation/>"

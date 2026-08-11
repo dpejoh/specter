@@ -383,24 +383,16 @@ _teesim_set_patch() {
 
 _teesim_get_mode() {
   _tgm_file="$1"
-  [ -f "$_tgm_file" ] || { printf 'patch\n'; return 0; }
-  _tgm_ir="${_tgm_file}.ir.$$"
-  _teesim_load_ir "$_tgm_file" "$_tgm_ir" || {
-    rm -f "$_tgm_ir"
-    printf 'patch\n'
-    unset _tgm_file _tgm_ir
-    return 0
-  }
-  _tgm_val=$(awk '
+  [ -f "$_tgm_file" ] && [ -s "$_tgm_file" ] || { printf 'patch\n'; return 0; }
+  _tgm_val=$(_teesim_to_ir "$_tgm_file" | awk '
     /^P / { cur = $2 }
     cur == "default" && /^M / { print substr($0, 3); exit }
-  ' "$_tgm_ir") || _tgm_val=""
-  rm -f "$_tgm_ir"
+  ') || _tgm_val=""
   case "$_tgm_val" in
     patch|generation) printf '%s\n' "$_tgm_val" ;;
     *) printf 'patch\n' ;;
   esac
-  unset _tgm_file _tgm_ir _tgm_val
+  unset _tgm_file _tgm_val
 }
 
 _teesim_set_mode() {
@@ -417,9 +409,7 @@ _teesim_set_mode() {
     return 1
   }
   awk -v mode="$_tsm_mode" '
-    BEGIN { cur = "" }
-    /^P / { cur = $2; print; next }
-    cur == "default" && /^M / { print "M " mode; next }
+    /^M / { print "M " mode; next }
     { print }
   ' "$_tsm_ir" > "${_tsm_ir}.out"
   _teesim_write_ir "$_tsm_cfg" "${_tsm_ir}.out"
