@@ -1580,7 +1580,7 @@ md-filled-tonal-button {
 }
 
 .ta-mode-content {
-  min-width: 360px;
+  min-width: min(360px, calc(100vw - 96px));
 }
 .ta-mode-desc {
   margin-top: 0;

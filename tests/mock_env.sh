@@ -11,7 +11,8 @@ bootstrap() {
   export TEST_ROOT
   MOCK_DIR="$TEST_ROOT/mock"; PROPS_DIR="$MOCK_DIR/props"; LOGS_DIR="$MOCK_DIR/logs"
   BIN_DIR="$TEST_ROOT/bin"; CONFIG_DIR="$TEST_ROOT/config"
-  SPECTER_DIR="$TEST_ROOT/specter"; TRICKY_DIR="$TEST_ROOT/tricky_store"
+  SPECTER_DIR="$TEST_ROOT/specter"
+  TRICKY_DIR="$TEST_ROOT/tricky_store"
   MODDIR="$TEST_ROOT"
   MODULES_BASE="$TEST_ROOT/modules"
   OMK_MODULE="$MODULES_BASE/oh_my_keymint"
@@ -20,9 +21,13 @@ bootstrap() {
   OMK_INJECTOR="$OMK_DIR/injector.toml"
   OMK_CONFIG="$OMK_DIR/config.toml"
   OMK_RESTART_DIR="$TEST_ROOT/omk_restart"
+  TEESIM_DIR="$TEST_ROOT/teesim"
+  TEESIM_CONFIG="$TEESIM_DIR/config.json"
+  TEESIM_KEYBOX="$TEESIM_DIR/keybox.xml"
   mkdir -p "$PROPS_DIR" "$LOGS_DIR" "$BIN_DIR" "$CONFIG_DIR/val" "$SPECTER_DIR" "$TRICKY_DIR" "$MODULES_BASE"
   export MOCK_DIR PROPS_DIR LOGS_DIR BIN_DIR CONFIG_DIR SPECTER_DIR TRICKY_DIR MODDIR
   export MODULES_BASE OMK_MODULE OMK_DIR OMK_KEYBOX OMK_INJECTOR OMK_CONFIG OMK_RESTART_DIR
+  export TEESIM_DIR TEESIM_CONFIG TEESIM_KEYBOX
 
   cat > "$BIN_DIR/resetprop" << 'MOCK'
 #!/bin/sh
@@ -85,6 +90,7 @@ source_libs() {
   . "$REPO_ROOT/src/lib/detect.sh" 2>/dev/null
   . "$REPO_ROOT/src/lib/props.sh" 2>/dev/null
   . "$REPO_ROOT/src/lib/keybox.sh" 2>/dev/null
+  . "$REPO_ROOT/src/lib/teesim.sh" 2>/dev/null
   . "$REPO_ROOT/src/lib/keystore.sh" 2>/dev/null
   . "$REPO_ROOT/src/lib/conflicts.sh" 2>/dev/null
   SPECTER_DIR="$TEST_ROOT/specter"
@@ -106,6 +112,9 @@ source_libs() {
   OMK_KEYBOX="$OMK_DIR/keybox.xml"
   OMK_INJECTOR="$OMK_DIR/injector.toml"
   OMK_CONFIG="$OMK_DIR/config.toml"
+  TEESIM_DIR="$TEST_ROOT/teesim"
+  TEESIM_CONFIG="$TEESIM_DIR/config.json"
+  TEESIM_KEYBOX="$TEESIM_DIR/keybox.xml"
 }
 
 # Fakes an installed module by writing $MODULES_BASE/<id>/module.prop.

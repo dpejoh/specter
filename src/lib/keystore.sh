@@ -1,20 +1,18 @@
 # shellcheck shell=sh
-# Keystore-manager abstraction: makes the rest of the codebase agnostic to
-# whether Tricky Store or OhMyKeymint is the active spoofer backend.
-#
-# Callers must invoke detect_keystore_manager() after sourcing common.sh and
-# before touching any KSM_* variable — detection depends on cfg_get, which
-# needs CONFIG_DIR resolved, and results are not cached across processes
-# (feature scripts run from the WebUI as fresh `sh` invocations).
+# Keystore backends: Tricky Store / TEESimulator-RS (txt), JingMatrix teesim (json), OMK (toml).
+# Call detect_keystore_manager() after common.sh before using KSM_*.
 
 detect_keystore_manager() {
   _dkm_override=$(cfg_get keystore_manager auto 2>/dev/null)
   case "$_dkm_override" in
     trickystore) KSM=trickystore ;;
+    teesim) KSM=teesim ;;
     omk) KSM=omk ;;
     *)
       if [ -n "$(_ts_prop)" ]; then
         KSM=trickystore
+      elif [ -n "$(_teesim_prop)" ]; then
+        KSM=teesim
       elif [ -n "$(_omk_prop)" ]; then
         KSM=omk
       else
@@ -25,13 +23,24 @@ detect_keystore_manager() {
 
   case "$KSM" in
     trickystore)
-      KSM_NAME="Tricky Store"
+      KSM_NAME=$(_ts_prop)
+      [ -n "$KSM_NAME" ] || KSM_NAME="Tricky Store"
       KSM_DIR="$TRICKY_DIR"
       KSM_KEYBOX="$TARGET_FILE"
       KSM_TARGETS="$TARGET_TXT"
       KSM_SECURITY="$SECURITY_PATCH_FILE"
       KSM_LOCKED="$LOCKED_FILE"
       KSM_FORMAT="txt"
+      ;;
+    teesim)
+      KSM_NAME=$(_teesim_prop)
+      [ -n "$KSM_NAME" ] || KSM_NAME="TEESimulator"
+      KSM_DIR="$TEESIM_DIR"
+      KSM_KEYBOX="$TEESIM_KEYBOX"
+      KSM_TARGETS="$TEESIM_CONFIG"
+      KSM_SECURITY="$TEESIM_CONFIG"
+      KSM_LOCKED=""
+      KSM_FORMAT="json"
       ;;
     omk)
       KSM_NAME="OhMyKeymint"
@@ -88,15 +97,17 @@ _ksm_strip_suffix() {
   unset _kss_line
 }
 
-# Prints the active target list as bare packages, one per line, regardless
-# of backend format.
 ksm_read_targets() {
-  [ -f "$KSM_TARGETS" ] || return 0
   case "$KSM_FORMAT" in
+    json)
+      _teesim_read_apps "$KSM_TARGETS"
+      ;;
     toml)
+      [ -f "$KSM_TARGETS" ] || return 0
       _toml_read_scoop "$KSM_TARGETS"
       ;;
     *)
+      [ -f "$KSM_TARGETS" ] || return 0
       while IFS= read -r _krt_line || [ -n "$_krt_line" ]; do
         [ -z "$_krt_line" ] && continue
         case "$_krt_line" in \[*\]) continue ;; esac
@@ -108,24 +119,22 @@ ksm_read_targets() {
   esac
 }
 
-# Raw seed for building a new staging file: preserves the native file's
-# lines (including !/? suffixes and any [section] header lines) for txt
-# backends; identical to ksm_read_targets for toml backends, which have no
-# such lines to preserve.
 ksm_read_targets_raw() {
   case "$KSM_FORMAT" in
-    toml) ksm_read_targets ;;
+    json|toml) ksm_read_targets ;;
     *) [ -f "$KSM_TARGETS" ] && cat "$KSM_TARGETS" ;;
   esac
 }
 
-# Commits a Tricky-Store-format staging file (bare or !/? suffixed lines,
-# [section] header lines allowed) as the new target list for the active
-# manager. txt backends get it verbatim; toml backends get the suffixes
-# stripped and folded into the injector's scoop array.
 ksm_commit_targets() {
   _kct_src="$1"
   case "$KSM_FORMAT" in
+    json)
+      _teesim_commit_apps "$KSM_TARGETS" "$_kct_src" || {
+        unset _kct_src
+        return 1
+      }
+      ;;
     toml)
       _kct_tmp="${KSM_TARGETS}.pkgs.$$"
       : > "$_kct_tmp"
@@ -153,13 +162,17 @@ ksm_commit_targets() {
 }
 
 ksm_get_security_patch() {
-  [ -f "$KSM_SECURITY" ] || return 1
   case "$KSM_FORMAT" in
+    json)
+      _teesim_get_boot_patch "$KSM_SECURITY"
+      ;;
     toml)
+      [ -f "$KSM_SECURITY" ] || return 1
       grep -E '^[ ]*security_patch[ ]*=' "$KSM_SECURITY" 2>/dev/null | head -1 |
         sed 's/.*=[ ]*"\([^"]*\)".*/\1/'
       ;;
     *)
+      [ -f "$KSM_SECURITY" ] || return 1
       _kgsp=$(grep -E '^boot=' "$KSM_SECURITY" 2>/dev/null | head -1 | cut -d= -f2) || _kgsp=""
       [ -n "$_kgsp" ] || _kgsp=$(grep -E '^all=' "$KSM_SECURITY" 2>/dev/null | head -1 | cut -d= -f2) || _kgsp=""
       [ -n "$_kgsp" ] || { unset _kgsp; return 1; }
@@ -172,6 +185,12 @@ ksm_get_security_patch() {
 ksm_set_security_patch() {
   _ksp_date="$1"
   case "$KSM_FORMAT" in
+    json)
+      _teesim_set_patch "$KSM_SECURITY" "$_ksp_date" || {
+        unset _ksp_date
+        return 1
+      }
+      ;;
     toml)
       _toml_set_trust_key "$KSM_SECURITY" "security_patch" "\"$_ksp_date\"" || {
         unset _ksp_date
@@ -192,6 +211,20 @@ ksm_set_security_patch() {
       ;;
   esac
   unset _ksp_date
+}
+
+ksm_get_mode() {
+  case "$KSM_FORMAT" in
+    json) _teesim_get_mode "$KSM_TARGETS" ;;
+    *) printf '' ;;
+  esac
+}
+
+ksm_set_mode() {
+  case "$KSM_FORMAT" in
+    json) _teesim_set_mode "$KSM_TARGETS" "$1" ;;
+    *) return 1 ;;
+  esac
 }
 
 ksm_get_trust_field() {
@@ -232,6 +265,18 @@ ksm_install_keybox() {
         return 1
       }
       [ "$_kik_mode" = "copy" ] || rm -f "$_kik_src"
+      ;;
+    teesim)
+      mkdir -p "$TEESIM_DIR" 2>/dev/null
+      if [ "$_kik_mode" = "copy" ]; then
+        cp "$_kik_src" "$KSM_KEYBOX" || { unset _kik_src _kik_mode; return 1; }
+      else
+        mv "$_kik_src" "$KSM_KEYBOX" || { unset _kik_src _kik_mode; return 1; }
+      fi
+      _teesim_ensure_keybox_field "$TEESIM_CONFIG" || {
+        unset _kik_src _kik_mode
+        return 1
+      }
       ;;
     *)
       mkdir -p "$(dirname "$KSM_KEYBOX")" 2>/dev/null

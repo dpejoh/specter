@@ -18,13 +18,15 @@ if [ -f "$KSM_KEYBOX" ]; then
 fi
 
 case "$KSM_FORMAT" in
-  toml)
-    # injector.toml/config.toml carry OMK settings beyond what Specter
-    # manages, so back up only the values Specter owns, not the whole file.
+  toml|json)
     ksm_read_targets > "$BACKUP_DIR/targets.list.bak" 2>/dev/null
     _fbs_patch=$(sh "$MODDIR/security_patch.sh" --get 2>/dev/null) || _fbs_patch=""
     [ -n "$_fbs_patch" ] && printf '%s\n' "$_fbs_patch" > "$BACKUP_DIR/security_patch.value.bak"
     unset _fbs_patch
+    if [ "$KSM_FORMAT" = "json" ] && [ -f "$KSM_TARGETS" ]; then
+      cp "$KSM_TARGETS" "$BACKUP_DIR/teesim_config.json.bak"
+      log_d "FIRST_BOOT" "Backed up $KSM_TARGETS"
+    fi
     ;;
   *)
     if [ -f "$KSM_TARGETS" ]; then

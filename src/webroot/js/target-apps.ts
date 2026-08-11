@@ -3,15 +3,18 @@ import '@material/web/labs/segmentedbutton/outlined-segmented-button.js';
 import '@material/web/switch/switch.js';
 import { exec, getModuleDir, getDataDir } from './bridge.js';
 import { cfgGet, cfgSet } from './cfg.js';
-import { shellEscape } from './utils.js';
+import { shellEscape, fetchJson } from './utils.js';
 import { showToast } from './toast.js';
 import { getTranslation } from './i18n.js';
 import { appendToOutput } from './terminal.js';
+import { API_URLS } from './constants.js';
+import type { KeystoreManagerJson } from './types.js';
 
 type TargetState = 'unchecked' | 'bare' | 'conditional' | 'force';
 type BlacklistState = 'unchecked' | 'blacklisted';
 type AppState = TargetState | BlacklistState;
 type Mode = 'target' | 'blacklist';
+type KsmFormat = 'txt' | 'toml' | 'json' | '';
 
 interface TargetApp {
   packageName: string;
@@ -323,6 +326,8 @@ export async function openTargetAppsManager() {
   let sysPkgs: string[] = [];
   let mode: Mode = 'target';
   let defaultMode = 'bare';
+  let ksmFormat: KsmFormat = 'txt';
+  let supportsPerAppMode = true;
 
   const iconMgr = new AppIconManager();
 
@@ -395,7 +400,8 @@ export async function openTargetAppsManager() {
   }
 
   overlay.querySelector('#ta-select-all')!.addEventListener('click', () => {
-    for (const app of apps) app.state = mode === 'blacklist' ? 'blacklisted' : (defaultMode as AppState);
+    const on = mode === 'blacklist' ? 'blacklisted' : (supportsPerAppMode ? (defaultMode as AppState) : 'bare');
+    for (const app of apps) app.state = on;
     appendToOutput(`[TARGET] Selected all apps`);
     applyFilters();
     closeTapMenu();
@@ -468,8 +474,63 @@ export async function openTargetAppsManager() {
 
   overlay.querySelector('#ta-mode')!.addEventListener('click', () => {
     closeTapMenu();
-    openModeDialog();
+    if (ksmFormat === 'json') openTeesimModeDialog();
+    else if (supportsPerAppMode) openModeDialog();
   });
+
+  function openTeesimModeDialog() {
+    const moddir = getModuleDir();
+    if (!moddir) return;
+    const scriptPath = shellEscape(moddir + '/features/teesim_mode.sh');
+    const d = document.createElement('md-dialog');
+    d.innerHTML = `
+      <div slot="headline">${t('ta_teesim_mode_title', 'Operation Mode')}</div>
+      <div slot="content" class="ta-mode-content">
+        <p class="supporting-text ta-mode-desc">${t('ta_teesim_mode_desc', 'Applies to all apps in the TEESimulator default profile')}</p>
+        <md-outlined-segmented-button-set id="ta-teesim-mode-set">
+          <md-outlined-segmented-button value="patch" selected label="${t('ta_teesim_mode_patch', 'Patch')}"></md-outlined-segmented-button>
+          <md-outlined-segmented-button value="generation" label="${t('ta_teesim_mode_generation', 'Generation')}"></md-outlined-segmented-button>
+        </md-outlined-segmented-button-set>
+      </div>
+      <div slot="actions">
+        <md-text-button class="dialog-action-close">${t('dialog_cancel', 'Cancel')}</md-text-button>
+        <md-filled-button id="ta-teesim-mode-apply">${t('dialog_apply', 'Apply')}</md-filled-button>
+      </div>
+    `;
+    document.body.appendChild(d);
+    d.addEventListener('close', () => document.body.removeChild(d));
+
+    let _mode = 'patch';
+    exec(`sh ${scriptPath} --get 2>/dev/null || echo patch`).then(({ stdout }) => {
+      const cur = stdout.trim();
+      if (cur === 'patch' || cur === 'generation') {
+        _mode = cur;
+        d.querySelectorAll('#ta-teesim-mode-set md-outlined-segmented-button').forEach(b => {
+          (b as HTMLElement & { selected: boolean }).selected = b.getAttribute('value') === cur;
+        });
+      }
+    }).catch(() => {});
+
+    d.querySelectorAll('#ta-teesim-mode-set md-outlined-segmented-button').forEach(b => {
+      b.addEventListener('click', () => { _mode = b.getAttribute('value') || 'patch'; });
+    });
+    d.querySelector('#ta-teesim-mode-apply')!.addEventListener('click', async () => {
+      try {
+        const { code, stderr } = await exec(`sh ${scriptPath} --set ${shellEscape(_mode)}`);
+        if (code !== 0) {
+          showToast(stderr.trim() || t('simple_toast_error', 'Failed'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
+          return;
+        }
+        showToast(t('ta_teesim_mode_saved', 'Operation mode saved'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
+        d.close();
+      } catch {
+        showToast(t('simple_toast_error', 'Failed'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
+      }
+    });
+    d.querySelector('.dialog-action-close')!.addEventListener('click', () => d.close());
+    d.show();
+    paintSeg(d);
+  }
 
   function paintSeg(root: HTMLElement): void {
     const rootStyle = document.documentElement.style;
@@ -477,6 +538,8 @@ export async function openTargetAppsManager() {
       bare: [rootStyle.getPropertyValue('--md-sys-color-primary').trim(), rootStyle.getPropertyValue('--md-sys-color-on-primary').trim()],
       conditional: [rootStyle.getPropertyValue('--md-sys-color-tertiary').trim(), rootStyle.getPropertyValue('--md-sys-color-on-tertiary').trim()],
       force: [rootStyle.getPropertyValue('--md-sys-color-error').trim(), rootStyle.getPropertyValue('--md-sys-color-on-error').trim()],
+      patch: [rootStyle.getPropertyValue('--md-sys-color-primary').trim(), rootStyle.getPropertyValue('--md-sys-color-on-primary').trim()],
+      generation: [rootStyle.getPropertyValue('--md-sys-color-error').trim(), rootStyle.getPropertyValue('--md-sys-color-on-error').trim()],
     };
     const inject = (btn: Element) => {
       const sr = btn.shadowRoot;
@@ -646,7 +709,27 @@ export async function openTargetAppsManager() {
       if (typeof ksu?.cacheAllPackageIcons === 'function') {
         try { ksu.cacheAllPackageIcons(48); } catch {}
       }
-      defaultMode = (await cfgGet('target_default_mode', 'bare')) || 'bare';
+      try {
+        const km = await fetchJson<KeystoreManagerJson>(API_URLS.KEYSTORE_MANAGER!, 0);
+        const fmt = km?.format || '';
+        ksmFormat = fmt === 'json' || fmt === 'toml' || fmt === 'txt' ? fmt : 'txt';
+      } catch {
+        ksmFormat = 'txt';
+      }
+      supportsPerAppMode = ksmFormat === 'txt';
+      const modeItem = overlay.querySelector('#ta-mode') as HTMLElement | null;
+      if (modeItem) {
+        modeItem.hidden = ksmFormat === 'toml';
+        const headline = modeItem.querySelector('[slot="headline"]');
+        if (headline) {
+          headline.textContent = ksmFormat === 'json'
+            ? t('ta_teesim_mode_title', 'Operation Mode')
+            : t('ta_mode_menu', 'Default Mode');
+        }
+      }
+      if (!supportsPerAppMode) defaultMode = 'bare';
+      else defaultMode = (await cfgGet('target_default_mode', 'bare')) || 'bare';
+
       const [targetResult, pkgs] = await Promise.all([
         readTargetList(),
         fetchUserPackages(),
@@ -655,9 +738,9 @@ export async function openTargetAppsManager() {
       const targetLines = targetResult.split('\n').map(s => s.trim()).filter(Boolean);
       targetMap.clear();
       for (const line of targetLines) {
-        if (line.endsWith('!')) targetMap.set(line.slice(0, -1), 'force');
-        else if (line.endsWith('?')) targetMap.set(line.slice(0, -1), 'conditional');
-        else targetMap.set(line, 'bare');
+        if (supportsPerAppMode && line.endsWith('!')) targetMap.set(line.slice(0, -1), 'force');
+        else if (supportsPerAppMode && line.endsWith('?')) targetMap.set(line.slice(0, -1), 'conditional');
+        else targetMap.set(line.replace(/[!?]$/, ''), 'bare');
       }
 
       const labelMap = await resolvePackageNames(pkgs);
@@ -668,7 +751,7 @@ export async function openTargetAppsManager() {
         state: targetMap.get(pkg) || 'unchecked',
       }));
 
-      appendToOutput(`[TARGET] Loaded ${apps.length} user apps, ${targetMap.size} in target.txt`);
+      appendToOutput(`[TARGET] Loaded ${apps.length} user apps, ${targetMap.size} in target list`);
       loading.style.display = 'none';
       list.style.display = '';
       applyFilters();
@@ -904,6 +987,8 @@ export async function openTargetAppsManager() {
           applyAppState(nextState(app.state));
         } else if (app.state === 'unchecked') {
           applyAppState('bare');
+        } else if (!supportsPerAppMode) {
+          applyAppState('unchecked');
         } else {
           const idx = TARGET_MODE_ORDER.indexOf(app.state as TargetState);
           const next = TARGET_MODE_ORDER[(idx + 1) % TARGET_MODE_ORDER.length];
@@ -915,7 +1000,8 @@ export async function openTargetAppsManager() {
         if (mode === 'blacklist') {
           applyAppState(app.state === 'unchecked' ? 'blacklisted' : 'unchecked');
         } else {
-          applyAppState(app.state === 'unchecked' ? (defaultMode as AppState) : 'unchecked');
+          const on = supportsPerAppMode ? (defaultMode as AppState) : 'bare';
+          applyAppState(app.state === 'unchecked' ? on : 'unchecked');
         }
       });
 
@@ -1009,8 +1095,8 @@ export async function openTargetAppsManager() {
       const lines = apps
         .filter(a => a.state !== 'unchecked')
         .map(a => {
-          if (a.state === 'force') return a.packageName + '!';
-          if (a.state === 'conditional') return a.packageName + '?';
+          if (supportsPerAppMode && a.state === 'force') return a.packageName + '!';
+          if (supportsPerAppMode && a.state === 'conditional') return a.packageName + '?';
           return a.packageName;
         })
         .sort();

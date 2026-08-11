@@ -8,7 +8,7 @@ MODDIR=${0%/*}
 log_d "TARGET" "Starting target management"
 
 detect_keystore_manager
-ksm_available || die "No keystore manager (Tricky Store / OhMyKeymint) data directory found"
+ksm_available || die "No keystore manager (Tricky Store / TEESimulator / OhMyKeymint) data directory found"
 
 case "${1:-}" in
   --list)
