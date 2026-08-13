@@ -500,11 +500,11 @@ export async function openTargetAppsManager() {
     document.body.appendChild(d);
     d.addEventListener('close', () => document.body.removeChild(d));
 
-    let _mode = 'patch';
+    let _touched = false;
     exec(`sh ${scriptPath} --get 2>/dev/null || echo patch`).then(({ stdout }) => {
+      if (_touched) return;
       const cur = stdout.trim();
       if (cur === 'patch' || cur === 'generation') {
-        _mode = cur;
         d.querySelectorAll('#ta-teesim-mode-set md-outlined-segmented-button').forEach(b => {
           (b as HTMLElement & { selected: boolean }).selected = b.getAttribute('value') === cur;
         });
@@ -512,19 +512,28 @@ export async function openTargetAppsManager() {
     }).catch(() => {});
 
     d.querySelectorAll('#ta-teesim-mode-set md-outlined-segmented-button').forEach(b => {
-      b.addEventListener('click', () => { _mode = b.getAttribute('value') || 'patch'; });
+      b.addEventListener('click', () => { _touched = true; });
     });
-    d.querySelector('#ta-teesim-mode-apply')!.addEventListener('click', async () => {
+    const applyBtn = d.querySelector('#ta-teesim-mode-apply') as HTMLElement & { disabled: boolean };
+    applyBtn.addEventListener('click', async () => {
+      if (applyBtn.disabled) return;
+      let mode = 'patch';
+      d.querySelectorAll('#ta-teesim-mode-set md-outlined-segmented-button').forEach(b => {
+        if ((b as HTMLElement & { selected: boolean }).selected) mode = b.getAttribute('value') || 'patch';
+      });
+      applyBtn.disabled = true;
       try {
-        const { code, stderr } = await exec(`sh ${scriptPath} --set ${shellEscape(_mode)}`);
+        const { code, stderr } = await exec(`sh ${scriptPath} --set ${shellEscape(mode)}`);
         if (code !== 0) {
           showToast(stderr.trim() || t('simple_toast_error', 'Failed'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
+          applyBtn.disabled = false;
           return;
         }
         showToast(t('ta_teesim_mode_saved', 'Operation mode saved'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
         d.close();
       } catch {
         showToast(t('simple_toast_error', 'Failed'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
+        applyBtn.disabled = false;
       }
     });
     d.querySelector('.dialog-action-close')!.addEventListener('click', () => d.close());
