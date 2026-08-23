@@ -246,7 +246,7 @@
   "rom_fingerprint_custom_props": "Egyedi ROM Prop paraméterek",
   "rom_fingerprint_custom_props_desc": "Egyedi ROM identitás Prop paraméterek eltávolítása indításkor (ROM OTA rendszerfrissítés meghibásodhat)",
   "adb_disabler_dialog_desc": "Válaszd ki mely fejlesztői beállításokat szeretnéd kikapcsoltatni indításkor.",
-  "adb_disabler_dev_options": Fejlesztői beállítások kikapcsolása",
+  "adb_disabler_dev_options": "Fejlesztői beállítások kikapcsolása",
   "adb_disabler_dev_options_desc": "Kiválasztott fejlesztői beállítások kikapcsolása",
   "adb_disabler_usb_debug": "USB Hibaelhárítás",
   "adb_disabler_usb_debug_desc": "ADB kikapcsolása,USB zárolása, adb daemon leállítása, és OEM feloldás visszazárolása",
