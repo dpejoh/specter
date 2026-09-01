@@ -178,9 +178,20 @@ ksm_lock_targets() {
   while ! ln -s "$$" "$_klt" 2>/dev/null; do
     _klt_pid=$(readlink "$_klt" 2>/dev/null || true)
     if [ -n "$_klt_pid" ] && [ -d "/proc/$_klt_pid" ]; then
+      _klt_cmd=""
+      [ -f "/proc/$_klt_pid/cmdline" ] &&
+        _klt_cmd=$(tr '\0' ' ' < "/proc/$_klt_pid/cmdline" 2>/dev/null || echo "")
+      case "$_klt_cmd" in
+        *target.sh*) ;;
+        *)
+          rm -rf "$_klt"
+          continue
+          ;;
+      esac
       _klt_n=$((_klt_n + 1))
       [ "$_klt_n" -ge 15 ] && {
         log_w "KSM" "timed out waiting for target lock (pid $_klt_pid)"
+        unset _klt _klt_n _klt_pid _klt_cmd
         return 1
       }
       sleep 1
@@ -188,6 +199,7 @@ ksm_lock_targets() {
     fi
     rm -rf "$_klt"
   done
+  unset _klt _klt_n _klt_pid _klt_cmd
 }
 
 ksm_commit_targets() {
