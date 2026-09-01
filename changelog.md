@@ -8,7 +8,7 @@
 - Hot install on KernelSU: module updates apply without a reboot
 - Action security patch sources: device, Pixel bulletin, or synthetic
 - Reset default options in Settings
-- French + Indonesian translations
+- French, Hungarian, and Indonesian translations
 
 **Changed**
 - Keystore management prefers TEESimulator over the Tricky Store family

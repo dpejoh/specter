@@ -297,7 +297,7 @@
   "auto_target_interval_desc": "Az időintervallum hossza. Minimum 3 másodperc.",
   "auto_target_saved": "Automatikus Célpontozás beállítva",
   "control_toggle_autopif": "Automatikus PIF (Ujjlenyomat)",
-  "control_toggle_autopif_desc": "Új PIF Rendszer Ujjlenyomat időközönkénti lehívása"
+  "control_toggle_autopif_desc": "Új PIF Rendszer Ujjlenyomat időközönkénti lehívása",
   "autopif_title": "Automatikus PIF",
   "autopif_desc": "Új PIF Rendszer Ujjlenyomat lehívása fix időnként.",
   "autopif_interval": "Időintervallum (órában)",

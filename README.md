@@ -111,7 +111,7 @@ ALWAYS MAINTAIN BACKUPS OF IMPORTANT DATA.
 
 ## Translations
 
-The WebUI is translated into Arabic, Spanish, French, Indonesian, Polish, Russian, Turkish, and Chinese (mostly AI-generated — human review welcome).
+The WebUI is translated into Arabic, Spanish, French, Hungarian, Indonesian, Polish, Russian, Turkish, and Chinese (mostly AI-generated. Human review welcome).
 
 To contribute translations:
 - **Preferred**: Join the [Crowdin project](https://crowdin.com/project/specter-module) — web UI, no git needed
