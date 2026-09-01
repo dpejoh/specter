@@ -35,6 +35,9 @@ case "${1:-}" in
       case "$_set_line" in \[*\]) continue ;; esac
       printf '%s\n' "$(_normalize_pkg "$_set_line")" >> "$_set_bases"
     done < "$2"
+    if [ -s "$2" ] && [ "$(tail -c 1 "$2" | wc -l)" -eq 0 ]; then
+      printf '\n' >> "$2"
+    fi
     for _set_entry in $FIXED_TARGETS; do
       grep -Fxq "$_set_entry" "$_set_bases" 2>/dev/null && continue
       printf '%s\n' "$_set_entry" >> "$2"
