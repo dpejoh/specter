@@ -12,7 +12,7 @@ export async function initI18n() {
 
 export async function applyLanguage(langCode: string) {
   cfgSet('lang', langCode);
-  const available = ['en', 'zh', 'ru', 'fr', 'es', 'ar', 'pl', 'tr', 'id', 'hu'];
+  const available = ['en', 'zh', 'ru', 'fr', 'es', 'ar', 'pl', 'tr', 'id', 'hu', 'vi'];
   let target = langCode;
   if (langCode === 'auto') {
     target = (navigator.language || '').slice(0, 2);
@@ -68,7 +68,7 @@ function wireLanguageSelect(currentLang: string) {
   const select = document.getElementById('language-select') as HTMLSelectElement | null;
   if (!select) return;
   select.innerHTML = '';
-  const langs: [string, string][] = [['auto', 'Auto'], ['en', 'English'], ['zh', '中文'], ['ru', 'Русский'], ['fr', 'Français'], ['es', 'Español'], ['ar', 'العربية'], ['pl', 'Polski'], ['tr', 'Türkçe'], ['id', 'Bahasa indonesia'], ['hu', 'Magyar']];
+  const langs: [string, string][] = [['auto', 'Auto'], ['en', 'English'], ['zh', '中文'], ['ru', 'Русский'], ['fr', 'Français'], ['es', 'Español'], ['ar', 'العربية'], ['pl', 'Polski'], ['tr', 'Türkçe'], ['id', 'Bahasa indonesia'], ['hu', 'Magyar'], ['vi', 'Tiếng Việt']];
   for (const [code, name] of langs) {
     const opt = document.createElement('option');
     opt.value = code; opt.textContent = name; select.appendChild(opt);
