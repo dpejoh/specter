@@ -18,6 +18,10 @@ if [ -f "$KSM_KEYBOX" ]; then
 fi
 
 case "$KSM_FORMAT" in
+  ini)
+    cp "$KSM_CONFIG" "$BACKUP_DIR/config.ini.bak"
+    log_d "FIRST_BOOT" "Backed up config.ini"
+    ;;
   toml|json)
     ksm_read_targets > "$BACKUP_DIR/targets.list.bak" 2>/dev/null
     _fbs_patch=$(sh "$MODDIR/security_patch.sh" --get 2>/dev/null) || _fbs_patch=""

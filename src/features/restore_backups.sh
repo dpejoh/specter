@@ -26,6 +26,13 @@ if [ -f "$BACKUP_DIR/keybox.xml.bak" ] && [ -n "$KSM_KEYBOX" ]; then
 fi
 
 case "$KSM_FORMAT" in
+  ini)
+    if [ -f "$BACKUP_DIR/config.ini.bak" ]; then
+      _ksm_inplace_from "$BACKUP_DIR/config.ini.bak" "$KSM_CONFIG" || die "Failed to restore config.ini"
+      log_i "RESTORE" "Restored config.ini"
+      _restored=$((_restored + 1))
+    fi
+    ;;
   toml|json)
     if [ -f "$BACKUP_DIR/targets.list.bak" ]; then
       _rb_tmp="$SPECTER_DIR/.restore_targets.$$"
