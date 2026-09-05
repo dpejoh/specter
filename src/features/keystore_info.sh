@@ -22,4 +22,7 @@ cat <<EOF > "$INFO_PATH"
 EOF
 
 log_i "KEYSTORE_INFO" "Active manager: ${KSM_NAME:-none}"
+if [ "$KSM" != "none" ]; then
+  log_i "KEYSTORE_INFO" "Configuration: format=$KSM_FORMAT; targets=$KSM_TARGETS; config=$KSM_CONFIG"
+fi
 exit 0

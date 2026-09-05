@@ -9,8 +9,8 @@
 #   KSM_TARGETS      target/app list file
 #   KSM_CONFIG       main config file: security patch level lives here; for
 #                    toml also the trust fields, for json also the profiles
-#   KSM_FORMAT       file format of targets/config: txt | json | toml
-#   KSM_PER_APP_MODES  1 when per-app !/? suffixes are meaningful (txt only)
+#   KSM_FORMAT       file format of targets/config: txt | ini | json | toml
+#   KSM_PER_APP_MODES  1 when per-app !/? suffixes are meaningful (txt/ini)
 #
 # Feature scripts and the WebUI consume only this contract; nothing outside
 # this file (plus the per-format helpers) knows backend-specific paths.
@@ -72,6 +72,13 @@ detect_keystore_manager() {
       KSM_TARGETS="$TARGET_TXT"
       KSM_CONFIG="$SECURITY_PATCH_FILE"
       KSM_FORMAT="txt"
+      # Some Tricky Store versions migrate legacy configuration to INI.
+      # Select the backend from the configuration file present on disk.
+      if [ -f "$TRICKY_CONFIG" ]; then
+        KSM_TARGETS="$TRICKY_CONFIG"
+        KSM_CONFIG="$TRICKY_CONFIG"
+        KSM_FORMAT="ini"
+      fi
       KSM_PER_APP_MODES=1
       ;;
     teesim)
@@ -109,7 +116,8 @@ detect_keystore_manager() {
 }
 
 ksm_available() {
-  [ "$KSM" != "none" ] && [ -n "$KSM_DIR" ] && [ -d "$KSM_DIR" ]
+  [ "$KSM" != "none" ] && [ -n "$KSM_DIR" ] && [ -d "$KSM_DIR" ] || return 1
+  [ "$KSM_FORMAT" != "ini" ] || [ -f "$KSM_CONFIG" ]
 }
 
 # Explicit Tools for injector; keymint also auto-touches on trust field saves.
@@ -160,6 +168,12 @@ _ksm_filter_pkgs() {
 
 ksm_read_targets() {
   case "$KSM_FORMAT" in
+    ini)
+      _ini_read_targets "$KSM_TARGETS" | while IFS= read -r _krt_ini; do
+        _ksm_strip_suffix "$_krt_ini"
+        printf '\n'
+      done
+      ;;
     json)
       _teesim_read_apps "$KSM_TARGETS" | _ksm_filter_pkgs
       ;;
@@ -183,6 +197,7 @@ ksm_read_targets() {
 
 ksm_read_targets_raw() {
   case "$KSM_FORMAT" in
+    ini) _ini_read_targets "$KSM_TARGETS" ;;
     # UI-facing list: package names only — uid:/pkg@user tokens are the
     # TEESimulator WebUI's concern and are preserved on commit regardless.
     json) _teesim_read_apps "$KSM_TARGETS" default | _ksm_filter_pkgs ;;
@@ -236,6 +251,12 @@ ksm_lock_targets() {
 ksm_commit_targets() {
   _kct_src="$1"
   case "$KSM_FORMAT" in
+    ini)
+      _ini_write_targets "$KSM_TARGETS" "$_kct_src" || {
+        unset _kct_src
+        return 1
+      }
+      ;;
     json)
       _teesim_commit_apps "$KSM_TARGETS" "$_kct_src" || {
         unset _kct_src
@@ -277,6 +298,7 @@ ksm_commit_targets() {
 ksm_commit_targets_merge() {
   _kcm_src="$1"
   case "$KSM_FORMAT" in
+    ini) _ini_write_targets "$KSM_TARGETS" "$_kcm_src" || { unset _kcm_src; return 1; } ;;
     txt)
       if [ -f "$KSM_TARGETS" ]; then
         _ksm_txt_merge "$_kcm_src" || { unset _kcm_src; return 1; }
@@ -292,6 +314,7 @@ ksm_commit_targets_merge() {
 
 ksm_get_security_patch() {
   case "$KSM_FORMAT" in
+    ini) _ini_get_boot_patch "$KSM_CONFIG" ;;
     json)
       _teesim_get_boot_patch "$KSM_CONFIG"
       ;;
@@ -322,6 +345,12 @@ ksm_get_security_patch() {
 ksm_set_security_patch() {
   _ksp_date="$1"
   case "$KSM_FORMAT" in
+    ini)
+      _ini_set_patch "$KSM_CONFIG" "$_ksp_date" || {
+        unset _ksp_date
+        return 1
+      }
+      ;;
     json)
       _teesim_set_patch "$KSM_CONFIG" "$_ksp_date" || {
         unset _ksp_date

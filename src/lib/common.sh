@@ -21,6 +21,7 @@ case "${1:-}" in --list|--list-raw|--get) export SPECTER_LOG_FD=2 ;; esac
 . "$_root/lib/teesim.sh"
 . "$_root/lib/keystore_toml.sh"
 . "$_root/lib/keystore_txt.sh"
+. "$_root/lib/keystore_ini.sh"
 . "$_root/lib/keystore.sh"
 . "$_root/lib/conflicts.sh"
 
