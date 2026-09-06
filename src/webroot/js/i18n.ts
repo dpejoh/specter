@@ -68,7 +68,7 @@ function wireLanguageSelect(currentLang: string) {
   const select = document.getElementById('language-select') as HTMLSelectElement | null;
   if (!select) return;
   select.innerHTML = '';
-  const langs: [string, string][] = [['auto', 'Auto'], ['en', 'English'], ['zh', '中文'], ['ru', 'Русский'], ['fr', 'Français'], ['es', 'Español'], ['ar', 'العربية'], ['pl', 'Polski'], ['tr', 'Türkçe'], ['id', 'Bahasa indonesia'], ['hu', 'Magyar'], ['vi', 'Tiếng Việt']];
+  const langs: [string, string][] = [['auto', 'Auto'], ['en', 'English'], ['zh', '中文'], ['ru', 'Русский'], ['fr', 'Français'], ['es', 'Español'], ['ar', 'العربية'], ['pl', 'Polski'], ['tr', 'Türkçe'], ['id', 'Bahasa indonesia'], ['hu', 'Magyar'], ['vn', 'Tiếng Việt']];
   for (const [code, name] of langs) {
     const opt = document.createElement('option');
     opt.value = code; opt.textContent = name; select.appendChild(opt);
