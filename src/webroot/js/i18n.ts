@@ -12,7 +12,7 @@ export async function initI18n() {
 
 export async function applyLanguage(langCode: string) {
   cfgSet('lang', langCode);
-  const available = ['en', 'zh', 'ru', 'fr', 'es', 'ar', 'pl', 'tr', 'id', 'hu', 'vi'];
+  const available = ['en', 'zh', 'ru', 'fr', 'es', 'ar', 'pl', 'tr', 'id', 'hu', 'vn'];
   let target = langCode;
   if (langCode === 'auto') {
     target = (navigator.language || '').slice(0, 2);
