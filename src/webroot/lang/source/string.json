@@ -180,7 +180,7 @@
   "theme_preset_pink": "Pink",
   "theme_preset_cyan": "Cyan",
   "theme_preset_grey": "Grey",
-  "advance_set_hma_desc": "Downloads HMA-OSS / HMA / HMAL anti-detection config with proper permissions, falls back to built-in template",
+  "advance_set_hma_desc": "Downloads the HMA-OSS config and writes it to the Zygisk service so hiding rules apply",
   "advance_set_hma-oss_configs": "Set HMA-OSS Configs",
   "advance_set_zygisk_desc": "Configures enforce-denylist, memory-type, linker settings",
   "advance_set_zygisk_next_configs": "Set Zygisk Next Configs",

@@ -36,21 +36,22 @@ _install_ok=0
 if check_network; then
   if download "$HMA_CONFIG_URL" "$TEMP_FILE" 2>/dev/null && [ -s "$TEMP_FILE" ]; then
 
-    cp "$TEMP_FILE" "/sdcard/Download/hma-oss.json" 2>/dev/null || cp "$TEMP_FILE" "/sdcard/hma-oss.json" 2>/dev/null
+    cp "$TEMP_FILE" "/sdcard/Download/hma-oss.json" 2>/dev/null || cp "$TEMP_FILE" "/sdcard/hma-oss.json" 2>/dev/null || true
 
-    _pkg=$(echo "$_target_dir" | cut -d"/" -f5)
-    _uid=$(pm list packages -U 2>/dev/null | grep "^package:$_pkg uid:" | sed "s/.*uid://") || _uid=0
-
-    # Try direct install (works on Magisk, boot, action.sh)
-    mkdir -p "$_target_dir" 2>/dev/null
-    if cp "$TEMP_FILE" "$_target_file" 2>/dev/null; then
-      chmod 600 "$_target_file" 2>/dev/null
-      chown "$_uid:$_uid" "$_target_file" 2>/dev/null
-      chown "$_uid:$_uid" "$_target_dir" 2>/dev/null
+    mkdir -p "$_target_dir" 2>/dev/null || true
+    if cat "$TEMP_FILE" > "$_target_file" 2>/dev/null; then
       _install_ok=1
     else
-      # Sandboxed (KSU/APatch WebUI) — use su to escape namespace
-      su -c "mkdir -p '$_target_dir' && cp '$TEMP_FILE' '$_target_file' && chmod 600 '$_target_file' && chown $_uid:$_uid '$_target_file' && chown $_uid:$_uid '$_target_dir'" 2>/dev/null && _install_ok=1
+      su -c "mkdir -p '$_target_dir' && cat '$TEMP_FILE' > '$_target_file'" 2>/dev/null && _install_ok=1
+    fi
+
+    if [ "$_found" = "HMA-OSS" ]; then
+      for _d in /data/misc/hide_my_applist_*; do
+        [ -d "$_d" ] || continue
+        if cat "$TEMP_FILE" > "$_d/config.json" 2>/dev/null || su -c "cat '$TEMP_FILE' > '$_d/config.json'" 2>/dev/null; then
+          _install_ok=1
+        fi
+      done
     fi
 
     if [ "$_install_ok" = "1" ]; then
@@ -64,6 +65,6 @@ if check_network; then
   fi
 fi
 
-unset _installed_pkgs _target_dir _target_file _found _uid _pkg _install_ok TEMP_FILE
+unset _installed_pkgs _target_dir _target_file _found _install_ok _d TEMP_FILE
 log_i "HMA" "HMA config install complete"
 exit 0
