@@ -19,8 +19,10 @@ fi
 
 case "$KSM_FORMAT" in
   ini)
-    cp "$KSM_CONFIG" "$BACKUP_DIR/config.ini.bak"
-    log_d "FIRST_BOOT" "Backed up config.ini"
+    if [ -f "$KSM_CONFIG" ]; then
+      cp "$KSM_CONFIG" "$BACKUP_DIR/config.ini.bak"
+      log_d "FIRST_BOOT" "Backed up config.ini"
+    fi
     ;;
   toml|json)
     ksm_read_targets > "$BACKUP_DIR/targets.list.bak" 2>/dev/null

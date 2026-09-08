@@ -216,6 +216,35 @@ SPECTER_FIRST_BOOT=1 run_feature security_patch.sh >/dev/null
 assert_contains "first boot: auto preserved" "$(cat "$OMK_CONFIG")" 'security_patch = "auto"'
 assert_not_contains "first boot: device not written" "$(cat "$OMK_CONFIG")" "2026-10-05"
 
+# ---------- ini (Tricky Store config.ini) ----------
+bootstrap
+source_libs
+mk_module tricky_store "Tricky Store"
+sed $'s/$/\r/' > "$TRICKY_DIR/config.ini" << 'EOF'
+[default_policy]
+boot_patch = no
+
+[com.google.android.gms]
+os_patch = prop
+
+[target]
+com.google.android.gms!
+com.example.wallet?
+EOF
+detect_keystore_manager
+assert_eq "detect: format ini" "ini" "$KSM_FORMAT"
+assert_contains "ini read: package" "$(ksm_read_targets)" "com.google.android.gms"
+_inode_ini=$(stat -c %i "$KSM_CONFIG")
+printf 'com.google.android.gms!\ncom.new.app\n' > "$TEST_ROOT/staging_ini.txt"
+ksm_commit_targets "$TEST_ROOT/staging_ini.txt"
+_ini_out=$(cat "$KSM_CONFIG")
+assert_contains "ini write: new app" "$_ini_out" "com.new.app"
+assert_not_contains "ini write: dropped wallet" "$_ini_out" "com.example.wallet"
+assert_contains "ini write: policy kept" "$_ini_out" "[com.google.android.gms]"
+assert_eq "ini write: in-place inode" "$_inode_ini" "$(stat -c %i "$KSM_CONFIG")"
+ksm_set_security_patch "2026-06-05"
+assert_eq "ini patch get" "2026-06-05" "$(ksm_get_security_patch)"
+
 # ---------- targets (JM): txt preserves suffixes; toml strips into scoop ----------
 bootstrap
 source_libs

@@ -6,6 +6,7 @@ _ini_read_targets() {
   awk '
     {
       line = $0
+      sub(/\r$/, "", line)
       sub(/[;#].*$/, "", line)
       gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
       if (line ~ /^\[[^][]+\]$/) { section = line; next }
@@ -48,6 +49,7 @@ _ini_write_targets() (
     }
     {
       line = $0
+      sub(/\r$/, "", line)
       sub(/[;#].*$/, "", line)
       gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
       if (line ~ /^\[[^][]+\]$/) {
@@ -75,6 +77,7 @@ _ini_get_boot_patch() {
   awk '
     {
       line = $0
+      sub(/\r$/, "", line)
       sub(/[;#].*$/, "", line)
       gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
       if (line ~ /^\[[^][]+\]$/) { section = line; next }
@@ -116,6 +119,7 @@ _ini_set_patch() (
     }
     {
       line = $0
+      sub(/\r$/, "", line)
       sub(/[;#].*$/, "", line)
       gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
       if (line ~ /^\[[^][]+\]$/) {
