@@ -527,4 +527,11 @@ assert_not_contains "lossless: raw hides uid token" "$_raw" "uid:10123"
 assert_not_contains "lossless: raw hides user token" "$_raw" "com.work.app@10"
 assert_contains "lossless: raw shows pkg" "$_raw" "com.new.app"
 
+bootstrap
+source_libs
+mkdir -p "$SPECTER_DIR/.lock"
+ln -s "9999999" "$SPECTER_DIR/.lock/targets"
+ksm_lock_targets
+assert_eq "lock: dead pid stolen" "$$" "$(readlink "$SPECTER_DIR/.lock/targets")"
+
 done_testing

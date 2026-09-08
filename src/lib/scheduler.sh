@@ -18,7 +18,8 @@ ensure_dir "$SPECTER_DIR/log" 2>/dev/null
 if [ -f "$PID_FILE" ]; then
   _old_pid=$(cat "$PID_FILE" 2>/dev/null || echo "")
   if [ -n "$_old_pid" ] && [ -f "/proc/$_old_pid/cmdline" ]; then
-    _cmdline=$(tr '\0' ' ' < "/proc/$_old_pid/cmdline" 2>/dev/null || echo "")
+    # shellcheck disable=SC2002
+    _cmdline=$(cat "/proc/$_old_pid/cmdline" 2>/dev/null | tr '\0' ' ' || echo "")
     case "$_cmdline" in
       *scheduler*) log_w "SCHED" "Already running (PID $_old_pid), exiting"; exit 0 ;;
     esac

@@ -210,8 +210,9 @@ ksm_lock_targets() {
     _klt_pid=$(readlink "$_klt" 2>/dev/null || true)
     if [ -n "$_klt_pid" ] && [ -d "/proc/$_klt_pid" ]; then
       _klt_cmd=""
+      # shellcheck disable=SC2002
       [ -f "/proc/$_klt_pid/cmdline" ] &&
-        _klt_cmd=$(tr '\0' ' ' < "/proc/$_klt_pid/cmdline" 2>/dev/null || echo "")
+        _klt_cmd=$(cat "/proc/$_klt_pid/cmdline" 2>/dev/null | tr '\0' ' ' || echo "")
       case "$_klt_cmd" in
         *target.sh*) ;;
         *)
