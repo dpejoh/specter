@@ -1,14 +1,26 @@
+# v1.4.5-2
+
+**New**
+- Tricky Store config.ini for targets and security patch
+- Vietnamese translations
+
+**Fixed**
+- Auto-target hanging with tr at 100% CPU on a dead lock holder
+- App Targeting treating debug logs as packages, `--set` keeping non-package lines
+- HMA-OSS config missing the Zygisk service path, failed sdcard copy aborting the install
+- Specter module description not updating
+
 # v1.4.5-1
 
 **New**
-- Hungarian translations (#84)
+- Hungarian translations
 
 **Changed**
-- French and Turkish translations (#82, #89)
+- French and Turkish translations
 
 **Fixed**
 - Auto-target still wiping the list to newly installed apps, lock covered commit only
-- App Targeting dropping installed system apps on apply and on hide/reopen (#87)
+- App Targeting dropping installed system apps on apply and on hide/reopen
 - App Targeting apply appending `android` onto the last package, list file missing a trailing newline
 - `--set` appending FIXED_TARGETS onto the WebUI target file, failed `--list-raw` treated as an empty list
 - Target lock matching leftover PIDs after reboot, Apply waiting 15s while auto-target scanned
@@ -37,8 +49,8 @@
 - App Targeting dropping FIXED_TARGETS and bypassing the active keystore backend (#74)
 - Auto-target race that could wipe the target list
 - TEESimulator mode dialog overwriting a quick selection
-- Keybox status not written on catalog miss, UI not refreshing (#68)
-- Spoofed device orphan PIF entry (#62)
+- Keybox status not written on catalog miss, UI not refreshing
+- Spoofed device orphan PIF entry
 
 # v1.4.4-17
 
