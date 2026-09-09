@@ -17,7 +17,7 @@ export type TargetState = 'unchecked' | 'bare' | 'conditional' | 'force';
 type BlacklistState = 'unchecked' | 'blacklisted';
 export type AppState = TargetState | BlacklistState;
 type Mode = 'target' | 'blacklist';
-export type KsmFormat = 'txt' | 'toml' | 'json' | '';
+export type KsmFormat = 'txt' | 'ini' | 'toml' | 'json' | '';
 
 export interface TargetApp {
   packageName: string;
@@ -472,14 +472,14 @@ export async function openTargetAppsManager() {
       try {
         const km = await fetchJson<KeystoreManagerJson>(API_URLS.KEYSTORE_MANAGER!, 0);
         const fmt = km?.format || '';
-        ksmFormat = fmt === 'json' || fmt === 'toml' || fmt === 'txt' ? fmt : 'txt';
+        ksmFormat = fmt === 'json' || fmt === 'toml' || fmt === 'txt' || fmt === 'ini' ? fmt : 'txt';
         perAppModes = km?.perAppModes;
       } catch {
         ksmFormat = 'txt';
       }
       // Contract flag from keystore_manager.json; format sniff only as a
       // fallback for stale info files written by older Specter versions.
-      supportsPerAppMode = perAppModes ?? (ksmFormat === 'txt');
+      supportsPerAppMode = perAppModes ?? (ksmFormat === 'txt' || ksmFormat === 'ini');
       const modeItem = overlay.querySelector('#ta-mode') as HTMLElement | null;
       if (modeItem) {
         modeItem.hidden = ksmFormat === 'toml';

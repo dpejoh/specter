@@ -41,6 +41,10 @@ _validate_patch_date() {
 _is_intentional_spoofed_patch() {
   _validate_patch_date "$1" >/dev/null && return 0
   case "$KSM_FORMAT" in
+    ini)
+      case "$1" in no|prop) return 0 ;; esac
+      printf '%s\n' "$1" | grep -qE '^([0-9]{4}|YYYY)([0-9]{2}|MM)([0-9]{2}|DD)$' && return 0
+      ;;
     toml)
       case "$1" in
         auto|latest) return 0 ;;

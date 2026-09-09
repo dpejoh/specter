@@ -93,6 +93,7 @@ source_libs() {
   . "$REPO_ROOT/src/lib/teesim.sh" 2>/dev/null
   . "$REPO_ROOT/src/lib/keystore_toml.sh" 2>/dev/null
   . "$REPO_ROOT/src/lib/keystore_txt.sh" 2>/dev/null
+  . "$REPO_ROOT/src/lib/keystore_ini.sh" 2>/dev/null
   . "$REPO_ROOT/src/lib/keystore.sh" 2>/dev/null
   . "$REPO_ROOT/src/lib/conflicts.sh" 2>/dev/null
   SPECTER_DIR="$TEST_ROOT/specter"
@@ -104,6 +105,7 @@ source_libs() {
   TARGET_FILE="$TRICKY_DIR/keybox.xml"
   BACKUP_FILE="$SPECTER_DIR/backup/keybox.xml.bak"
   TARGET_TXT="$TRICKY_DIR/target.txt"
+  TRICKY_CONFIG="$TRICKY_DIR/config.ini"
   SECURITY_PATCH_FILE="$TRICKY_DIR/security_patch.txt"
   BACKUP_DIR="$SPECTER_DIR/backup"
   OMK_KEYBOX="$OMK_DIR/keybox.xml"
