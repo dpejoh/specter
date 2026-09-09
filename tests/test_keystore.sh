@@ -563,4 +563,31 @@ ln -s "9999999" "$SPECTER_DIR/.lock/targets"
 ksm_lock_targets
 assert_eq "lock: dead pid stolen" "$$" "$(readlink "$SPECTER_DIR/.lock/targets")"
 
+# Live holder so we enter the cmdline read. A tr that sees /proc/*/cmdline
+# on stdin (the old redirect) leaves a marker; cat | tr feeds it a pipe.
+bootstrap
+source_libs
+_real_tr=$(command -v tr)
+cat > "$BIN_DIR/tr" <<EOF
+#!/bin/sh
+_src=\$(readlink /proc/self/fd/0 2>/dev/null || true)
+case "\$_src" in
+  */cmdline) printf '%s\n' "\$_src" > "$TEST_ROOT/tr_direct_cmdline" ;;
+esac
+exec $_real_tr "\$@"
+EOF
+chmod +x "$BIN_DIR/tr"
+sleep 60 &
+_holder=$!
+mkdir -p "$SPECTER_DIR/.lock"
+ln -s "$_holder" "$SPECTER_DIR/.lock/targets"
+ksm_lock_targets
+kill "$_holder" 2>/dev/null || true
+wait "$_holder" 2>/dev/null || true
+assert_eq "lock: live non-target stolen" "$$" "$(readlink "$SPECTER_DIR/.lock/targets")"
+assert_file_not_exists "lock: tr stdin is not cmdline" "$TEST_ROOT/tr_direct_cmdline"
+_redir=$(grep -n "tr '\\\\0' ' ' <" "$REPO_ROOT/src/lib/keystore.sh" "$REPO_ROOT/src/lib/scheduler.sh" || true)
+assert_eq "lock: no tr redirect from cmdline" "" "$_redir"
+unset _holder _real_tr _redir
+
 done_testing
