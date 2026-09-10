@@ -14,8 +14,8 @@ export const PRESETS: Record<string, string> = {
   grey:   '#5E5E5E',
 };
 
-let currentPreset: string = 'blue';
-let currentMappedPreset: string = 'blue';
+let currentPreset: string = 'monet';
+let currentMappedPreset: string = 'monet';
 let monetSeed: string | null = null;
 
 export function getCurrentPreset(): string {

@@ -43,7 +43,7 @@ export function updateColorsSummary() {
 }
 
 export async function openColorsDialog() {
-  let selectedPreset = getCurrentPreset();
+  let selectedPreset = getCurrentPreset() || 'monet';
 
   openSubPage({
     id: 'colors',
