@@ -1,157 +1,165 @@
 package com.dpejoh.specter;
 
+import android.app.Application;
+import android.app.Instrumentation;
+import android.content.Context;
+import android.os.Build;
 import android.os.Looper;
+import android.os.Process;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
+import android.system.Os;
 import android.util.Log;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.OutputStreamWriter;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.nio.charset.StandardCharsets;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
 import java.security.SecureRandom;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.security.spec.ECGenParameterSpec;
-import java.util.Arrays;
 
 import com.dpejoh.specter.attestation.Attestation;
 import com.dpejoh.specter.attestation.RootOfTrust;
 
 public class Main {
-
     private static final String TAG = "Specter";
-    private static final String ALIAS = "specter_tee_check";
+    private static final String ALIAS = "specter_tee_probe";
 
     public static void main(String[] args) {
-        String specterDir = "/data/adb/specter";
-        if (args.length > 0) specterDir = args[0];
-
-        prepareEnvironment();
-        runAttestationCheck(specterDir);
+        try {
+            fixEnv();
+            String hash = getTeeBootHash();
+            if (hash != null && !isAllZero(hash) && hash.length() == 64) {
+                System.out.println(hash);
+                System.exit(0);
+            } else {
+                System.exit(1);
+            }
+        } catch (Throwable t) {
+            System.exit(2);
+        }
     }
 
-    private static void runAttestationCheck(String specterDir) {
+    private static void fixEnv() {
         try {
-            KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
+            if (Os.geteuid() == Process.ROOT_UID) {
+                try {
+                    Os.seteuid(Process.SYSTEM_UID);
+                } catch (Throwable ignored) {}
+            }
+
+            if (Looper.getMainLooper() == null) {
+                Looper.prepareMainLooper();
+            }
+
+            Class<?> atClass = Class.forName("android.app.ActivityThread");
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                try {
+                    atClass.getMethod("initializeMainlineModules").invoke(null);
+                } catch (Throwable ignored) {}
+            }
+
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    Class.forName("android.security.keystore2.AndroidKeyStoreProvider")
+                            .getMethod("install").invoke(null);
+                } else {
+                    Class.forName("android.security.keystore.AndroidKeyStoreProvider")
+                            .getMethod("install").invoke(null);
+                }
+            } catch (Throwable t) {
+                try {
+                    Class.forName("android.security.keystore.AndroidKeyStoreProvider")
+                            .getMethod("install").invoke(null);
+                } catch (Throwable ignored) {}
+            }
+
+            Object activityThread = atClass.getMethod("systemMain").invoke(null);
+            Context systemContext = (Context) atClass.getMethod("getSystemContext").invoke(activityThread);
+
+            try {
+                String packageName = Os.geteuid() == Process.SYSTEM_UID ? "android" : "com.android.shell";
+                int flags = Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY;
+                Context context = systemContext.createPackageContext(packageName, flags);
+                Field mPackageInfo = context.getClass().getDeclaredField("mPackageInfo");
+                mPackageInfo.setAccessible(true);
+                Object loadedApk = mPackageInfo.get(context);
+                Method makeApplication = loadedApk.getClass().getDeclaredMethod("makeApplication",
+                        boolean.class, Instrumentation.class);
+                Application application = (Application) makeApplication.invoke(loadedApk, true, null);
+                Field mInitialApplication = atClass.getDeclaredField("mInitialApplication");
+                mInitialApplication.setAccessible(true);
+                mInitialApplication.set(activityThread, application);
+            } catch (Throwable fallback) {
+                Application app = (Application) Class.forName("android.app.Application")
+                        .getDeclaredConstructor().newInstance();
+                Method attach = Class.forName("android.content.ContextWrapper")
+                        .getDeclaredMethod("attachBaseContext", Context.class);
+                attach.setAccessible(true);
+                attach.invoke(app, systemContext);
+                Field f = atClass.getDeclaredField("mInitialApplication");
+                f.setAccessible(true);
+                f.set(activityThread, app);
+            }
+        } catch (Throwable ignored) {}
+    }
+
+    private static String getTeeBootHash() {
+        KeyStore keyStore = null;
+        try {
+            keyStore = KeyStore.getInstance("AndroidKeyStore");
             keyStore.load(null);
-            if (keyStore.containsAlias(ALIAS)) keyStore.deleteEntry(ALIAS);
+            if (keyStore.containsAlias(ALIAS)) {
+                keyStore.deleteEntry(ALIAS);
+            }
 
             byte[] challenge = new byte[16];
             new SecureRandom().nextBytes(challenge);
+
             KeyGenParameterSpec spec = new KeyGenParameterSpec.Builder(
                     ALIAS, KeyProperties.PURPOSE_SIGN)
                     .setAlgorithmParameterSpec(new ECGenParameterSpec("secp256r1"))
                     .setDigests(KeyProperties.DIGEST_SHA256)
                     .setAttestationChallenge(challenge)
                     .build();
+
             KeyPairGenerator kpg = KeyPairGenerator.getInstance(
                     KeyProperties.KEY_ALGORITHM_EC, "AndroidKeyStore");
             kpg.initialize(spec);
             kpg.generateKeyPair();
 
             Certificate[] chain = keyStore.getCertificateChain(ALIAS);
-            keyStore.deleteEntry(ALIAS);
             if (chain == null || chain.length == 0) {
-                Log.w(TAG, "Empty certificate chain");
-                writeFailure(specterDir);
-                return;
+                return null;
             }
 
             X509Certificate leaf = (X509Certificate) chain[0];
             Attestation att = Attestation.loadFromCertificate(leaf);
-            RootOfTrust root = att.getRootOfTrust();
-
-            writeResults(specterDir, att, root, challenge);
-        } catch (Exception e) {
-            Log.w(TAG, "Full attestation failed", e);
-            writeFailure(specterDir);
-        }
-    }
-
-    private static void writeResults(
-            String dir, Attestation att, RootOfTrust root, byte[] challenge
-    ) {
-        try {
-            new File(dir).mkdirs();
-
-            String hash = root != null ? root.verifiedBootHashHex() : null;
-            int tier = att.getAttestationSecurityLevel();
-            int keymasterVersion = att.getKeymasterVersion();
-            boolean challengeVerified = challenge != null
-                    && att.getAttestationChallenge() != null
-                    && Arrays.equals(challenge, att.getAttestationChallenge());
-            boolean teeBroken = hash == null;
-
-            writeFile(new File(dir, "tee_status"),
-                    "tee_broken=" + teeBroken + "\n" +
-                    "challenge_verified=" + challengeVerified + "\n");
-
-            if (hash != null) {
-                writeFile(new File(dir, "tee_bhash"), hash + "\n");
+            RootOfTrust rot = att.getRootOfTrust();
+            if (rot != null) {
+                return rot.verifiedBootHashHex();
             }
-
-            writeFile(new File(dir, "tee_tier"), tier + "\n");
-            writeFile(new File(dir, "tee_keymaster_version"), keymasterVersion + "\n");
-            writeFile(new File(dir, "tee_challenge"),
-                    "challenge_verified=" + challengeVerified + "\n");
-
-            File vbmeta = new File(dir, "vbmeta_digest");
-            if (hash != null && !vbmeta.exists()) {
-                writeFile(vbmeta, hash + "\n");
+        } catch (Throwable ignored) {
+        } finally {
+            if (keyStore != null) {
+                try {
+                    if (keyStore.containsAlias(ALIAS)) {
+                        keyStore.deleteEntry(ALIAS);
+                    }
+                } catch (Throwable ignored) {}
             }
-
-            Log.i(TAG, "TEE status: " + (teeBroken ? "broken" : "normal") +
-                    ", tier=" + tier +
-                    ", kmVer=" + keymasterVersion +
-                    ", challengeOk=" + challengeVerified);
-            if (hash != null) Log.i(TAG, "Boot hash: " + hash);
-
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to write status files", e);
         }
+        return null;
     }
 
-    private static void writeFailure(String dir) {
-        try {
-            new File(dir).mkdirs();
-            writeFile(new File(dir, "tee_status"),
-                    "tee_broken=true\nchallenge_verified=false\n");
-            Log.w(TAG, "TEE status: broken");
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to write failure status", e);
+    private static boolean isAllZero(String hex) {
+        if (hex == null || hex.isEmpty()) return true;
+        for (int i = 0; i < hex.length(); i++) {
+            if (hex.charAt(i) != '0') return false;
         }
-    }
-
-    private static void writeFile(File file, String content) throws Exception {
-        try (OutputStreamWriter w = new OutputStreamWriter(
-                new FileOutputStream(file), StandardCharsets.UTF_8)) {
-            w.write(content);
-        }
-    }
-
-    private static void prepareEnvironment() {
-        try {
-            if (Looper.getMainLooper() == null) Looper.prepareMainLooper();
-            Class<?> atClass = Class.forName("android.app.ActivityThread");
-            Object at = atClass.getMethod("systemMain").invoke(null);
-            Object ctx = atClass.getMethod("getSystemContext").invoke(at);
-            Object app = Class.forName("android.app.Application").getDeclaredConstructor().newInstance();
-            Method attach = Class.forName("android.content.ContextWrapper")
-                    .getDeclaredMethod("attachBaseContext", Class.forName("android.content.Context"));
-            attach.setAccessible(true);
-            attach.invoke(app, ctx);
-            Field f = atClass.getDeclaredField("mInitialApplication");
-            f.setAccessible(true);
-            f.set(at, app);
-            Class.forName("android.security.keystore2.AndroidKeyStoreProvider")
-                    .getMethod("install").invoke(null);
-        } catch (Exception e) {
-            Log.w(TAG, "Environment setup failed", e);
-        }
+        return true;
     }
 }

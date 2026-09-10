@@ -21,6 +21,10 @@ if [ "$_do_bootprops" != "0" ]; then
 
   apply_boot_props
   log_i "PROPS" "Boot property overrides applied"
+
+  if [ -f "$MODDIR/boot_hash.sh" ]; then
+    sh "$MODDIR/boot_hash.sh" || log_w "PROPS" "Boot hash resolution failed"
+  fi
 fi
 
 # --- 2. Persistent prop scan (existing logic) ---

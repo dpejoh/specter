@@ -4,27 +4,31 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 MODULE_DEPS="$PROJECT_ROOT/src/deps"
+ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}"
 
-export ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}"
+PLATFORM_JAR=$(ls -v "$ANDROID_HOME/platforms"/android-*/android.jar 2>/dev/null | tail -1)
+D8=$(ls -v "$ANDROID_HOME/build-tools"/*/d8 2>/dev/null | tail -1)
 
-echo "=== Building release APK ==="
-cd "$SCRIPT_DIR"
-gradle assembleRelease
-
-APK="$SCRIPT_DIR/app/build/outputs/apk/release/app-release.apk"
-[ -f "$APK" ] && echo "APK: $APK ($(stat -c%s "$APK") bytes)" || { echo "Build failed"; exit 1; }
-
-echo "=== Copying classes.dex to module deps ==="
-mkdir -p "$MODULE_DEPS"
-DEX_TMP=$(mktemp -d)
-unzip -o "$APK" "classes.dex" -d "$DEX_TMP" >/dev/null 2>&1
-if [ -f "$DEX_TMP/classes.dex" ]; then
-  cp "$DEX_TMP/classes.dex" "$MODULE_DEPS/classes.dex"
-  echo "Copied classes.dex ($(stat -c%s "$MODULE_DEPS/classes.dex") bytes)"
-else
-  echo "Warning: classes.dex not found in APK"
+if [ -z "$PLATFORM_JAR" ] || [ -z "$D8" ]; then
+  echo "Error: Android SDK platform jar or d8 not found in $ANDROID_HOME"
+  exit 1
 fi
-rm -rf "$DEX_TMP"
 
+echo "=== Compiling classes.dex using javac + d8 ==="
+BUILD_TMP=$(mktemp -d)
+mkdir -p "$BUILD_TMP/classes"
+
+javac -cp "$PLATFORM_JAR" -d "$BUILD_TMP/classes" \
+  "$SCRIPT_DIR"/app/src/main/java/com/dpejoh/specter/Main.java \
+  "$SCRIPT_DIR"/app/src/main/java/com/dpejoh/specter/attestation/*.java
+
+"$D8" --output "$BUILD_TMP" \
+  "$BUILD_TMP"/classes/com/dpejoh/specter/*.class \
+  "$BUILD_TMP"/classes/com/dpejoh/specter/attestation/*.class
+
+mkdir -p "$MODULE_DEPS"
+cp "$BUILD_TMP/classes.dex" "$MODULE_DEPS/classes.dex"
+echo "Copied classes.dex ($(stat -c%s "$MODULE_DEPS/classes.dex") bytes) to src/deps/classes.dex"
+
+rm -rf "$BUILD_TMP"
 echo "=== Done ==="
-echo "Now run 'npm run build' from $PROJECT_ROOT to bundle it"

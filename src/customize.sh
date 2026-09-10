@@ -111,6 +111,7 @@ fi
 for _f in inotifyd64 inotifyd32 inotifyd_x86_64 inotifyd_x86; do
   [ -f "$MODPATH/deps/$_f" ] && rm -f "$MODPATH/deps/$_f"
 done
+[ -f "$MODPATH/deps/classes.dex" ] && set_perm "$MODPATH/deps/classes.dex" 0 0 0644
 unset _arch _src _f
 
 # Copy shipped config files to data dir
