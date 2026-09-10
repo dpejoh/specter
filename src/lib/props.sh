@@ -42,6 +42,22 @@ sp_persist() {
   unset _sp_name _sp_value _sp_original
 }
 
+sp_force() {
+  _sf_name="$1" _sf_expected="$2"
+  _sf_current=$(resetprop "$_sf_name" 2>/dev/null || echo "")
+  [ "$_sf_current" = "$_sf_expected" ] && { unset _sf_name _sf_expected _sf_current; return 0; }
+  resetprop -n "$_sf_name" "$_sf_expected" 2>/dev/null || true
+  log_i "PROPS" "$_sf_name: ${_sf_current:-(unset)} → $_sf_expected"
+  if [ -n "$_sf_current" ] && [ "$_sf_current" != "$_sf_expected" ]; then
+    if ! grep -qsF "|$_sf_name|" "$PERSIST_RESTORE_FILE" 2>/dev/null; then
+      ensure_dir "$SPECTER_DIR" 2>/dev/null
+      echo "restore|$_sf_name|$_sf_current" >> "$PERSIST_RESTORE_FILE" 2>/dev/null || true
+    fi
+  fi
+  unset _sf_name _sf_expected _sf_current
+  return 0
+}
+
 apply_boot_props() {
   for _abp_prop in \
     ro.build.selinux:1 ro.build.selinux.enforce:1 \
@@ -50,7 +66,7 @@ apply_boot_props() {
     ro.boot.warranty_bit:0 ro.warranty_bit:0 ro.vendor.warranty_bit:0 ro.vendor.boot.warranty_bit:0 \
     ro.is_ever_orange:0 ro.secureboot.lockstate:locked \
     ro.boot.vbmeta.device_state:locked ro.boot.verifiedbootstate:green \
-    ro.boot.flash.locked:1 ro.boot.veritymode:enforcing \
+    ro.boot.veritymode:enforcing \
     ro.boot.veritymode.managed:yes ro.boot.selinux:enforcing \
     vendor.boot.verifiedbootstate:green vendor.boot.vbmeta.device_state:locked \
     ro.boot.realmebootstate:green ro.boot.realme.lockstate:1 \
@@ -59,6 +75,7 @@ apply_boot_props() {
     ro.system.build.tags:release-keys ro.vendor.build.tags:release-keys; do
     sp_try "${_abp_prop%%:*}" "${_abp_prop#*:}"
   done
+  sp_force "ro.boot.flash.locked" "1"
   for _abp_prop in ro.product.build.type ro.system.build.type ro.vendor.build.type \
     ro.odm.build.type ro.product.vendor.build.type ro.product.odm.build.type; do
     sp_try "$_abp_prop" "user"

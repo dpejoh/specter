@@ -25,6 +25,14 @@ set_prop "ro.build.flavor" "lineage_user"
 sp_try "ro.build.flavor" "userdebug" "user"
 assert_prop_eq "sp_try(3) skips if needle not found" "ro.build.flavor" "lineage_user"
 
+# ---- sp_force: sets prop even if missing ----
+rm -f "$PROPS_DIR/ro.boot.flash.locked"
+sp_force "ro.boot.flash.locked" "1"
+assert_prop_eq "sp_force sets missing prop" "ro.boot.flash.locked" "1"
+set_prop "ro.boot.flash.locked" "0"
+sp_force "ro.boot.flash.locked" "1"
+assert_prop_eq "sp_force overrides wrong value" "ro.boot.flash.locked" "1"
+
 # ---- apply_boot_props: one-line props ----
 bootstrap
 source_libs
@@ -38,7 +46,7 @@ set_prop "ro.warranty_bit" "1"
 set_prop "ro.vendor.warranty_bit" "1"
 set_prop "ro.boot.vbmeta.device_state" "unlocked"
 set_prop "ro.boot.verifiedbootstate" "orange"
-set_prop "ro.boot.flash.locked" "0"
+# Note: ro.boot.flash.locked is omitted here to verify it gets set even when missing from device
 set_prop "ro.boot.veritymode" "eio"
 set_prop "ro.boot.selinux" "permissive"
 set_prop "ro.system.build.tags" "dev-keys"
@@ -54,7 +62,7 @@ assert_prop_eq "boot: ro.warranty_bit 1→0"   "ro.warranty_bit" "0"
 assert_prop_eq "boot: vendor.warranty_bit 1→0" "ro.vendor.warranty_bit" "0"
 assert_prop_eq "boot: device_state→locked"   "ro.boot.vbmeta.device_state" "locked"
 assert_prop_eq "boot: verifiedbootstate→green" "ro.boot.verifiedbootstate" "green"
-assert_prop_eq "boot: flash.locked 0→1"      "ro.boot.flash.locked" "1"
+assert_prop_eq "boot: flash.locked missing→1" "ro.boot.flash.locked" "1"
 assert_prop_eq "boot: veritymode→enforcing"  "ro.boot.veritymode" "enforcing"
 assert_prop_eq "boot: selinux→enforcing"     "ro.boot.selinux" "enforcing"
 
