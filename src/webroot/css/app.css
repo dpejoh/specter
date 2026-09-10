@@ -2972,6 +2972,10 @@ md-filled-tonal-button {
   opacity: 0.85;
 }
 
+.subpage-custom-item {
+  display: contents;
+}
+
 /* Grouped M3 Expressive rounded cards for sub-options */
 .subpage-options-wrapper .list-container .list-item {
   padding: 18px 24px;
@@ -3037,6 +3041,49 @@ md-filled-tonal-button {
   font-size: 0.875rem;
   color: var(--md-sys-color-on-surface-variant);
   font-weight: 500;
+}
+
+/* Subpage footer action buttons */
+.subpage-footer {
+  width: 100%;
+  max-width: 800px;
+  margin: 16px auto 0;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+/* Subpage text input container */
+.subpage-text-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 10px;
+  background: var(--md-sys-color-surface-container-highest);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: 14px;
+  padding: 4px 6px 4px 14px;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.subpage-text-input-wrap:focus-within {
+  border-color: var(--md-sys-color-primary);
+}
+
+.subpage-full-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--md-ref-typeface-plain);
+  font-size: 0.9375rem;
+  color: var(--md-sys-color-on-surface);
+  min-width: 0;
 }
 
 /* Disabled sub-options container when master switch is off */

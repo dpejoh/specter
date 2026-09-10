@@ -73,6 +73,7 @@ export interface SubPageConfig {
   masterToggle?: SubPageMasterToggle;
   groups: SubPageGroup[];
   infoCard?: SubPageInfoCard;
+  footer?: (container: HTMLElement, instance: SubPageInstance) => void;
   onClose?: () => void;
 }
 
@@ -209,6 +210,8 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
           `).join('')}
         </div>
 
+        <div class="subpage-footer" id="subpage-footer" ${config.footer ? '' : 'style="display:none;"'}></div>
+
         ${config.infoCard ? `
           <div class="subpage-info-note">
             <md-icon aria-hidden="true">${config.infoCard.icon || 'info'}</md-icon>
@@ -337,9 +340,16 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
     });
   });
 
-  return {
+  const instance: SubPageInstance = {
     overlay,
     close: () => history.back(),
     isMasterEnabled: () => masterEnabled,
   };
+
+  if (config.footer) {
+    const footerEl = overlay.querySelector('#subpage-footer') as HTMLElement | null;
+    if (footerEl) config.footer(footerEl, instance);
+  }
+
+  return instance;
 }
