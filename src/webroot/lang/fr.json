@@ -215,7 +215,7 @@
   "settings_advanced": "Paramètres avancés",
   "settings_appearance": "Apparence",
   "settings_color_preset": "Couleur",
-  "settings_contributors": "Contributeurs au projet",
+  "settings_contributors": "Principaux contributeurs",
   "settings_reset_defaults": "Rétablissement des options par défaut",
   "settings_reset_defaults_desc": "Rétablit les valeurs d'usine des options de l'onglet Contrôle et des fonctionnalités. Les réglages de langue et d'apparence sont conservés",
   "settings_dev_mode": "Mode Développeur",

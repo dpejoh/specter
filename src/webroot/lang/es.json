@@ -215,7 +215,7 @@
   "settings_advanced": "Avanzado",
   "settings_appearance": "Apariencia",
   "settings_color_preset": "Color",
-  "settings_contributors": "Colaboradores del proyecto",
+  "settings_contributors": "Principales colaboradores",
   "settings_reset_defaults": "Restablecer opciones predeterminadas",
   "settings_reset_defaults_desc": "Restaura los interruptores de Control y las funciones a los valores de fábrica. El idioma y la apariencia no cambian.",
   "settings_dev_mode": "Modo desarrollador",

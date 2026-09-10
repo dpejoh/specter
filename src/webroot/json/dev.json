@@ -7,18 +7,18 @@
     "avatar": "https://github.com/dpejoh.png"
   },
   {
-    "name": "Juan Martín",
-    "username": "juanma0511",
-    "role": "Backend Contributor",
-    "github": "https://github.com/juanma0511",
-    "avatar": "https://github.com/juanma0511.png"
-  },
-  {
     "name": "bocho",
     "username": "bocho8",
     "role": "WebUI & Backend Contributor",
     "github": "https://github.com/bocho8",
     "avatar": "https://github.com/bocho8.png"
+  },
+  {
+    "name": "Juan Martín",
+    "username": "juanma0511",
+    "role": "Backend Contributor",
+    "github": "https://github.com/juanma0511",
+    "avatar": "https://github.com/juanma0511.png"
   },
   {
     "name": "myzanori",
@@ -28,45 +28,17 @@
     "avatar": "https://github.com/myzanori.png"
   },
   {
-    "name": "Burak",
-    "username": "mirvora",
-    "role": "Turkish Translator",
-    "github": "https://github.com/mirvora",
-    "avatar": "https://github.com/mirvora.png"
+    "name": "lyf",
+    "username": "li-yifei",
+    "role": "Backend Contributor",
+    "github": "https://github.com/li-yifei",
+    "avatar": "https://github.com/li-yifei.png"
   },
   {
-    "name": "Nixie24",
-    "username": "Nixie24",
-    "role": "Chinese Translator",
-    "github": "https://github.com/Nixie24",
-    "avatar": "https://github.com/Nixie24.png"
-  },
-  {
-    "name": "czaruscc",
-    "username": "czaruscc",
-    "role": "Polish Translator",
-    "github": "https://github.com/czaruscc",
-    "avatar": "https://github.com/czaruscc.png"
-  },
-  {
-    "name": "PifGadget",
-    "username": "PifGadget92",
-    "role": "French Translator",
-    "github": "https://github.com/PifGadget92",
-    "avatar": "https://github.com/PifGadget92.png"
-  },
-  {
-    "name": "tilla2",
-    "username": "tilla2",
-    "role": "Hungarian Translator",
-    "github": "https://github.com/tilla2",
-    "avatar": "https://github.com/tilla2.png"
-  },
-  {
-    "name": "d224407",
-    "username": "d224407",
-    "role": "Vietnamese Translator",
-    "github": "https://github.com/d224407",
-    "avatar": "https://github.com/d224407.png"
+    "name": "pannal",
+    "username": "pannal",
+    "role": "WebUI & Backend Contributor",
+    "github": "https://github.com/pannal",
+    "avatar": "https://github.com/pannal.png"
   }
 ]

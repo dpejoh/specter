@@ -215,7 +215,7 @@
   "settings_advanced": "Расширенные",
   "settings_appearance": "Внешний вид",
   "settings_color_preset": "Цвет",
-  "settings_contributors": "Участники проекта",
+  "settings_contributors": "Основные участники",
   "settings_reset_defaults": "Сбросить параметры по умолчанию",
   "settings_reset_defaults_desc": "Восстанавливает переключатели Control и функций до заводских значений. Язык и оформление не меняются.",
   "settings_dev_mode": "Режим разработчика",

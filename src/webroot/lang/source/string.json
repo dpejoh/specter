@@ -215,7 +215,7 @@
   "settings_advanced": "Advanced",
   "settings_appearance": "Appearance",
   "settings_color_preset": "Color",
-  "settings_contributors": "Project Contributors",
+  "settings_contributors": "Top Contributors",
   "settings_reset_defaults": "Reset default options",
   "settings_reset_defaults_desc": "Restore Control and feature toggles to factory defaults. Language and appearance are kept.",
   "settings_dev_mode": "Developer Mode",
