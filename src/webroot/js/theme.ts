@@ -2,7 +2,7 @@ import { getPresetColors, presetClosestTo } from './color-utils.js';
 import { cfgGet, cfgSet } from './cfg.js';
 import { exec } from './bridge.js';
 
-const PRESETS: Record<string, string> = {
+export const PRESETS: Record<string, string> = {
   blue:   '#1157CE',
   yellow: '#8F4E06',
   red:    '#B3251E',
@@ -17,6 +17,10 @@ const PRESETS: Record<string, string> = {
 let currentPreset: string = 'blue';
 let currentMappedPreset: string = 'blue';
 let monetSeed: string | null = null;
+
+export function getCurrentPreset(): string {
+  return currentPreset;
+}
 
 export async function initTheme(savedMode: string) {
   currentPreset = await cfgGet('theme_preset', 'monet') || 'monet';
@@ -75,6 +79,7 @@ function resolveMode(mode: string): string {
 }
 
 async function applyMonetPreset(mode: string) {
+  currentPreset = 'monet';
   const resolved = resolveMode(mode);
   const isDark = resolved === 'dark';
 
@@ -106,18 +111,23 @@ export function refreshTheme() {
   }
 }
 
-function applyMode(mode: string) {
+export function applyMode(mode: string) {
   const resolved = resolveMode(mode);
   document.documentElement.setAttribute('data-theme', mode);
   document.documentElement.setAttribute('data-theme-resolved', resolved);
   document.documentElement.style.colorScheme = resolved;
   cfgSet('theme', mode);
 
-  const name = currentPreset === 'monet' ? currentMappedPreset : currentPreset;
-  applyNamedPreset(name, resolved === 'dark');
+  if (currentPreset === 'monet') {
+    applyMonetPreset(mode);
+  } else {
+    const name = currentPreset;
+    applyNamedPreset(name, resolved === 'dark');
+  }
 }
 
-function applyPreset(preset: string) {
+export function applyPreset(preset: string) {
+  currentPreset = preset;
   if (preset === 'monet') {
     document.querySelectorAll('.preset-chip').forEach(chip => {
       (chip as HTMLElement & { selected: boolean }).selected = (chip as HTMLElement).dataset.preset === 'monet';

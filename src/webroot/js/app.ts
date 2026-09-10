@@ -46,6 +46,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.addEventListener('languageChanged', () => {
     loadContributors().catch(() => {});
+    import('./dark-theme-ui.js').then(m => m.updateDarkThemeSummary()).catch(() => {});
+    import('./language-ui.js').then(m => m.updateLanguageSummary()).catch(() => {});
+    import('./colors-ui.js').then(m => m.updateColorsSummary()).catch(() => {});
     const active = document.querySelector('.nav-tab--active') as HTMLElement | null;
     const indicator = document.getElementById('nav-indicator') as HTMLElement | null;
     if (active && indicator) {
@@ -75,6 +78,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   import('./security-patch-ui.js').then(m => m.wireSecurityPatch()).catch(() => {});
   import('./omk-trust-ui.js').then(m => m.wireOmkTrust()).catch(() => {});
   import('./font.js').then(m => m.wireFontToggles()).catch(() => {});
+  import('./dark-theme-ui.js').then(m => m.wireDarkTheme()).catch(() => {});
+  import('./language-ui.js').then(m => m.wireLanguageUI()).catch(() => {});
+  import('./colors-ui.js').then(m => m.wireColorsUI()).catch(() => {});
 
   initI18n().then(() => { loadContributors().catch(() => {}); }).catch(() => {});
   initDevice().catch(() => {});
