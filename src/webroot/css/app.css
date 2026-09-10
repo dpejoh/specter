@@ -619,10 +619,27 @@ section:not([hidden]) {
   padding: 14px 16px;
   user-select: none;
   position: relative;
-  border-radius: 12px;
+  border-radius: 4px;
   box-sizing: border-box;
   transition: border-radius 0.2s ease, transform 0.2s ease;
   cursor: pointer;
+}
+
+/* Grouped M3 Expressive corner radii for list items */
+.list-container .list-item:only-child {
+  border-radius: 28px;
+}
+
+.list-container .list-item:first-child:not(:only-child) {
+  border-radius: 28px 28px 4px 4px;
+}
+
+.list-container .list-item:not(:first-child):not(:last-child) {
+  border-radius: 4px;
+}
+
+.list-container .list-item:last-child:not(:only-child) {
+  border-radius: 4px 4px 28px 28px;
 }
 
 .list-item[hidden] {
@@ -634,7 +651,6 @@ section:not([hidden]) {
 }
 .list-item:active {
   background: color-mix(in srgb, var(--md-sys-color-surface-container-high), var(--md-sys-color-on-surface) 10%);
-  border-radius: 20px;
   transform: scale(0.98);
 }
 
