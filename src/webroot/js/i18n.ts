@@ -1,16 +1,39 @@
 import { cfgGet, cfgSet } from './cfg.js';
 import enStrings from '../lang/source/string.json';
 
+export const SUPPORTED_LANGUAGES = [
+  { code: 'auto', name: 'Auto', native: 'System default' },
+  { code: 'en', name: 'English', native: 'English' },
+  { code: 'zh', name: 'Chinese', native: '中文' },
+  { code: 'ru', name: 'Russian', native: 'Русский' },
+  { code: 'fr', name: 'French', native: 'Français' },
+  { code: 'es', name: 'Spanish', native: 'Español' },
+  { code: 'ar', name: 'Arabic', native: 'العربية' },
+  { code: 'pl', name: 'Polish', native: 'Polski' },
+  { code: 'tr', name: 'Turkish', native: 'Türkçe' },
+  { code: 'id', name: 'Indonesian', native: 'Bahasa Indonesia' },
+  { code: 'hu', name: 'Hungarian', native: 'Magyar' },
+  { code: 'vn', name: 'Vietnamese', native: 'Tiếng Việt' }
+];
+
+let _currentLangCode = 'auto';
+
+export function getCurrentLanguageCode(): string {
+  return _currentLangCode;
+}
+
 let currentStrings: Record<string, string> = {};
 const fallbackStrings: Record<string, string> = enStrings;
 
 export async function initI18n() {
   const saved = await cfgGet('lang', 'auto') || 'auto';
+  _currentLangCode = saved;
   await applyLanguage(saved);
   wireLanguageSelect(saved);
 }
 
 export async function applyLanguage(langCode: string) {
+  _currentLangCode = langCode;
   cfgSet('lang', langCode);
   const available = ['en', 'zh', 'ru', 'fr', 'es', 'ar', 'pl', 'tr', 'id', 'hu', 'vn'];
   let target = langCode;
