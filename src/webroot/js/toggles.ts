@@ -55,17 +55,35 @@ export function renderControlToggles() {
 
     const ripple = document.createElement('md-ripple');
 
+    const actionArea = document.createElement('div');
+    actionArea.className = 'li-toggle-action';
+
+    if (toggle.configurable) {
+      const cue = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      cue.setAttribute('class', 'li-config-chevron');
+      cue.setAttribute('viewBox', '0 0 8 14');
+      cue.setAttribute('width', '8');
+      cue.setAttribute('height', '14');
+      cue.setAttribute('fill', 'none');
+      cue.setAttribute('stroke', 'currentColor');
+      cue.setAttribute('stroke-width', '2');
+      cue.setAttribute('stroke-linecap', 'round');
+      cue.setAttribute('stroke-linejoin', 'round');
+      cue.setAttribute('aria-hidden', 'true');
+      cue.innerHTML = '<path d="M1.5 2L6.5 7L1.5 12"/>';
+      actionArea.appendChild(cue);
+
+      const div = document.createElement('div');
+      div.className = 'li-config-divider';
+      div.setAttribute('aria-hidden', 'true');
+      actionArea.appendChild(div);
+    }
+
+    actionArea.appendChild(sw);
+
     row.appendChild(iconDiv);
     row.appendChild(content);
-    if (toggle.configurable) {
-      const cue = document.createElement('md-icon');
-      cue.className = 'li-config-icon';
-      cue.setAttribute('aria-hidden', 'true');
-      cue.textContent = 'settings';
-      row.appendChild(cue);
-    }
-    row.appendChild(spacer);
-    row.appendChild(sw);
+    row.appendChild(actionArea);
     row.appendChild(ripple);
     container.appendChild(row);
   }

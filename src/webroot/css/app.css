@@ -659,13 +659,36 @@ section:not([hidden]) {
   min-width: 0;
 }
 
-.list-item--toggle .spacer {
-  display: none;
+.li-toggle-action {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
-md-icon.li-config-icon {
-  font-size: 20px;
-  color: var(--md-sys-color-on-surface-variant);
+.li-config-chevron {
+  width: 8px;
+  height: 14px;
+  color: inherit;
+  opacity: 0.65;
+  flex-shrink: 0;
+  user-select: none;
+  pointer-events: none;
+  display: block;
+}
+
+.li-config-divider {
+  width: 1px;
+  height: 48px;
+  background-color: currentColor;
+  opacity: 0.65;
+  flex-shrink: 0;
+}
+
+.li-toggle-action md-switch {
+  margin: 0;
   flex-shrink: 0;
 }
 
@@ -2774,5 +2797,213 @@ md-filled-tonal-button {
 .ap-interval-input::-webkit-outer-spin-button,
 .ap-interval-input::-webkit-inner-spin-button {
   -webkit-appearance: none;
+  margin: 0;
+}
+
+/* ==========================================================================
+   Material Design 3 Expressive Sub-Pages
+   ========================================================================== */
+
+.subpage-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  opacity: 0;
+  transform: translateX(28px);
+  transition: opacity 220ms cubic-bezier(0.3, 0.0, 0.8, 0.15),
+              transform 220ms cubic-bezier(0.3, 0.0, 0.8, 0.15);
+  display: flex;
+  flex-direction: column;
+}
+
+.subpage-overlay--open {
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 300ms cubic-bezier(0.05, 0.7, 0.1, 1.0),
+              transform 300ms cubic-bezier(0.05, 0.7, 0.1, 1.0);
+}
+
+.subpage-inner {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.subpage-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  padding-top: calc(10px + var(--window-inset-top, 0px));
+  min-height: 64px;
+  flex-shrink: 0;
+  background: var(--md-sys-color-surface);
+  position: relative;
+  z-index: 2;
+}
+
+.subpage-back-btn {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.subpage-back-btn:active {
+  transform: scale(0.92);
+  filter: brightness(0.9);
+}
+
+.subpage-back-btn md-icon {
+  font-size: 20px;
+  color: var(--md-sys-color-on-surface);
+}
+
+.subpage-title {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--md-sys-color-on-surface);
+  flex: 1;
+}
+
+.subpage-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 16px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+}
+
+/* Master Hero Switch Item at page top */
+.subpage-master-container {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.subpage-master-item {
+  border-radius: 9999px !important;
+  padding: 22px 28px !important;
+  min-height: 76px;
+  box-sizing: border-box;
+  transition: background-color 0.25s cubic-bezier(0.2, 0, 0, 1),
+              color 0.25s ease,
+              transform 0.2s ease !important;
+}
+
+.subpage-master-item:hover,
+.subpage-master-item:active {
+  border-radius: 9999px !important;
+}
+
+.subpage-master-text {
+  font-size: 1.15rem !important;
+  font-weight: 500 !important;
+  line-height: 1.35 !important;
+}
+
+.subpage-master-item--active {
+  background-color: var(--md-sys-color-primary-container) !important;
+  color: var(--md-sys-color-on-primary-container) !important;
+}
+
+.subpage-master-item--active .li-icon {
+  background: var(--md-sys-color-surface) !important;
+  color: var(--md-sys-color-primary) !important;
+}
+
+.subpage-master-item--active .li-icon md-icon {
+  color: var(--md-sys-color-primary) !important;
+}
+
+.subpage-master-item--active .toggle-text {
+  color: var(--md-sys-color-on-primary-container) !important;
+}
+
+.subpage-master-item--active .supporting-text {
+  color: var(--md-sys-color-on-primary-container) !important;
+  opacity: 0.85;
+}
+
+/* Grouped M3 Expressive rounded cards for sub-options */
+.subpage-options-wrapper .list-container .list-item {
+  padding: 18px 24px;
+}
+
+.subpage-options-wrapper .list-container .list-item:only-child {
+  border-radius: 28px;
+}
+
+.subpage-options-wrapper .list-container .list-item:first-child:not(:only-child) {
+  border-radius: 28px 28px 4px 4px;
+}
+
+.subpage-options-wrapper .list-container .list-item:not(:first-child):not(:last-child) {
+  border-radius: 4px;
+}
+
+.subpage-options-wrapper .list-container .list-item:last-child:not(:only-child) {
+  border-radius: 4px 4px 28px 28px;
+}
+
+.subpage-options-wrapper .list-container .list-item:active {
+  transform: scale(0.99);
+}
+
+/* Disabled sub-options container when master switch is off */
+.subpage-options--disabled .list-item {
+  opacity: 0.42;
+  pointer-events: none;
+}
+
+/* Native Android Settings style info note below options */
+.subpage-info-note {
+  width: 100%;
+  max-width: 800px;
+  margin: 24px auto 0;
+  padding: 0 24px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+
+.subpage-info-note md-icon {
+  font-size: 22px;
+  color: var(--md-sys-color-on-surface-variant);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.subpage-info-note p {
   margin: 0;
 }

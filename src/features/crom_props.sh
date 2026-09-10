@@ -5,7 +5,7 @@ MODDIR=${0%/*}
 . "$MODDIR/../lib/constants.sh"
 
 [ "$(cfg_get toggle_rom_fingerprint 1)" = "0" ] && exit 0
-[ "$(cfg_get toggle_custom_rom_props 1)" = "0" ] && exit 0
+[ "$(cfg_get toggle_custom_rom_props 0)" = "0" ] && exit 0
 
 log_i "CROM_PROPS" "Cleaning custom ROM props"
 

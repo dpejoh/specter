@@ -33,7 +33,7 @@ source_libs
 set_cfg "toggle_rom_fingerprint" "1"
 set_cfg "rom_fingerprint_hexpatch" "0"
 set_cfg "rom_fingerprint_prefix" "1"
-set_prop "ro.build.display.id" "aosp_beryllium-userdebug"
+set_prop "ro.build.display.id" "lineage-beryllium-userdebug"
 set_prop "ro.build.fingerprint" "lineage_beryllium-userdebug"
 set_prop "ro.build.description" "stock desc"
 set_prop "ro.build.version.incremental" "QQ3A.200605.001"
@@ -44,7 +44,7 @@ if [ "$_rf_prefix" != "0" ]; then
     _rf_val=$(resetprop "$_rf_build_prop" 2>/dev/null || echo "")
     [ -z "$_rf_val" ] && continue
     _rf_new_val="$_rf_val"
-    for _rf_pref in aosp_ lineage_; do
+    for _rf_pref in aosp_ lineage_ lineage-; do
       case "$_rf_new_val" in
         "$_rf_pref"*) _rf_new_val="${_rf_new_val#$_rf_pref}" ;;
       esac
@@ -53,7 +53,7 @@ if [ "$_rf_prefix" != "0" ]; then
   done
 fi
 
-assert_prop_eq "prefix: display.id aosp_ stripped" "ro.build.display.id" "beryllium-userdebug"
+assert_prop_eq "prefix: display.id lineage- stripped" "ro.build.display.id" "beryllium-userdebug"
 assert_prop_eq "prefix: fingerprint lineage_ stripped" "ro.build.fingerprint" "beryllium-userdebug"
 assert_prop_eq "prefix: description unchanged" "ro.build.description" "stock desc"
 assert_prop_eq "prefix: incremental unchanged" "ro.build.version.incremental" "QQ3A.200605.001"
@@ -140,5 +140,19 @@ set_prop "ro.build.display.id" "lineage_rom"
 
 [ "$(cfg_get toggle_rom_fingerprint 1)" = "0" ] && _disabled=true
 assert_eq "master-off: no action when toggle=0" "true" "$_disabled"
+
+# ---------- dirty suffix stripping in spoof_build_props ----------
+
+bootstrap
+source_libs
+set_prop "ro.build.display.id" "beryllium-userdebug 10 QQ3A.200605.001-dirty"
+set_prop "ro.build.version.incremental" "eng.ben.20230612.212507-dirty"
+set_prop "ro.build.flavor" "lineage_userdebug"
+
+spoof_build_props
+
+assert_prop_eq "spoof_build: display.id -dirty stripped" "ro.build.display.id" "beryllium-userdebug 10 QQ3A.200605.001"
+assert_prop_eq "spoof_build: incremental -dirty stripped" "ro.build.version.incremental" "eng.ben.20230612.212507"
+assert_prop_eq "spoof_build: flavor userdebug -> user" "ro.build.flavor" "lineage_user"
 
 done_testing

@@ -112,6 +112,20 @@ spoof_build_props() {
     *)           [ -n "$_fb_fingerprint" ] && log_i "PROPS" "ro.build.fingerprint: already release" ;;
   esac
   unset _fb_fingerprint
+
+  # Clean -dirty suffix from build properties
+  for _fb_prop in ro.build.display.id ro.build.description ro.build.version.incremental \
+                  ro.bootimage.build.version.incremental ro.system.build.version.incremental \
+                  ro.vendor.build.version.incremental ro.odm.build.version.incremental \
+                  ro.product.build.version.incremental ro.system_ext.build.version.incremental; do
+    _fb_val=$(resetprop "$_fb_prop" 2>/dev/null || echo "")
+    case "$_fb_val" in
+      *-dirty)
+        sp_try "$_fb_prop" "${_fb_val%-dirty}"
+        ;;
+    esac
+  done
+  unset _fb_prop _fb_val
 }
 
 

@@ -71,7 +71,7 @@ toggle_prop_handler:1 toggle_boot_state_props:1 toggle_bootmode_spoof:1
 toggle_adb_disabler:0
 toggle_adb_disabler_dev_options:1 toggle_adb_disabler_usb_debug:1
 toggle_adb_disabler_oem_unlock:1
-toggle_rom_fingerprint:1 toggle_custom_rom_props:1 toggle_pif_props:1
+toggle_rom_fingerprint:1 toggle_custom_rom_props:0 toggle_pif_props:1
 rom_fingerprint_pif:1
 toggle_rom_fingerprint_names:1 toggle_rom_fingerprint_prefix:1
 toggle_rom_fingerprint_build_type:1
