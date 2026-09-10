@@ -167,7 +167,6 @@
   "custom_kb_softbanned": "Softbanned",
   "custom_kb_private_toggle": "Private Keybox",
   "custom_kb_private_desc": "Hide certificate subject and serial in keybox information",
-  "custom_kb_info_desc": "Custom keybox files should be valid Key Provider XML files. Installing a custom keybox writes the file directly to your keystore and restarts the keybox provider.",
   "dialog_cancel": "Cancel",
   "dialog_close": "Close",
   "dialog_save": "Save",

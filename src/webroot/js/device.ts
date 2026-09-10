@@ -134,7 +134,10 @@ function applySecurityPatch(data: InfoJson) {
   const pifEl = document.getElementById('sp-pif');
   if (!dateEl) return;
   dateEl.textContent = data.security_patch || data.build_patch || '—';
-  if (pifEl) pifEl.textContent = data.pif_model || '—';
+  if (pifEl) {
+    pifEl.textContent = data.pif_model || '—';
+    if (data.pif_model) pifEl.title = data.pif_model;
+  }
 }
 
 interface ConflictModule {

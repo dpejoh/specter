@@ -2439,7 +2439,8 @@ md-filled-tonal-button {
   gap: 14px;
 }
 
-.sp-hero-date {
+.sp-hero-date,
+.sp-hero-pif {
   font-size: 1.125rem;
   font-weight: 600;
   color: var(--md-sys-color-on-surface);
@@ -2452,9 +2453,6 @@ md-filled-tonal-button {
 }
 
 .sp-hero-pif {
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: var(--md-sys-color-on-surface);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2568,17 +2566,14 @@ md-filled-tonal-button {
 
 .recent-activity-item-icon--success {
   background: var(--md-sys-color-primary-container);
-  border: 1px solid color-mix(in srgb, var(--md-sys-color-primary) 15%, transparent);
 }
 
 .recent-activity-item-icon--error {
   background: var(--md-sys-color-error-container);
-  border: 1px solid color-mix(in srgb, var(--md-sys-color-error) 15%, transparent);
 }
 
 .recent-activity-item-icon--neutral {
   background: var(--md-sys-color-surface-container-high);
-  border: 1px solid color-mix(in srgb, var(--md-sys-color-outline) 15%, transparent);
 }
 
 .recent-activity-item-icon md-icon {
