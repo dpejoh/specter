@@ -70,7 +70,9 @@ function applyKeystoreManager(data: KeystoreManagerJson) {
   }
   const backendEl = document.getElementById('sp-backend');
   if (backendEl) {
-    backendEl.textContent = data.name || (data.id && data.id !== 'none' ? data.id : (getTranslation('device_not_installed') || 'Not Installed'));
+    const text = data.name || (data.id && data.id !== 'none' ? data.id : (getTranslation('device_not_installed') || 'Not Installed'));
+    backendEl.textContent = text;
+    backendEl.title = text;
   }
   updateListContainerCorners();
 }

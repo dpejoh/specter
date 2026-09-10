@@ -2521,6 +2521,7 @@ md-filled-tonal-button {
 }
 
 .sp-hero-date,
+.sp-hero-backend,
 .sp-hero-pif {
   font-size: 1.125rem;
   font-weight: 600;
@@ -2533,6 +2534,7 @@ md-filled-tonal-button {
   gap: 12px;
 }
 
+.sp-hero-backend,
 .sp-hero-pif {
   overflow: hidden;
   text-overflow: ellipsis;
