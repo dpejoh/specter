@@ -135,6 +135,8 @@
   "fb_internal_storage": "Internal Storage",
   "fb_showing_all": "Showing all files",
   "fb_none_selected": "No file selected",
+  "fb_filter_keybox": "Keybox Files",
+  "fb_all_files": "All Files",
   "conflict_covers": "Covers",
   "feature_disabled_desc": "Feature is disabled, enable it in Control to configure",
   "conflict_toast_module_handles": "Module handles it",

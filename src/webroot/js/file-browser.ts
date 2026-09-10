@@ -1,6 +1,8 @@
 import { shellEscape, escapeHtml } from './utils.js';
 import { getTranslation } from './i18n.js';
 import { exec } from './bridge.js';
+import '@material/web/labs/segmentedbuttonset/outlined-segmented-button-set.js';
+import '@material/web/labs/segmentedbutton/outlined-segmented-button.js';
 
 interface FsEntry {
   name: string;
@@ -48,43 +50,25 @@ export async function openFileBrowser(
 
   const matchesExt = (name: string) => extensions.some(ext => name.toLowerCase().endsWith(ext.toLowerCase()));
 
-  function renderBreadcrumbs(path: string): string {
+  function formatPathSubtitle(path: string): string {
     const norm = path.startsWith('/storage/emulated/0') ? '/sdcard' + path.slice('/storage/emulated/0'.length) : path;
-    const crumbs: { label: string; path: string; icon?: string }[] = [];
-
-    if (norm.startsWith('/sdcard')) {
-      crumbs.push({ label: t('fb_internal_storage', 'Internal Storage'), path: '/sdcard', icon: 'smartphone' });
-      let acc = '/sdcard';
-      const rest = norm.slice('/sdcard'.length).split('/').filter(Boolean);
-      for (const seg of rest) {
-        acc += '/' + seg;
-        crumbs.push({ label: seg, path: acc });
-      }
-    } else {
-      let acc = '';
-      const segments = norm.split('/').filter(Boolean);
-      for (const seg of segments) {
-        acc += '/' + seg;
-        crumbs.push({ label: seg, path: acc });
-      }
+    if (norm === '/' || norm === '/sdcard') {
+      return t('fb_internal_storage', 'Internal Storage');
     }
-
-    return crumbs.map((c, idx) => {
-      const isLast = idx === crumbs.length - 1;
-      return `
-        <button type="button" class="fb-breadcrumb-chip ${isLast ? 'fb-breadcrumb-chip--active' : ''}" data-crumb="${escapeHtml(c.path)}">
-          ${c.icon ? `<md-icon aria-hidden="true">${c.icon}</md-icon>` : ''}
-          <span>${escapeHtml(c.label)}</span>
-        </button>
-        ${!isLast ? '<md-icon class="fb-breadcrumb-sep" aria-hidden="true">chevron_right</md-icon>' : ''}
-      `;
-    }).join('');
+    if (norm.startsWith('/sdcard/')) {
+      const parts = norm.slice('/sdcard/'.length).split('/').filter(Boolean);
+      return `${t('fb_internal_storage', 'Internal Storage')} › ${parts.join(' › ')}`;
+    }
+    return norm.split('/').filter(Boolean).join(' › ');
   }
+
+  const filterLabel = extensions.some(e => e.toLowerCase().includes('xml'))
+    ? t('fb_filter_keybox', 'Keybox Files')
+    : (extensions.join(', ') + ' files');
 
   function render() {
     const dirs = entries.filter(e => e.isFolder);
     const files = entries.filter(e => !e.isFolder && (allFiles || matchesExt(e.name)));
-    const totalFiles = entries.filter(e => !e.isFolder).length;
     const isAtRoot = currentPath === '/' || currentPath === '/sdcard' || currentPath === '/storage/emulated/0';
 
     overlay.innerHTML = `
@@ -96,24 +80,19 @@ export async function openFileBrowser(
           </button>
           <div class="subpage-header-title-wrap">
             <h1 class="subpage-title">${pageTitle}</h1>
-            <span class="subpage-header-subtitle">${escapeHtml(currentPath)}</span>
+            <span class="subpage-header-subtitle">${escapeHtml(formatPathSubtitle(currentPath))}</span>
           </div>
         </header>
 
-        <div class="fb-subpage-pathbar">
-          ${renderBreadcrumbs(currentPath)}
-        </div>
-
-        <div class="fb-filter-row">
-          <div class="fb-filter-chip ${!allFiles ? 'fb-filter-chip--active' : ''}" id="fb-filter-toggle">
-            <md-icon aria-hidden="true">${allFiles ? 'visibility' : 'filter_list'}</md-icon>
-            <span>${allFiles ? t('fb_showing_all', 'Showing all files') : (extensions.join(', ') + ' files')}</span>
-          </div>
-          ${!allFiles && files.length < totalFiles ? `
-            <md-text-button id="fb-show-all-btn" style="--md-text-button-label-text-size: 0.75rem;">
-              ${t('file_browser_show_all', 'Show all files')}
-            </md-text-button>
-          ` : ''}
+        <div class="fb-filter-bar">
+          <md-outlined-segmented-button-set class="fb-segmented-filter">
+            <md-outlined-segmented-button value="filter" ${!allFiles ? 'selected' : ''} label="${filterLabel}">
+              <md-icon slot="icon" aria-hidden="true">filter_alt</md-icon>
+            </md-outlined-segmented-button>
+            <md-outlined-segmented-button value="all" ${allFiles ? 'selected' : ''} label="${t('fb_all_files', 'All Files')}">
+              <md-icon slot="icon" aria-hidden="true">grid_view</md-icon>
+            </md-outlined-segmented-button>
+          </md-outlined-segmented-button-set>
         </div>
 
         <div class="subpage-content" id="fb-scroll-area" style="padding-bottom: 24px;">
@@ -125,7 +104,6 @@ export async function openFileBrowser(
                 </div>
                 <div class="list-item-content">
                   <div class="toggle-text">${t('fb_parent_folder', 'Parent folder')}</div>
-                  <span class="supporting-text">..</span>
                 </div>
                 <div class="spacer"></div>
                 <md-ripple></md-ripple>
@@ -183,8 +161,8 @@ export async function openFileBrowser(
                 <div class="fb-empty-title">${emptyLabel}</div>
                 ${!allFiles ? `
                   <md-filled-tonal-button id="fb-empty-show-all">
-                    <md-icon slot="icon" aria-hidden="true">visibility</md-icon>
-                    ${t('file_browser_show_all', 'Show all files')}
+                    <md-icon slot="icon" aria-hidden="true">grid_view</md-icon>
+                    ${t('fb_all_files', 'All Files')}
                   </md-filled-tonal-button>
                 ` : ''}
               </div>
@@ -213,25 +191,15 @@ export async function openFileBrowser(
       </div>
     `;
 
-    // Wire breadcrumbs
-    overlay.querySelectorAll('.fb-breadcrumb-chip').forEach(el => {
-      el.addEventListener('click', () => {
-        const crumbPath = (el as HTMLElement).dataset.crumb;
-        if (crumbPath && crumbPath !== currentPath) {
-          loadDir(crumbPath);
-        }
+    // Wire segmented filter buttons
+    overlay.querySelectorAll('.fb-segmented-filter md-outlined-segmented-button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const val = btn.getAttribute('value');
+        allFiles = val === 'all';
+        render();
       });
     });
 
-    // Wire filter toggle
-    overlay.querySelector('#fb-filter-toggle')?.addEventListener('click', () => {
-      allFiles = !allFiles;
-      render();
-    });
-    overlay.querySelector('#fb-show-all-btn')?.addEventListener('click', () => {
-      allFiles = true;
-      render();
-    });
     overlay.querySelector('#fb-empty-show-all')?.addEventListener('click', () => {
       allFiles = true;
       render();
@@ -330,12 +298,9 @@ export async function openFileBrowser(
           </button>
           <div class="subpage-header-title-wrap">
             <h1 class="subpage-title">${pageTitle}</h1>
-            <span class="subpage-header-subtitle">${escapeHtml(path)}</span>
+            <span class="subpage-header-subtitle">${escapeHtml(formatPathSubtitle(path))}</span>
           </div>
         </header>
-        <div class="fb-subpage-pathbar">
-          ${renderBreadcrumbs(path)}
-        </div>
         <div class="fb-loading">
           <md-circular-progress indeterminate></md-circular-progress>
         </div>
