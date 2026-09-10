@@ -18,13 +18,32 @@ export interface SubPageSwitchItem {
   onChange?: (checked: boolean) => void;
 }
 
+export interface SubPageInputItem {
+  type: 'input';
+  id: string;
+  key?: string;
+  defaultVal?: string;
+  icon?: string;
+  title: string;
+  description?: string;
+  inputType?: 'number' | 'text';
+  value?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  unit?: string;
+  ariaLabel?: string;
+  getValue?: () => Promise<string> | string;
+  onChange?: (value: string) => void;
+}
+
 export interface SubPageCustomItem {
   type: 'custom';
   id?: string;
   render: (container: HTMLElement, isEnabled: () => boolean) => void;
 }
 
-export type SubPageItem = SubPageSwitchItem | SubPageCustomItem;
+export type SubPageItem = SubPageSwitchItem | SubPageInputItem | SubPageCustomItem;
 
 export interface SubPageGroup {
   title?: string;
@@ -74,8 +93,9 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
     masterEnabled = raw !== '0';
   }
 
-  // Pre-fetch all switch config states concurrently
+  // Pre-fetch all switch and input config states concurrently
   const switchValues = new Map<string, boolean>();
+  const inputValues = new Map<string, string>();
   const fetchPromises: Promise<void>[] = [];
 
   for (const group of config.groups) {
@@ -87,6 +107,23 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
             switchValues.set(swItem.key, val !== '0');
           })
         );
+      } else if (item.type === 'input') {
+        const inpItem = item as SubPageInputItem;
+        if (inpItem.getValue) {
+          fetchPromises.push(
+            Promise.resolve(inpItem.getValue()).then(val => {
+              inputValues.set(inpItem.id, val);
+            })
+          );
+        } else if (inpItem.key) {
+          fetchPromises.push(
+            cfgGet(inpItem.key, inpItem.defaultVal ?? '').then(val => {
+              inputValues.set(inpItem.id, inpItem.value ?? val ?? '');
+            })
+          );
+        } else if (inpItem.value !== undefined) {
+          inputValues.set(inpItem.id, inpItem.value);
+        }
       }
     }
   }
@@ -126,6 +163,33 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
               ${group.items.map((item, iIdx) => {
                 if (item.type === 'custom') {
                   return `<div class="subpage-custom-item" id="subpage-custom-${gIdx}-${iIdx}"></div>`;
+                }
+                if (item.type === 'input') {
+                  const inpItem = item as SubPageInputItem;
+                  const currentVal = inputValues.get(inpItem.id) ?? inpItem.value ?? '';
+                  return `
+                    <div class="list-item list-item--input" id="${inpItem.id}-row">
+                      ${inpItem.icon ? `<div class="li-icon"><md-icon aria-hidden="true">${inpItem.icon}</md-icon></div>` : ''}
+                      <div class="list-item-content">
+                        <div class="toggle-text">${inpItem.title}</div>
+                        ${inpItem.description ? `<span class="supporting-text">${inpItem.description}</span>` : ''}
+                      </div>
+                      <div class="spacer"></div>
+                      <div class="subpage-input-wrapper">
+                        <input
+                          type="${inpItem.inputType || 'number'}"
+                          id="${inpItem.id}"
+                          class="subpage-inline-input"
+                          value="${currentVal}"
+                          ${inpItem.min !== undefined ? `min="${inpItem.min}"` : ''}
+                          ${inpItem.max !== undefined ? `max="${inpItem.max}"` : ''}
+                          ${inpItem.step !== undefined ? `step="${inpItem.step}"` : ''}
+                          aria-label="${inpItem.ariaLabel || inpItem.title}"
+                        />
+                        ${inpItem.unit ? `<span class="subpage-input-unit">${inpItem.unit}</span>` : ''}
+                      </div>
+                    </div>
+                  `;
                 }
                 const swItem = item as SubPageSwitchItem;
                 const isChecked = switchValues.get(swItem.key) ?? true;
@@ -257,6 +321,17 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
             cfgSet(swItem.key, sw.selected ? '1' : '0');
             swItem.onChange?.(sw.selected);
           });
+        }
+      } else if (item.type === 'input') {
+        const inpItem = item as SubPageInputItem;
+        const input = overlay.querySelector(`#${inpItem.id}`) as HTMLInputElement | null;
+        if (input) {
+          const handleInput = () => {
+            if (inpItem.key) cfgSet(inpItem.key, input.value);
+            inpItem.onChange?.(input.value);
+          };
+          input.addEventListener('change', handleInput);
+          input.addEventListener('input', handleInput);
         }
       }
     });

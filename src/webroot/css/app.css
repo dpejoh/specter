@@ -2976,6 +2976,48 @@ md-filled-tonal-button {
   transform: scale(0.99);
 }
 
+/* Subpage inline inputs */
+.subpage-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.subpage-inline-input {
+  width: 68px;
+  text-align: center;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  background: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-ref-typeface-plain);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  outline: none;
+  transition: border-color 0.2s, background-color 0.2s;
+  -moz-appearance: textfield;
+  box-sizing: border-box;
+}
+
+.subpage-inline-input:focus {
+  border-color: var(--md-sys-color-primary);
+  background: var(--md-sys-color-surface-container-high);
+}
+
+.subpage-inline-input::-webkit-outer-spin-button,
+.subpage-inline-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.subpage-input-unit {
+  font-size: 0.875rem;
+  color: var(--md-sys-color-on-surface-variant);
+  font-weight: 500;
+}
+
 /* Disabled sub-options container when master switch is off */
 .subpage-options--disabled .list-item {
   opacity: 0.42;

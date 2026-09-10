@@ -1,102 +1,99 @@
 import '@material/web/labs/segmentedbuttonset/outlined-segmented-button-set.js';
 import '@material/web/labs/segmentedbutton/outlined-segmented-button.js';
-import '@material/web/button/filled-button.js';
 import { cfgGet, cfgSet } from './cfg.js';
-import { showToast } from './toast.js';
 import { getTranslation } from './i18n.js';
 import { wireRowDialog } from './toggles.js';
+import { openSubPage } from './subpage.js';
 
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
 export function openAutoTargetDialog() {
-  const dialog = document.createElement('md-dialog');
-  dialog.id = 'auto-target-dialog';
+  openSubPage({
+    id: 'auto-target',
+    title: t('auto_target_title', 'Auto Targeting'),
+    masterToggle: {
+      key: 'toggle_auto_target',
+      defaultVal: '1',
+      title: t('control_toggle_auto_target_master', 'Use Auto-Targeting'),
+      syncSwitchId: 'toggle-background_auto_target',
+    },
+    groups: [
+      {
+        items: [
+          {
+            type: 'custom',
+            id: 'at-custom-controls',
+            render: async (container) => {
+              const [method, interval] = await Promise.all([
+                cfgGet('auto_target_method', 'instant'),
+                cfgGet('auto_target_interval', '300'),
+              ]);
+              const isPolling = method === 'polling';
 
-  Promise.all([
-    cfgGet('auto_target_method', 'instant'),
-    cfgGet('auto_target_interval', '300'),
-  ]).then(([method, interval]) => {
-    const isPolling = method === 'polling';
-    dialog.innerHTML = `
-      <div slot="headline">
-        <div class="at-dialog-headline">
-          <md-icon aria-hidden="true">update</md-icon>
-          <span>${t('auto_target_title', 'Auto Targeting')}</span>
-        </div>
-      </div>
-      <div slot="content">
-        <p class="at-dialog-desc">${t('auto_target_desc', 'Automatically watches for newly installed apps and adds them to Tricky Store target.txt.')}</p>
+              container.innerHTML = `
+                <div class="list-item" style="flex-direction: column; align-items: stretch; gap: 12px; cursor: default;">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="toggle-text">${t('auto_target_method', 'Detection Method')}</div>
+                  </div>
+                  <md-outlined-segmented-button-set style="width: 100%;">
+                    <md-outlined-segmented-button value="instant" ${method === 'instant' ? 'selected' : ''}>
+                      <md-icon slot="icon">bolt</md-icon>
+                      ${t('auto_target_method_instant', 'Instant')}
+                    </md-outlined-segmented-button>
+                    <md-outlined-segmented-button value="polling" ${method === 'polling' ? 'selected' : ''}>
+                      <md-icon slot="icon">schedule</md-icon>
+                      ${t('auto_target_method_polling', 'Polling')}
+                    </md-outlined-segmented-button>
+                  </md-outlined-segmented-button-set>
+                  <div class="supporting-text" id="at-method-help">
+                    ${isPolling ? t('auto_target_method_polling_help', 'Checks periodically at a set interval') : t('auto_target_method_instant_help', 'Detects new installs immediately via inotifyd (recommended)')}
+                  </div>
+                </div>
 
-        <div class="at-method-section">
-          <div class="at-method-label">${t('auto_target_method', 'Detection Method')}</div>
-          <md-outlined-segmented-button-set>
-            <md-outlined-segmented-button value="instant"${method === 'instant' ? ' selected' : ''}>
-              <md-icon slot="icon">bolt</md-icon>
-              ${t('auto_target_method_instant', 'Instant')}
-            </md-outlined-segmented-button>
-            <md-outlined-segmented-button value="polling"${method === 'polling' ? ' selected' : ''}>
-              <md-icon slot="icon">schedule</md-icon>
-              ${t('auto_target_method_polling', 'Polling')}
-            </md-outlined-segmented-button>
-          </md-outlined-segmented-button-set>
-          <div class="at-method-help" id="at-help">${isPolling ? t('auto_target_method_polling_help', 'Checks periodically at a set interval') : t('auto_target_method_instant_help', 'Detects new installs immediately via inotifyd (recommended)')}</div>
-        </div>
+                <div class="list-item list-item--input" id="at-interval-row" style="${isPolling ? '' : 'display: none;'}">
+                  <div class="li-icon"><md-icon aria-hidden="true">timer</md-icon></div>
+                  <div class="list-item-content">
+                    <div class="toggle-text">${t('auto_target_interval', 'Interval (seconds)')}</div>
+                    <span class="supporting-text">${t('auto_target_interval_desc', 'How often to check for new apps. Minimum 3 seconds.')}</span>
+                  </div>
+                  <div class="spacer"></div>
+                  <div class="subpage-input-wrapper">
+                    <input type="number" id="at-interval-input" class="subpage-inline-input" min="3" value="${interval}" aria-label="${t('auto_target_interval_aria', 'Interval in seconds')}">
+                    <span class="subpage-input-unit">sec</span>
+                  </div>
+                </div>
+              `;
 
-        <div class="list-container at-dialog-list${isPolling ? '' : ' at-hidden'}" id="at-interval-row">
-          <div class="list-item">
-            <div class="li-icon"><md-icon aria-hidden="true">timer</md-icon></div>
-            <div class="list-item-content">
-              <div class="toggle-text">${t('auto_target_interval', 'Interval (seconds)')}</div>
-              <span class="supporting-text">${t('auto_target_interval_desc', 'How often to check for new apps. Minimum 3 seconds.')}</span>
-            </div>
-            <div class="spacer"></div>
-            <input type="number" id="at-interval" class="at-interval-input" min="3" value="${interval}" aria-label="${t('auto_target_interval_aria', 'Interval in seconds')}">
-          </div>
-        </div>
-      </div>
-      <div slot="actions">
-        <md-text-button id="at-cancel">${t('dialog_cancel', 'Cancel')}</md-text-button>
-        <md-filled-button id="at-save">${t('dialog_save', 'Save')}</md-filled-button>
-      </div>
-    `;
+              const helpEl = container.querySelector('#at-method-help') as HTMLElement;
+              const intervalRow = container.querySelector('#at-interval-row') as HTMLElement;
+              const intervalInput = container.querySelector('#at-interval-input') as HTMLInputElement;
 
-    document.body.appendChild(dialog);
-    dialog.addEventListener('close', () => document.body.removeChild(dialog));
+              container.querySelectorAll('md-outlined-segmented-button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                  const val = btn.getAttribute('value') || 'instant';
+                  const polling = val === 'polling';
+                  cfgSet('auto_target_method', val);
+                  helpEl.textContent = polling
+                    ? t('auto_target_method_polling_help', 'Checks periodically at a set interval')
+                    : t('auto_target_method_instant_help', 'Detects new installs immediately via inotifyd (recommended)');
+                  intervalRow.style.display = polling ? '' : 'none';
+                });
+              });
 
-    const helpEl = dialog.querySelector('#at-help') as HTMLElement;
-    const intervalRow = dialog.querySelector('#at-interval-row') as HTMLElement;
-    const intervalInput = dialog.querySelector('#at-interval') as HTMLInputElement;
-    const saveBtn = dialog.querySelector('#at-save') as HTMLElement;
-    const cancelBtn = dialog.querySelector('#at-cancel') as HTMLElement;
-
-    let currentMethod = method;
-
-    function updateIntervalRow(polling: boolean) {
-      helpEl.textContent = polling
-        ? t('auto_target_method_polling_help', 'Checks periodically at a set interval')
-        : t('auto_target_method_instant_help', 'Detects new installs immediately via inotifyd (recommended)');
-      intervalRow.classList.toggle('at-hidden', !polling);
-    }
-
-    dialog.querySelectorAll('md-outlined-segmented-button').forEach(btn => {
-      btn.addEventListener('click', () => {
-        currentMethod = btn.getAttribute('value') || 'instant';
-        updateIntervalRow(currentMethod === 'polling');
-      });
-    });
-    updateIntervalRow(isPolling);
-
-    cancelBtn.addEventListener('click', () => dialog.close());
-
-    saveBtn.addEventListener('click', () => {
-      const num = parseInt(intervalInput.value || '15', 10);
-      cfgSet('auto_target_method', currentMethod);
-      cfgSet('auto_target_interval', String(Math.max(3, num)));
-      showToast(t('auto_target_saved', 'Auto targeting settings saved'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
-      dialog.close();
-    });
-
-    dialog.show();
+              intervalInput?.addEventListener('input', () => {
+                const num = parseInt(intervalInput.value || '15', 10);
+                cfgSet('auto_target_interval', String(Math.max(3, num)));
+              });
+            },
+          },
+        ],
+      },
+    ],
+    infoCard: {
+      icon: 'info',
+      title: t('auto_target_title', 'Auto Targeting'),
+      text: t('auto_target_desc', 'Automatically watches for newly installed apps and adds them to Tricky Store target.txt.'),
+    },
   });
 }
 
