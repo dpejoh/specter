@@ -155,7 +155,7 @@
   "custom_kb_file": "Import File",
   "custom_kb_file_desc": "Select a keybox XML file from your device",
   "custom_kb_no_file": "No file selected",
-  "custom_kb_browse": "Browse Files",
+  "custom_kb_browse": "Browse",
   "custom_kb_url": "URL or Path",
   "custom_kb_clear": "Clear",
   "custom_kb_apply": "Apply",

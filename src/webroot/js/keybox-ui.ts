@@ -102,64 +102,101 @@ export async function openCustomKeyboxDialog() {
 
   let selectedFilePath = existingVal || '';
   let urlInputEl: HTMLInputElement | null = null;
-  let fileChipEl: HTMLElement | null = null;
+  let fileSubtitleEl: HTMLElement | null = null;
+  let fileIconEl: HTMLElement | null = null;
+
+  const updateFileUI = (val: string) => {
+    if (fileSubtitleEl) {
+      if (val) {
+        fileSubtitleEl.textContent = val.split('/').pop() || val;
+        fileSubtitleEl.style.color = 'var(--md-sys-color-primary)';
+        fileSubtitleEl.style.fontWeight = '500';
+      } else {
+        fileSubtitleEl.textContent = t('custom_kb_file_desc', 'Select a keybox XML file from your device');
+        fileSubtitleEl.style.color = '';
+        fileSubtitleEl.style.fontWeight = '';
+      }
+    }
+    if (fileIconEl) {
+      fileIconEl.textContent = val ? 'vpn_key' : 'upload_file';
+    }
+  };
 
   openSubPage({
     id: 'custom-keybox',
     title: t('custom_kb_title', 'Custom Keybox'),
+    headerAction: (container, instance) => {
+      container.innerHTML = `
+        <md-icon-button id="kb-clear" aria-label="${t('custom_kb_clear', 'Clear')}">
+          <md-icon aria-hidden="true">delete_outline</md-icon>
+        </md-icon-button>
+      `;
+
+      const clearBtn = container.querySelector('#kb-clear') as HTMLElement | null;
+      clearBtn?.addEventListener('click', async () => {
+        cfgSet('keybox_custom_type', '');
+        cfgSet('keybox_custom_value', '');
+        cfgSet('keybox_private', '');
+        selectedFilePath = '';
+        if (urlInputEl) urlInputEl.value = '';
+        updateFileUI('');
+        showToast(t('custom_kb_cleared', 'Custom keybox cleared'), { icon: 'info', type: 'info', autoCloseDelay: 2500 });
+        instance.close();
+      });
+    },
     groups: [
       {
         items: [
           {
             type: 'custom',
             id: 'kb-file-picker-item',
-            render: (container) => {
+            render: (container, _isEnabled, posClass) => {
               container.innerHTML = `
-                <div class="list-item" style="cursor: default; padding: 18px 20px;">
-                  <div class="li-icon"><md-icon aria-hidden="true">upload_file</md-icon></div>
+                <div class="list-item ${posClass || 'list-item--first'}" id="kb-file-row" style="cursor: pointer; padding: 14px 16px;">
+                  <div class="li-icon"><md-icon id="kb-file-icon" aria-hidden="true">${selectedFilePath ? 'vpn_key' : 'upload_file'}</md-icon></div>
                   <div class="list-item-content">
                     <div class="toggle-text">${t('custom_kb_file', 'Import File')}</div>
-                    <span class="supporting-text" id="kb-file-chip">${selectedFilePath ? selectedFilePath.split('/').pop() : t('custom_kb_file_desc', 'Select a keybox XML file from your device')}</span>
+                    <span class="supporting-text" id="kb-file-subtitle" style="${selectedFilePath ? 'color: var(--md-sys-color-primary); font-weight: 500;' : ''}">
+                      ${selectedFilePath ? selectedFilePath.split('/').pop() : t('custom_kb_file_desc', 'Select a keybox XML file from your device')}
+                    </span>
                   </div>
                   <div class="spacer"></div>
-                  <md-filled-tonal-button id="kb-browse-btn" style="flex-shrink: 0;">
+                  <md-filled-tonal-button id="kb-browse-btn" style="flex-shrink: 0; --md-filled-tonal-button-container-shape: 9999px; border-radius: 9999px;">
                     <md-icon slot="icon" aria-hidden="true">folder_open</md-icon>
-                    ${t('custom_kb_browse', 'Browse')}
+                    ${t('custom_kb_browse', 'Browse Files')}
                   </md-filled-tonal-button>
                   <md-ripple></md-ripple>
                 </div>
               `;
 
-              fileChipEl = container.querySelector('#kb-file-chip');
+              fileSubtitleEl = container.querySelector('#kb-file-subtitle');
+              fileIconEl = container.querySelector('#kb-file-icon');
               const browseBtn = container.querySelector('#kb-browse-btn');
+              const fileRow = container.querySelector('#kb-file-row');
 
               const onPick = () => {
                 openFileBrowser((filePath: string) => {
                   selectedFilePath = filePath;
-                  if (fileChipEl) fileChipEl.textContent = filePath.split('/').pop() || filePath;
+                  updateFileUI(filePath);
                   if (urlInputEl) urlInputEl.value = filePath;
                 }, {
-                  title: t('custom_kb_file', 'Import File'),
+                  title: t('fb_internal_storage', 'Internal storage'),
                 });
               };
 
+              fileRow?.addEventListener('click', onPick);
               browseBtn?.addEventListener('click', (e) => {
                 e.stopPropagation();
                 onPick();
               });
-              container.querySelector('.list-item')?.addEventListener('click', onPick);
             },
           },
-        ],
-      },
-      {
-        items: [
           {
             type: 'custom',
             id: 'kb-url-path-item',
-            render: (container) => {
+            render: (container, _isEnabled, posClass) => {
               container.innerHTML = `
-                <div class="list-item" style="flex-direction: column; align-items: stretch; gap: 10px; cursor: default; padding: 18px 20px;">
+                <div class="list-item ${posClass || 'list-item--last'}" style="flex-direction: column; align-items: stretch; gap: 8px; cursor: default; padding: 14px 16px;">
                   <div style="display: flex; align-items: center; gap: 14px;">
                     <div class="li-icon"><md-icon aria-hidden="true">link</md-icon></div>
                     <div class="list-item-content">
@@ -188,9 +225,7 @@ export async function openCustomKeyboxDialog() {
 
               urlInputEl?.addEventListener('input', () => {
                 selectedFilePath = urlInputEl?.value.trim() || '';
-                if (fileChipEl) {
-                  fileChipEl.textContent = selectedFilePath ? selectedFilePath.split('/').pop() || selectedFilePath : t('custom_kb_no_file', 'No file selected');
-                }
+                updateFileUI(selectedFilePath);
               });
 
               pasteBtn?.addEventListener('click', async () => {
@@ -199,9 +234,7 @@ export async function openCustomKeyboxDialog() {
                   if (text && urlInputEl) {
                     urlInputEl.value = text.trim();
                     selectedFilePath = text.trim();
-                    if (fileChipEl) {
-                      fileChipEl.textContent = selectedFilePath.split('/').pop() || selectedFilePath;
-                    }
+                    updateFileUI(selectedFilePath);
                   }
                 } catch (e) {
                   console.warn('Clipboard read failed:', e);
@@ -224,31 +257,14 @@ export async function openCustomKeyboxDialog() {
         ],
       },
     ],
-    footer: (footerContainer, instance) => {
-      footerContainer.innerHTML = `
-        <md-text-button id="kb-clear" style="--md-text-button-label-text-color: var(--md-sys-color-error);">
-          <md-icon slot="icon" aria-hidden="true">delete</md-icon>
-          ${t('custom_kb_clear', 'Clear')}
-        </md-text-button>
-        <md-filled-button id="kb-apply">
-          <md-icon slot="icon" aria-hidden="true">check</md-icon>
-          ${t('custom_kb_apply', 'Apply')}
-        </md-filled-button>
+    fab: (container, instance) => {
+      container.innerHTML = `
+        <md-fab id="kb-apply" class="subpage-fab" label="${t('custom_kb_apply', 'Apply')}">
+          <md-icon slot="icon">check</md-icon>
+        </md-fab>
       `;
 
-      const clearBtn = footerContainer.querySelector('#kb-clear') as HTMLButtonElement;
-      const applyBtn = footerContainer.querySelector('#kb-apply') as HTMLButtonElement;
-
-      clearBtn?.addEventListener('click', async () => {
-        cfgSet('keybox_custom_type', '');
-        cfgSet('keybox_custom_value', '');
-        cfgSet('keybox_private', '');
-        if (urlInputEl) urlInputEl.value = '';
-        if (fileChipEl) fileChipEl.textContent = t('custom_kb_file_desc', 'Select a keybox XML file from your device');
-        showToast(t('custom_kb_cleared', 'Custom keybox cleared'), { icon: 'info', type: 'info', autoCloseDelay: 2500 });
-        instance.close();
-      });
-
+      const applyBtn = container.querySelector('#kb-apply') as any;
       applyBtn?.addEventListener('click', async () => {
         const text = urlInputEl?.value.trim() || selectedFilePath.trim();
 
@@ -288,14 +304,6 @@ export async function openCustomKeyboxDialog() {
           applyBtn.disabled = false;
         }
       });
-    },
-    infoCard: {
-      icon: 'info',
-      title: t('custom_kb_title', 'Custom Keybox'),
-      text: t(
-        'custom_kb_info_desc',
-        'Custom keybox files should be valid Key Provider XML files. Installing a custom keybox writes the file directly to your keystore and restarts the keybox provider.'
-      ),
     },
   });
 }

@@ -40,7 +40,7 @@ export interface SubPageInputItem {
 export interface SubPageCustomItem {
   type: 'custom';
   id?: string;
-  render: (container: HTMLElement, isEnabled: () => boolean) => void;
+  render: (container: HTMLElement, isEnabled: () => boolean, posClass?: string) => void;
 }
 
 export type SubPageItem = SubPageSwitchItem | SubPageInputItem | SubPageCustomItem;
@@ -73,6 +73,8 @@ export interface SubPageConfig {
   masterToggle?: SubPageMasterToggle;
   groups: SubPageGroup[];
   infoCard?: SubPageInfoCard;
+  headerAction?: (container: HTMLElement, instance: SubPageInstance) => void;
+  fab?: (container: HTMLElement, instance: SubPageInstance) => void;
   footer?: (container: HTMLElement, instance: SubPageInstance) => void;
   onClose?: () => void;
 }
@@ -140,6 +142,7 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
           <md-ripple></md-ripple>
         </button>
         <h1 class="subpage-title">${config.title}</h1>
+        <div class="subpage-header-actions" id="subpage-header-actions"></div>
       </header>
 
       <div class="subpage-content" id="subpage-scroll-area">
@@ -162,6 +165,8 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
             ${group.description ? `<p class="supporting-text" style="padding:0 20px 8px;max-width:800px;margin:0 auto;box-sizing:border-box;">${group.description}</p>` : ''}
             <div class="list-container" id="subpage-group-${gIdx}">
               ${group.items.map((item, iIdx) => {
+                const total = group.items.length;
+                const posClass = total === 1 ? 'list-item--only' : iIdx === 0 ? 'list-item--first' : iIdx === total - 1 ? 'list-item--last' : 'list-item--middle';
                 if (item.type === 'custom') {
                   return `<div class="subpage-custom-item" id="subpage-custom-${gIdx}-${iIdx}"></div>`;
                 }
@@ -169,7 +174,7 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
                   const inpItem = item as SubPageInputItem;
                   const currentVal = inputValues.get(inpItem.id) ?? inpItem.value ?? '';
                   return `
-                    <div class="list-item list-item--input" id="${inpItem.id}-row">
+                    <div class="list-item list-item--input ${posClass}" id="${inpItem.id}-row">
                       ${inpItem.icon ? `<div class="li-icon"><md-icon aria-hidden="true">${inpItem.icon}</md-icon></div>` : ''}
                       <div class="list-item-content">
                         <div class="toggle-text">${inpItem.title}</div>
@@ -195,7 +200,7 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
                 const swItem = item as SubPageSwitchItem;
                 const isChecked = switchValues.get(swItem.key) ?? true;
                 return `
-                  <div class="list-item list-item--toggle" id="${swItem.id}-row">
+                  <div class="list-item list-item--toggle ${posClass}" id="${swItem.id}-row">
                     ${swItem.icon ? `<div class="li-icon"><md-icon aria-hidden="true">${swItem.icon}</md-icon></div>` : ''}
                     <div class="list-item-content">
                       <div class="toggle-text">${swItem.title}</div>
@@ -222,6 +227,7 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
           </div>
         ` : ''}
       </div>
+      <div id="subpage-fab-slot"></div>
     </div>
   `;
 
@@ -231,8 +237,10 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
   config.groups.forEach((group, gIdx) => {
     group.items.forEach((item, iIdx) => {
       if (item.type === 'custom') {
+        const total = group.items.length;
+        const posClass = total === 1 ? 'list-item--only' : iIdx === 0 ? 'list-item--first' : iIdx === total - 1 ? 'list-item--last' : 'list-item--middle';
         const host = overlay.querySelector(`#subpage-custom-${gIdx}-${iIdx}`) as HTMLElement;
-        if (host) item.render(host, () => masterEnabled);
+        if (host) item.render(host, () => masterEnabled, posClass);
       }
     });
   });
@@ -255,7 +263,10 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
     }, 300);
   }
 
-  function onPopState() {
+  function onPopState(e: PopStateEvent) {
+    if (e.state && (e.state.subpage === config.id || e.state.subpage === 'file-browser')) {
+      return;
+    }
     closeOverlay();
   }
 
@@ -348,6 +359,16 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
     close: () => history.back(),
     isMasterEnabled: () => masterEnabled,
   };
+
+  if (config.headerAction) {
+    const haContainer = overlay.querySelector('#subpage-header-actions') as HTMLElement | null;
+    if (haContainer) config.headerAction(haContainer, instance);
+  }
+
+  if (config.fab) {
+    const fabSlot = overlay.querySelector('#subpage-fab-slot') as HTMLElement | null;
+    if (fabSlot) config.fab(fabSlot, instance);
+  }
 
   if (config.footer) {
     const footerEl = overlay.querySelector('#subpage-footer') as HTMLElement | null;

@@ -1,33 +1,262 @@
 import { shellEscape, escapeHtml } from './utils.js';
 import { getTranslation } from './i18n.js';
 import { exec } from './bridge.js';
-import '@material/web/labs/segmentedbuttonset/outlined-segmented-button-set.js';
-import '@material/web/labs/segmentedbutton/outlined-segmented-button.js';
+import '@material/web/menu/menu.js';
+import '@material/web/menu/menu-item.js';
+import type { MdMenu } from '@material/web/menu/menu.js';
 
 interface FsEntry {
   name: string;
   isFolder: boolean;
   path: string;
+  size: number;
+  mtime: number;
 }
 
-function getFileIcon(name: string): string {
-  const lower = name.toLowerCase();
-  if (lower.endsWith('.xml')) return 'vpn_key';
-  if (lower.endsWith('.prop')) return 'tune';
-  if (lower.endsWith('.bak')) return 'history';
-  if (lower.endsWith('.json')) return 'data_object';
-  if (lower.endsWith('.txt') || lower.endsWith('.log')) return 'article';
-  return 'description';
+interface FileVisual {
+  icon: string;
+  typeLabel: string;
+  bgStyle: string;
+  iconStyle: string;
 }
 
-function getFileTypeLabel(name: string): string {
-  const lower = name.toLowerCase();
-  if (lower.endsWith('.xml')) return 'XML Key Provider';
-  if (lower.endsWith('.prop')) return 'Build Properties';
-  if (lower.endsWith('.bak')) return 'Backup File';
-  if (lower.endsWith('.json')) return 'JSON Document';
-  return 'File';
+function formatFileSize(bytes: number): string {
+  if (!bytes || bytes <= 0) return '';
+  const units = ['B', 'kB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  const size = bytes / Math.pow(1024, i);
+  return `${size < 10 && i > 0 ? size.toFixed(2) : size < 100 && i > 0 ? size.toFixed(1) : Math.round(size)} ${units[i]}`;
 }
+
+function formatDate(epochSec: number): string {
+  if (!epochSec || isNaN(epochSec)) return '';
+  const date = new Date(epochSec * 1000);
+  const now = new Date();
+  const time = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+  if (date.toDateString() === now.toDateString()) {
+    return `Today, ${time}`;
+  }
+
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) {
+    return `Yesterday, ${time}`;
+  }
+
+  const month = date.toLocaleDateString([], { month: 'short' });
+  const day = date.getDate();
+  const year = date.getFullYear();
+
+  if (year === now.getFullYear()) {
+    return `${month} ${day}, ${time}`;
+  }
+  return `${month} ${day}, ${year}`;
+}
+
+function getFileVisual(name: string): FileVisual {
+  const lower = name.toLowerCase();
+
+  // Keys & Attestation
+  if (lower.endsWith('.xml')) {
+    return {
+      icon: 'vpn_key',
+      typeLabel: 'XML Key Provider',
+      bgStyle: 'background: #441a33;',
+      iconStyle: 'color: #f48fb1;',
+    };
+  }
+  if (lower.endsWith('.key') || lower.endsWith('.pem') || lower.endsWith('.crt') || lower.endsWith('.cer') || lower.endsWith('.der')) {
+    return {
+      icon: 'key',
+      typeLabel: 'Certificate / Key',
+      bgStyle: 'background: #441a33;',
+      iconStyle: 'color: #f48fb1;',
+    };
+  }
+
+  // Archives
+  if (lower.endsWith('.zip') || lower.endsWith('.tar') || lower.endsWith('.gz') || lower.endsWith('.tgz') ||
+      lower.endsWith('.bz2') || lower.endsWith('.xz') || lower.endsWith('.7z') || lower.endsWith('.rar')) {
+    return {
+      icon: 'folder_zip',
+      typeLabel: 'Archive',
+      bgStyle: 'background: #4a2912;',
+      iconStyle: 'color: #ffb74d;',
+    };
+  }
+
+  // Android Packages
+  if (lower.endsWith('.apk') || lower.endsWith('.apks') || lower.endsWith('.xapk') || lower.endsWith('.apkm')) {
+    return {
+      icon: 'android',
+      typeLabel: 'Android Package',
+      bgStyle: 'background: #194022;',
+      iconStyle: 'color: #81c784;',
+    };
+  }
+
+  // Scripts & Code
+  if (lower.endsWith('.sh') || lower.endsWith('.bash') || lower.endsWith('.zsh')) {
+    return {
+      icon: 'terminal',
+      typeLabel: 'Shell Script',
+      bgStyle: 'background: #1d2b3a;',
+      iconStyle: 'color: #64b5f6;',
+    };
+  }
+  if (lower.endsWith('.js') || lower.endsWith('.ts') || lower.endsWith('.py') || lower.endsWith('.c') || lower.endsWith('.cpp')) {
+    return {
+      icon: 'code',
+      typeLabel: 'Source Code',
+      bgStyle: 'background: #1d2b3a;',
+      iconStyle: 'color: #64b5f6;',
+    };
+  }
+
+  // Configuration & Properties
+  if (lower.endsWith('.prop') || lower.endsWith('.conf') || lower.endsWith('.ini') || lower.endsWith('.cfg')) {
+    return {
+      icon: 'tune',
+      typeLabel: 'Build Properties',
+      bgStyle: 'background: #19383b;',
+      iconStyle: 'color: #80cbc4;',
+    };
+  }
+  if (lower.endsWith('.json') || lower.endsWith('.toml') || lower.endsWith('.yaml') || lower.endsWith('.yml')) {
+    return {
+      icon: 'data_object',
+      typeLabel: 'Structured Config',
+      bgStyle: 'background: #19383b;',
+      iconStyle: 'color: #80cbc4;',
+    };
+  }
+
+  // Media
+  if (lower.endsWith('.png') || lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.webp') || lower.endsWith('.gif') || lower.endsWith('.svg')) {
+    return {
+      icon: 'image',
+      typeLabel: 'Image',
+      bgStyle: 'background: #1e3629;',
+      iconStyle: 'color: #a5d6a7;',
+    };
+  }
+  if (lower.endsWith('.mp3') || lower.endsWith('.ogg') || lower.endsWith('.flac') || lower.endsWith('.wav') || lower.endsWith('.m4a') || lower.endsWith('.aac')) {
+    return {
+      icon: 'audio_file',
+      typeLabel: 'Audio',
+      bgStyle: 'background: #371e3d;',
+      iconStyle: 'color: #ce93d8;',
+    };
+  }
+  if (lower.endsWith('.mp4') || lower.endsWith('.mkv') || lower.endsWith('.webm') || lower.endsWith('.avi') || lower.endsWith('.mov')) {
+    return {
+      icon: 'video_file',
+      typeLabel: 'Video',
+      bgStyle: 'background: #3e1b1b;',
+      iconStyle: 'color: #ef9a9a;',
+    };
+  }
+
+  // Documents
+  if (lower.endsWith('.pdf')) {
+    return {
+      icon: 'picture_as_pdf',
+      typeLabel: 'PDF Document',
+      bgStyle: 'background: #421b1d;',
+      iconStyle: 'color: #e57373;',
+    };
+  }
+  if (lower.endsWith('.txt') || lower.endsWith('.log') || lower.endsWith('.md')) {
+    return {
+      icon: 'article',
+      typeLabel: 'Text Document',
+      bgStyle: 'background: #2b2b35;',
+      iconStyle: 'color: #b0bec5;',
+    };
+  }
+  if (lower.endsWith('.bak')) {
+    return {
+      icon: 'history',
+      typeLabel: 'Backup File',
+      bgStyle: 'background: #282833;',
+      iconStyle: 'color: #9e9e9e;',
+    };
+  }
+
+  return {
+    icon: 'description',
+    typeLabel: 'File',
+    bgStyle: 'background: #28272e;',
+    iconStyle: 'color: #c7c5d0;',
+  };
+}
+
+interface Breadcrumb {
+  label: string;
+  path: string;
+  isCurrent: boolean;
+}
+
+function getBreadcrumbs(path: string, rootLabel: string): Breadcrumb[] {
+  const norm = path.startsWith('/storage/emulated/0')
+    ? '/sdcard' + path.slice('/storage/emulated/0'.length)
+    : path;
+
+  if (norm === '/' || norm === '/sdcard') {
+    return [{ label: rootLabel, path: '/sdcard', isCurrent: true }];
+  }
+
+  const crumbs: Breadcrumb[] = [];
+
+  if (norm.startsWith('/sdcard')) {
+    crumbs.push({ label: rootLabel, path: '/sdcard', isCurrent: false });
+    const parts = norm.slice('/sdcard/'.length).split('/').filter(Boolean);
+    let accum = '/sdcard';
+    parts.forEach((part, idx) => {
+      accum += '/' + part;
+      crumbs.push({
+        label: part,
+        path: accum,
+        isCurrent: idx === parts.length - 1,
+      });
+    });
+  } else {
+    crumbs.push({ label: 'Root', path: '/', isCurrent: false });
+    const parts = norm.split('/').filter(Boolean);
+    let accum = '';
+    parts.forEach((part, idx) => {
+      accum += '/' + part;
+      crumbs.push({
+        label: part,
+        path: accum,
+        isCurrent: idx === parts.length - 1,
+      });
+    });
+  }
+
+  return crumbs;
+}
+
+function renderBreadcrumbsHtml(path: string, rootLabel: string): string {
+  const crumbs = getBreadcrumbs(path, rootLabel);
+  return crumbs.map((c, idx) => {
+    const isLast = idx === crumbs.length - 1;
+    if (isLast) {
+      return `<span class="fb-crumb fb-crumb--current">${escapeHtml(c.label)}</span>`;
+    }
+    return `
+      <button type="button" class="fb-crumb" data-crumb-path="${escapeHtml(c.path)}">
+        ${escapeHtml(c.label)}
+        <md-ripple></md-ripple>
+      </button>
+      <md-icon class="fb-crumb-sep" aria-hidden="true">chevron_right</md-icon>
+    `;
+  }).join('');
+}
+
+// Persist the user's filter choice (All Files vs Primary) across directory navigations and session
+let savedAllFilesFilter = false;
 
 export async function openFileBrowser(
   onSelect: (path: string) => void,
@@ -36,31 +265,17 @@ export async function openFileBrowser(
   const t = (key: string, fallback: string) => getTranslation(key) || fallback;
   let currentPath = '/sdcard';
   let entries: FsEntry[] = [];
-  let selectedFile: string | null = null;
-  let allFiles = false;
+  let allFiles = savedAllFilesFilter;
   let closed = false;
   let historySteps = 1;
   const extensions = opts?.extensions || ['.xml', '.bak'];
-  const emptyLabel = opts?.emptyLabel || t('file_browser_empty', 'No XML files found');
-  const pageTitle = opts?.title || t('fb_title', 'Select File');
+  const pageTitle = opts?.title || t('fb_internal_storage', 'Internal storage');
 
   const overlay = document.createElement('div');
   overlay.className = 'subpage-overlay subpage-overlay--file-browser';
   overlay.id = 'subpage-file-browser';
 
   const matchesExt = (name: string) => extensions.some(ext => name.toLowerCase().endsWith(ext.toLowerCase()));
-
-  function formatPathSubtitle(path: string): string {
-    const norm = path.startsWith('/storage/emulated/0') ? '/sdcard' + path.slice('/storage/emulated/0'.length) : path;
-    if (norm === '/' || norm === '/sdcard') {
-      return t('fb_internal_storage', 'Internal Storage');
-    }
-    if (norm.startsWith('/sdcard/')) {
-      const parts = norm.slice('/sdcard/'.length).split('/').filter(Boolean);
-      return `${t('fb_internal_storage', 'Internal Storage')} › ${parts.join(' › ')}`;
-    }
-    return norm.split('/').filter(Boolean).join(' › ');
-  }
 
   const filterLabel = extensions.some(e => e.toLowerCase().includes('xml'))
     ? t('fb_filter_keybox', 'Keybox Files')
@@ -69,7 +284,14 @@ export async function openFileBrowser(
   function render() {
     const dirs = entries.filter(e => e.isFolder);
     const files = entries.filter(e => !e.isFolder && (allFiles || matchesExt(e.name)));
+
+    // Natural alphanumeric sorting
+    dirs.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true }));
+    files.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true }));
+
+    const hasItems = dirs.length > 0 || files.length > 0;
     const isAtRoot = currentPath === '/' || currentPath === '/sdcard' || currentPath === '/storage/emulated/0';
+    const emptyMsg = allFiles ? t('fb_folder_empty', 'This folder is empty') : (opts?.emptyLabel || t('file_browser_empty', 'No XML files found'));
 
     overlay.innerHTML = `
       <div class="subpage-inner">
@@ -80,151 +302,135 @@ export async function openFileBrowser(
           </button>
           <div class="subpage-header-title-wrap">
             <h1 class="subpage-title">${pageTitle}</h1>
-            <span class="subpage-header-subtitle">${escapeHtml(formatPathSubtitle(currentPath))}</span>
+          </div>
+          <div style="position: relative;">
+            <button type="button" class="subpage-action-btn" id="fb-menu-btn" aria-label="${t('ta_menu_more', 'More options')}">
+              <md-icon aria-hidden="true">more_vert</md-icon>
+              <md-ripple></md-ripple>
+            </button>
+            <md-menu id="fb-menu" class="fb-menu" anchor="fb-menu-btn" positioning="fixed">
+              <md-menu-item id="fb-menu-filter-primary" class="first">
+                <md-icon slot="start" aria-hidden="true" style="${!allFiles ? 'color: var(--md-sys-color-primary);' : 'visibility: hidden;'}">check</md-icon>
+                <div slot="headline">${filterLabel}</div>
+              </md-menu-item>
+              <md-menu-item id="fb-menu-filter-all" class="last">
+                <md-icon slot="start" aria-hidden="true" style="${allFiles ? 'color: var(--md-sys-color-primary);' : 'visibility: hidden;'}">check</md-icon>
+                <div slot="headline">${t('fb_all_files', 'All Files')}</div>
+              </md-menu-item>
+            </md-menu>
           </div>
         </header>
 
-        <div class="fb-filter-bar">
-          <md-outlined-segmented-button-set class="fb-segmented-filter">
-            <md-outlined-segmented-button value="filter" ${!allFiles ? 'selected' : ''} label="${filterLabel}">
-              <md-icon slot="icon" aria-hidden="true">filter_alt</md-icon>
-            </md-outlined-segmented-button>
-            <md-outlined-segmented-button value="all" ${allFiles ? 'selected' : ''} label="${t('fb_all_files', 'All Files')}">
-              <md-icon slot="icon" aria-hidden="true">grid_view</md-icon>
-            </md-outlined-segmented-button>
-          </md-outlined-segmented-button-set>
+        <div class="fb-breadcrumbs-wrap">
+          <nav class="fb-breadcrumbs" id="fb-breadcrumbs" aria-label="Breadcrumb">
+            ${renderBreadcrumbsHtml(currentPath, t('fb_internal_storage', 'Internal storage'))}
+          </nav>
         </div>
 
-        <div class="subpage-content" id="fb-scroll-area" style="padding-bottom: 24px;">
-          ${(dirs.length > 0 || !isAtRoot) ? `
-            <h2 class="list-title">${t('fb_folder', 'Folders')}</h2>
-            <div class="list-container" style="margin-bottom: 16px;">
-              ${!isAtRoot ? `
-                <div class="list-item" data-path=".." id="fb-up-row">
-                  <div class="li-icon" style="background: var(--md-sys-color-primary-container);">
-                    <md-icon style="color: var(--md-sys-color-on-primary-container);" aria-hidden="true">folder</md-icon>
-                  </div>
-                  <div class="list-item-content">
-                    <div class="toggle-text" style="font-size: 1.25rem; font-weight: 700; letter-spacing: 2px; line-height: 1;">...</div>
-                    <span class="supporting-text">${t('fb_parent_folder', 'Parent folder')}</span>
-                  </div>
-                  <div class="spacer"></div>
-                  <md-icon style="color: var(--md-sys-color-outline);" aria-hidden="true">chevron_right</md-icon>
-                  <md-ripple></md-ripple>
-                </div>
-              ` : ''}
-              ${dirs.map(d => `
-                <div class="list-item" data-path="${escapeHtml(d.path)}">
-                  <div class="li-icon" style="background: var(--md-sys-color-primary-container);">
-                    <md-icon style="color: var(--md-sys-color-on-primary-container);" aria-hidden="true">folder</md-icon>
-                  </div>
-                  <div class="list-item-content">
-                    <div class="toggle-text">${escapeHtml(d.name)}</div>
-                    <span class="supporting-text">${t('fb_folder', 'Folder')}</span>
-                  </div>
-                  <div class="spacer"></div>
-                  <md-icon style="color: var(--md-sys-color-outline);" aria-hidden="true">chevron_right</md-icon>
-                  <md-ripple></md-ripple>
-                </div>
-              `).join('')}
-            </div>
-          ` : ''}
-
-          ${files.length > 0 ? `
-            <h2 class="list-title">${t('fb_title', 'Files')}</h2>
-            <div class="list-container">
-              ${files.map(f => {
-                const isSelected = selectedFile === f.path;
+        <div class="subpage-content ${!hasItems ? 'fb-content--empty' : ''}" id="fb-scroll-area">
+          ${hasItems ? `
+            <div class="fb-list">
+              ${dirs.map(d => {
+                const dateStr = formatDate(d.mtime);
                 return `
-                  <div class="list-item ${isSelected ? 'list-item--selected' : ''}" data-path="${escapeHtml(f.path)}" data-is-file="true">
-                    <div class="li-icon" style="background: ${isSelected ? 'var(--md-sys-color-primary)' : 'var(--md-sys-color-secondary-container)'};">
-                      <md-icon style="color: ${isSelected ? 'var(--md-sys-color-on-primary)' : 'var(--md-sys-color-on-secondary-container)'};" aria-hidden="true">${getFileIcon(f.name)}</md-icon>
-                    </div>
-                    <div class="list-item-content">
-                      <div class="toggle-text">${escapeHtml(f.name)}</div>
-                      <span class="supporting-text">${getFileTypeLabel(f.name)}</span>
-                    </div>
-                    <div class="spacer"></div>
-                    ${isSelected ? `<md-icon style="color: var(--md-sys-color-primary); font-size: 24px;" aria-hidden="true">check_circle</md-icon>` : ''}
-                    <md-ripple></md-ripple>
+                <div class="fb-row" data-path="${escapeHtml(d.path)}">
+                  <div class="fb-icon" style="background: #393552;">
+                    <md-icon style="color: #d0bcff;" aria-hidden="true">folder</md-icon>
                   </div>
-                `;
+                  <div class="fb-text-col">
+                    <div class="fb-name">${escapeHtml(d.name)}</div>
+                    <div class="fb-meta">
+                      <span class="fb-meta-size">${t('fb_folder', 'Folder')}</span>
+                      ${dateStr ? `<span class="fb-meta-dot">•</span><span class="fb-meta-date">${dateStr}</span>` : ''}
+                    </div>
+                  </div>
+                  <md-icon class="fb-chevron" aria-hidden="true">chevron_right</md-icon>
+                  <md-ripple></md-ripple>
+                </div>
+              `;
+              }).join('')}
+              ${files.map(f => {
+                const visual = getFileVisual(f.name);
+                const sizeStr = formatFileSize(f.size);
+                const dateStr = formatDate(f.mtime);
+                return `
+                <div class="fb-row" data-path="${escapeHtml(f.path)}" data-is-file="true">
+                  <div class="fb-icon" style="${visual.bgStyle}">
+                    <md-icon style="${visual.iconStyle}" aria-hidden="true">${visual.icon}</md-icon>
+                  </div>
+                  <div class="fb-text-col">
+                    <div class="fb-name">${escapeHtml(f.name)}</div>
+                    <div class="fb-meta">
+                      <span class="fb-meta-size">${sizeStr || visual.typeLabel}</span>
+                      ${dateStr ? `<span class="fb-meta-dot">•</span><span class="fb-meta-date">${dateStr}</span>` : ''}
+                    </div>
+                  </div>
+                  <md-ripple></md-ripple>
+                </div>
+              `;
               }).join('')}
             </div>
-          ` : ''}
-
-          ${files.length === 0 && dirs.length === 0 ? `
-            <div class="list-container">
-              <div class="list-item fb-empty-state" style="cursor: default;">
-                <md-icon aria-hidden="true">folder_off</md-icon>
-                <div class="fb-empty-title">${emptyLabel}</div>
-                ${!allFiles ? `
-                  <md-filled-tonal-button id="fb-empty-show-all">
-                    <md-icon slot="icon" aria-hidden="true">grid_view</md-icon>
-                    ${t('fb_all_files', 'All Files')}
-                  </md-filled-tonal-button>
-                ` : ''}
-              </div>
+          ` : `
+            <div class="fb-empty-state">
+              <div class="fb-empty-title">${emptyMsg}</div>
             </div>
-          ` : ''}
+          `}
         </div>
-
-        <footer class="subpage-footer fb-footer">
-          <md-text-button id="fb-cancel">
-            <md-icon slot="icon" aria-hidden="true">close</md-icon>
-            ${t('dialog_cancel', 'Cancel')}
-          </md-text-button>
-          <div class="fb-selected-preview">
-            ${selectedFile ? `
-              <md-icon aria-hidden="true" style="font-size: 16px; color: var(--md-sys-color-primary);">check_circle</md-icon>
-              <span class="fb-selected-name">${escapeHtml(selectedFile.split('/').pop() || selectedFile)}</span>
-            ` : `
-              <span class="fb-no-file-msg">${t('fb_none_selected', 'No file selected')}</span>
-            `}
-          </div>
-          <md-filled-button id="fb-select" ${selectedFile ? '' : 'disabled'}>
-            <md-icon slot="icon" aria-hidden="true">check</md-icon>
-            ${t('fb_select', 'Select')}
-          </md-filled-button>
-        </footer>
       </div>
     `;
 
-    // Wire segmented filter buttons
-    overlay.querySelectorAll('.fb-segmented-filter md-outlined-segmented-button').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const val = btn.getAttribute('value');
-        allFiles = val === 'all';
-        render();
+    // Wire breadcrumbs navigation
+    overlay.querySelectorAll('.fb-crumb[data-crumb-path]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const p = (btn as HTMLElement).dataset.crumbPath;
+        if (p && p !== currentPath) {
+          loadDir(p);
+        }
       });
     });
 
-    overlay.querySelector('#fb-empty-show-all')?.addEventListener('click', () => {
-      allFiles = true;
-      render();
+    const breadcrumbsEl = overlay.querySelector('#fb-breadcrumbs') as HTMLElement | null;
+    if (breadcrumbsEl) {
+      breadcrumbsEl.scrollLeft = breadcrumbsEl.scrollWidth;
+    }
+
+    // Wire 3-dots menu
+    const menuBtn = overlay.querySelector('#fb-menu-btn');
+    const menu = overlay.querySelector('#fb-menu') as MdMenu | null;
+    menuBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (menu) menu.open = !menu.open;
     });
 
-    // Wire folder and file item clicks
-    overlay.querySelectorAll('.list-item[data-path]').forEach(el => {
+    overlay.querySelector('#fb-menu-filter-primary')?.addEventListener('click', () => {
+      if (menu) menu.open = false;
+      if (allFiles) {
+        allFiles = false;
+        savedAllFilesFilter = false;
+        render();
+      }
+    });
+
+    overlay.querySelector('#fb-menu-filter-all')?.addEventListener('click', () => {
+      if (menu) menu.open = false;
+      if (!allFiles) {
+        allFiles = true;
+        savedAllFilesFilter = true;
+        render();
+      }
+    });
+
+    // Wire folder and file row clicks
+    overlay.querySelectorAll('.fb-row[data-path]').forEach(el => {
       el.addEventListener('click', () => {
         const path = (el as HTMLElement).dataset.path;
         if (!path) return;
         const isFile = (el as HTMLElement).dataset.isFile === 'true';
 
-        if (path === '..') {
-          const parent = currentPath.substring(0, currentPath.lastIndexOf('/')) || '/sdcard';
-          loadDir(parent.startsWith('/sdcard') || parent === '/' ? parent : '/sdcard');
-          return;
-        }
-
         if (isFile) {
-          if (selectedFile === path) {
-            onSelect(path);
-            closeOverlay(true);
-          } else {
-            selectedFile = path;
-            render();
-          }
+          onSelect(path);
+          closeOverlay(true);
         } else {
           loadDir(path);
         }
@@ -236,15 +442,6 @@ export async function openFileBrowser(
       if (!isAtRoot) {
         history.back();
       } else {
-        closeOverlay(true);
-      }
-    });
-
-    // Wire footer actions
-    overlay.querySelector('#fb-cancel')?.addEventListener('click', () => closeOverlay(true));
-    overlay.querySelector('#fb-select')?.addEventListener('click', () => {
-      if (selectedFile) {
-        onSelect(selectedFile);
         closeOverlay(true);
       }
     });
@@ -297,35 +494,68 @@ export async function openFileBrowser(
           </button>
           <div class="subpage-header-title-wrap">
             <h1 class="subpage-title">${pageTitle}</h1>
-            <span class="subpage-header-subtitle">${escapeHtml(formatPathSubtitle(path))}</span>
           </div>
         </header>
+        <div class="fb-breadcrumbs-wrap">
+          <nav class="fb-breadcrumbs" id="fb-breadcrumbs" aria-label="Breadcrumb">
+            ${renderBreadcrumbsHtml(path, t('fb_internal_storage', 'Internal storage'))}
+          </nav>
+        </div>
         <div class="fb-loading">
           <md-circular-progress indeterminate></md-circular-progress>
         </div>
       </div>
     `;
 
+    const bc = overlay.querySelector('#fb-breadcrumbs') as HTMLElement | null;
+    if (bc) bc.scrollLeft = bc.scrollWidth;
+
     overlay.querySelector('#fb-back')?.addEventListener('click', () => {
       history.back();
     });
 
     try {
-      const result = await exec(`ls -1p ${shellEscape(path)} 2>/dev/null | head -200`);
-      const stdout = result.stdout || '';
-      entries = stdout.split('\n').filter(Boolean).map((line: string) => ({
-        name: line.replace(/\/$/, ''),
-        isFolder: line.endsWith('/') && line !== '../',
-        path: path.replace(/\/$/, '') + '/' + line.replace(/\/$/, '')
-      })).filter((e: FsEntry) => e.name !== '.' && e.name !== '..');
-      selectedFile = null;
-      allFiles = false;
-      render();
-    } catch (e) {
-      console.warn('Directory listing failed:', e);
-      entries = [];
-      render();
+      const result = await exec(`find ${shellEscape(path)} -mindepth 1 -maxdepth 1 -exec stat -c '%F|%s|%Y|%n' {} + 2>/dev/null | head -300`);
+      const stdout = (result.stdout || '').trim();
+      if (stdout) {
+        entries = stdout.split('\n').filter(Boolean).map(line => {
+          const parts = line.split('|');
+          const p0 = parts[0];
+          const p1 = parts[1];
+          const p2 = parts[2];
+          if (parts.length >= 4 && p0 !== undefined && p1 !== undefined && p2 !== undefined) {
+            const isFolder = p0.includes('directory');
+            const size = parseInt(p1, 10) || 0;
+            const mtime = parseInt(p2, 10) || 0;
+            const filePath = parts.slice(3).join('|');
+            const name = filePath.split('/').pop() || '';
+            return { name, isFolder, path: filePath, size, mtime };
+          }
+          return null;
+        }).filter((e): e is FsEntry => e !== null && e.name !== '.' && e.name !== '..');
+      }
+    } catch {
+      // fallback below
     }
+
+    if (entries.length === 0) {
+      try {
+        const result = await exec(`ls -1p ${shellEscape(path)} 2>/dev/null | head -300`);
+        const stdout = result.stdout || '';
+        entries = stdout.split('\n').filter(Boolean).map((line: string) => ({
+          name: line.replace(/\/$/, ''),
+          isFolder: line.endsWith('/') && line !== '../',
+          path: path.replace(/\/$/, '') + '/' + line.replace(/\/$/, ''),
+          size: 0,
+          mtime: 0
+        })).filter((e: FsEntry) => e.name !== '.' && e.name !== '..');
+      } catch (e) {
+        console.warn('Directory listing failed:', e);
+        entries = [];
+      }
+    }
+
+    render();
   }
 
   document.body.appendChild(overlay);
