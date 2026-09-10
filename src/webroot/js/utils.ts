@@ -61,3 +61,101 @@ export function setText(id: string, value: string) {
   const el = document.getElementById(id);
   if (el) el.textContent = value;
 }
+
+let _isUpdatingCorners = false;
+let _cornerRafId: number | null = null;
+let _cornerObserver: MutationObserver | null = null;
+
+export function updateListContainerCorners(root: ParentNode = document) {
+  _isUpdatingCorners = true;
+  try {
+    root.querySelectorAll('.list-container:not(.list-container--keybox)').forEach(container => {
+      const items = Array.from(container.querySelectorAll<HTMLElement>(':scope > .list-item'));
+      const visible = items.filter(el => !el.hidden && !el.classList.contains('hidden') && el.style.display !== 'none');
+
+      items.forEach(el => {
+        el.classList.remove('list-item--first', 'list-item--middle', 'list-item--last', 'list-item--only');
+      });
+
+      if (visible.length === 1 && visible[0]) {
+        visible[0].classList.add('list-item--only');
+      } else if (visible.length > 1) {
+        visible.forEach((el, idx) => {
+          if (idx === 0) el.classList.add('list-item--first');
+          else if (idx === visible.length - 1) el.classList.add('list-item--last');
+          else el.classList.add('list-item--middle');
+        });
+      }
+    });
+  } finally {
+    Promise.resolve().then(() => {
+      _isUpdatingCorners = false;
+    });
+  }
+}
+
+export function scheduleCornerUpdate() {
+  if (_cornerRafId !== null) return;
+  _cornerRafId = requestAnimationFrame(() => {
+    _cornerRafId = null;
+    updateListContainerCorners();
+  });
+}
+
+export function initCornerObserver() {
+  if (_cornerObserver || typeof MutationObserver === 'undefined' || typeof document === 'undefined') return;
+  _cornerObserver = new MutationObserver((mutations) => {
+    if (_isUpdatingCorners) return;
+    let shouldUpdate = false;
+    for (const m of mutations) {
+      if (m.type === 'childList') {
+        const target = m.target as HTMLElement;
+        if (target.classList?.contains('list-container') || target.closest?.('.list-container')) {
+          shouldUpdate = true;
+          break;
+        }
+        for (let i = 0; i < m.addedNodes.length; i++) {
+          const node = m.addedNodes[i] as HTMLElement;
+          if (node.nodeType === Node.ELEMENT_NODE && (node.classList?.contains('list-item') || node.querySelector?.('.list-item'))) {
+            shouldUpdate = true;
+            break;
+          }
+        }
+        if (shouldUpdate) break;
+      } else if (m.type === 'attributes') {
+        const target = m.target as HTMLElement;
+        if (target.nodeType !== Node.ELEMENT_NODE) continue;
+        if (m.attributeName === 'class') {
+          const oldVal = m.oldValue || '';
+          const newVal = target.className || '';
+          const sanitize = (c: string) => c.replace(/\blist-item--(first|middle|last|only)\b/g, '').replace(/\s+/g, ' ').trim();
+          if (sanitize(oldVal) === sanitize(newVal)) {
+            continue;
+          }
+        }
+        if (
+          target.classList?.contains('list-item') ||
+          target.classList?.contains('list-container') ||
+          target.closest?.('.list-container')
+        ) {
+          shouldUpdate = true;
+          break;
+        }
+      }
+    }
+    if (shouldUpdate) {
+      scheduleCornerUpdate();
+    }
+  });
+
+  const body = document.body || document.documentElement;
+  if (body) {
+    _cornerObserver.observe(body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['hidden', 'style', 'class'],
+      attributeOldValue: true,
+    });
+  }
+}

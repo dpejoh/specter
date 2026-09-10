@@ -1,5 +1,5 @@
 import { initBridge, getDataDir, getModuleDir, exec } from './bridge.js';
-import { shellEscape, setDevMode } from './utils.js';
+import { shellEscape, setDevMode, updateListContainerCorners, initCornerObserver } from './utils.js';
 import { setDataDir, migrateLocalStorage, cfgInit, cfgGet } from './cfg.js';
 import { initDevice, refreshDevice, refreshKeyboxStatus, refreshConflictStatus } from './device.js';
 import { initNetwork } from './network.js';
@@ -98,6 +98,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   dialogObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['open'] });
   document.getElementById('progress-dialog')?.addEventListener('cancel', (e: Event) => e.preventDefault());
+
+  // Dynamically adapt corner radii for list items when dynamic options are shown/hidden
+  initCornerObserver();
+  updateListContainerCorners();
 });
 
 async function wireConflictToggles() {

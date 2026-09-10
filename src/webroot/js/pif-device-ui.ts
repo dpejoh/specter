@@ -6,7 +6,7 @@ import { cfgGet, cfgSet } from './cfg.js';
 import { openFileBrowser } from './file-browser.js';
 import { showConfirm } from './dialog.js';
 import { showToast } from './toast.js';
-import { escapeHtml, shellEscape } from './utils.js';
+import { escapeHtml, shellEscape, updateListContainerCorners } from './utils.js';
 import { getTranslation } from './i18n.js';
 
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
@@ -296,6 +296,7 @@ export async function wirePifDevice() {
   const row = document.getElementById('pif-choose-device');
   if (!row) return;
   row.hidden = false;
+  updateListContainerCorners();
   void ensureCanaryList();
   row.addEventListener('click', () => {
     void openPifDeviceDialog();

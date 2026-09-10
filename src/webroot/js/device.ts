@@ -1,4 +1,4 @@
-import { fetchJson } from './utils.js';
+import { fetchJson, updateListContainerCorners } from './utils.js';
 import { runScript } from './bridge.js';
 import { appendToOutput } from './terminal.js';
 import { API_URLS } from './constants.js';
@@ -72,6 +72,7 @@ function applyKeystoreManager(data: KeystoreManagerJson) {
   if (backendEl) {
     backendEl.textContent = data.name || (data.id && data.id !== 'none' ? data.id : (getTranslation('device_not_installed') || 'Not Installed'));
   }
+  updateListContainerCorners();
 }
 
 function applyAllDeviceInfo(data: InfoJson) {
