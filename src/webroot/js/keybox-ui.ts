@@ -138,6 +138,8 @@ export async function openCustomKeyboxDialog() {
                   selectedFilePath = filePath;
                   if (fileChipEl) fileChipEl.textContent = filePath.split('/').pop() || filePath;
                   if (urlInputEl) urlInputEl.value = filePath;
+                }, {
+                  title: t('custom_kb_file', 'Import File'),
                 });
               };
 

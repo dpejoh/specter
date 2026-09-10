@@ -242,10 +242,13 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
   function closeOverlay() {
     if (closed) return;
     closed = true;
-    window.isOverlayOpen = false;
     window.removeEventListener('popstate', onPopState);
     overlay.classList.remove('subpage-overlay--open');
-    document.documentElement.style.overflow = '';
+    const hasRemaining = document.querySelectorAll('.subpage-overlay--open').length > 0;
+    if (!hasRemaining) {
+      window.isOverlayOpen = false;
+      document.documentElement.style.overflow = '';
+    }
     config.onClose?.();
     setTimeout(() => {
       if (overlay.parentNode) overlay.parentNode.removeChild(overlay);

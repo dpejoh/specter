@@ -1150,141 +1150,185 @@ md-dialog {
   --md-filled-button-pressed-state-layer-color: var(--md-sys-color-on-error);
 }
 
-.fb-dialog {
-  width: 400px;
-  max-width: calc(100vw - 32px);
+/* ==========================================================================
+   Material Design 3 Expressive Full-Screen File Browser Sub-Page
+   ========================================================================== */
+
+.subpage-overlay--file-browser {
+  z-index: 10005 !important;
 }
 
-.fb-headline {
+.fb-subpage-pathbar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 16px 20px 0;
+  gap: 6px;
+  padding: 10px 20px 8px;
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 
-.fb-back-btn {
-  width: 32px;
-  height: 32px;
-  --md-icon-button-icon-size: 20px;
+.fb-subpage-pathbar::-webkit-scrollbar {
+  display: none;
 }
 
-.fb-path {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.8125rem;
-  color: var(--md-sys-color-on-surface-variant);
-}
-
-.fb-content {
-  padding: 4px 16px 8px;
-  max-height: 380px;
-  overflow-y: auto;
-  min-height: 0;
-}
-
-.fb-row {
-  display: flex;
+.fb-breadcrumb-chip {
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.fb-row:hover {
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 9999px;
   background: var(--md-sys-color-surface-container-high);
-}
-
-.fb-row--selected {
-  background: var(--md-sys-color-primary-container);
-}
-
-.fb-row--selected:hover {
-  background: var(--md-sys-color-primary-container);
-}
-
-.fb-row-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  color: var(--md-sys-color-on-surface);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--md-sys-color-outline-variant);
   flex-shrink: 0;
+  user-select: none;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-.fb-row-icon--folder {
-  background: var(--md-sys-color-primary-container);
+.fb-breadcrumb-chip:hover {
+  background: var(--md-sys-color-surface-container-highest);
+  border-color: var(--md-sys-color-primary);
 }
 
-.fb-row-icon--file {
+.fb-breadcrumb-chip--active {
   background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  border-color: transparent;
+  font-weight: 600;
 }
 
-.fb-row-icon-inner {
+.fb-breadcrumb-chip md-icon {
   font-size: 16px;
-  font-family: 'Material Icons';
+  color: var(--md-sys-color-primary);
 }
 
-.fb-row-icon--folder .fb-row-icon-inner {
-  color: var(--md-sys-color-on-primary-container);
-}
-
-.fb-row-icon--file .fb-row-icon-inner {
+.fb-breadcrumb-chip--active md-icon {
   color: var(--md-sys-color-on-secondary-container);
 }
 
-.fb-row-name {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.875rem;
+.fb-breadcrumb-sep {
+  font-size: 16px;
+  color: var(--md-sys-color-outline);
+  flex-shrink: 0;
 }
 
-.fb-chevron {
-  font-size: 18px;
+.fb-filter-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 20px 10px;
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.fb-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  background: var(--md-sys-color-surface-container-high);
   color: var(--md-sys-color-on-surface-variant);
-  font-family: 'Material Icons';
-}
-
-.fb-empty {
-  text-align: center;
-  padding: 32px 16px;
-  color: var(--md-sys-color-on-surface-variant);
-  font-size: 0.8125rem;
-}
-
-.fb-show-all {
-  text-align: center;
-  padding: 8px;
   font-size: 0.75rem;
-  color: var(--md-sys-color-on-surface-variant);
-}
-
-.fb-show-all span {
+  font-weight: 500;
   cursor: pointer;
-  color: var(--md-sys-color-primary);
-  text-decoration: underline;
+  user-select: none;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  transition: all 0.15s ease;
 }
 
-.fb-loading {
+.fb-filter-chip md-icon {
+  font-size: 16px;
+}
+
+.fb-filter-chip--active {
+  border-color: var(--md-sys-color-primary);
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.fb-filter-chip--active md-icon {
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.fb-selected-preview {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 48px 20px;
-  min-height: 0;
+  gap: 6px;
+  padding: 0 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
 }
 
-.fb-actions {
-  padding: 0 20px 16px;
+.fb-selected-name {
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.fb-select-btn {
-  --md-filled-button-container-shape: 9999px;
+.fb-no-file-msg {
+  color: var(--md-sys-color-on-surface-variant);
+  opacity: 0.7;
+}
+
+.fb-footer {
+  padding: 14px 20px 20px;
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+  background: var(--md-sys-color-surface);
+  z-index: 1;
+}
+
+.list-item--selected {
+  background-color: var(--md-sys-color-primary-container) !important;
+}
+
+.list-item--selected .toggle-text {
+  color: var(--md-sys-color-on-primary-container) !important;
+  font-weight: 600;
+}
+
+.list-item--selected .supporting-text {
+  color: var(--md-sys-color-on-primary-container) !important;
+  opacity: 0.85;
+}
+
+.fb-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  gap: 12px;
+}
+
+.fb-empty-state md-icon {
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
+  color: var(--md-sys-color-outline);
+}
+
+.fb-empty-title {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
 }
 
 .pif-device-dialog {
