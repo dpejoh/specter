@@ -269,6 +269,9 @@ section:not([hidden]) {
 
 .list-container--keybox .li-icon { background: var(--md-sys-color-tertiary-container); }
 .list-container--keybox .li-icon md-icon { color: var(--md-sys-color-on-tertiary-container); }
+.list-container--keybox .list-item {
+  border-radius: 4px 4px 28px 28px !important;
+}
 
 .list-container--google .li-icon { background: var(--md-sys-color-secondary-container); }
 .list-container--google .li-icon md-icon { color: var(--md-sys-color-on-secondary-container); }
@@ -278,6 +281,8 @@ section:not([hidden]) {
 
 .keybox-install-card {
   --md-filled-card-container-color: var(--md-sys-color-surface-container-high);
+  --md-filled-card-container-shape: 28px 28px 4px 4px;
+  border-radius: 28px 28px 4px 4px;
   width: 100%;
   max-width: 800px;
   margin: 0 auto;
