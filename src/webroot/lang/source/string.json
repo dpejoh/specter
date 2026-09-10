@@ -233,7 +233,7 @@
   "colors_dynamic_desc": "Theme extracted from your wallpaper",
   "colors_info_desc": "Dynamic colors extract accent tones from your wallpaper on Android 12+. Basic colors apply a uniform Material Design 3 palette.",
   "colors_preview_label": "Preview",
-  "terminal_title": "Terminal Output",
+  "terminal_title": "Logs",
   "terminal_clear": "Clear",
   "terminal_copy": "Copy",
   "terminal_copied": "Copied!",

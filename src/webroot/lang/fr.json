@@ -225,7 +225,7 @@
   "settings_theme_mode": "Thème sombre",
   "settings_theme_mode_desc": "Dark, AMOLED, Light, or Auto",
   "settings_color_desc": "Accent palette & Monet dynamic theme",
-  "terminal_title": "Terminal Output",
+  "terminal_title": "Journaux",
   "terminal_clear": "Effacer",
   "terminal_copy": "Copier",
   "terminal_copied": "Copié !",

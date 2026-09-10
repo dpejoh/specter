@@ -225,7 +225,7 @@
   "settings_theme_mode": "深色主题",
   "settings_theme_mode_desc": "Dark, AMOLED, Light, or Auto",
   "settings_color_desc": "Accent palette & Monet dynamic theme",
-  "terminal_title": "Terminal Output",
+  "terminal_title": "日志",
   "terminal_clear": "清除",
   "terminal_copy": "复制",
   "terminal_copied": "已复制！",

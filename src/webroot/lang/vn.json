@@ -225,7 +225,7 @@
   "settings_theme_mode": "Giao diện tối",
   "settings_theme_mode_desc": "Dark, AMOLED, Light, or Auto",
   "settings_color_desc": "Accent palette & Monet dynamic theme",
-  "terminal_title": "Terminal Output",
+  "terminal_title": "Nhật ký",
   "terminal_clear": "Xóa",
   "terminal_copy": "Sao chép",
   "terminal_copied": "Đã sao chép!",

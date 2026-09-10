@@ -225,7 +225,7 @@
   "settings_theme_mode": "Tema oscuro",
   "settings_theme_mode_desc": "Dark, AMOLED, Light, or Auto",
   "settings_color_desc": "Accent palette & Monet dynamic theme",
-  "terminal_title": "Terminal Output",
+  "terminal_title": "Registros",
   "terminal_clear": "Limpiar",
   "terminal_copy": "Copiar",
   "terminal_copied": "¡Copiado!",

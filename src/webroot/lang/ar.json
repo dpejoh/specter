@@ -225,7 +225,7 @@
   "settings_theme_mode": "المظهر الداكن",
   "settings_theme_mode_desc": "Dark, AMOLED, Light, or Auto",
   "settings_color_desc": "Accent palette & Monet dynamic theme",
-  "terminal_title": "Terminal Output",
+  "terminal_title": "السجلات",
   "terminal_clear": "مسح",
   "terminal_copy": "نسخ",
   "terminal_copied": "تم النسخ!",
