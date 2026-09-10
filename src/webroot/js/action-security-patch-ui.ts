@@ -8,6 +8,10 @@ export function openActionSecurityPatchDialog() {
   openSubPage({
     id: 'security-patch-sources',
     title: t('action_sp_dialog_title', 'Security Patch Sources'),
+    description: t(
+      'action_sp_dialog_desc',
+      'Action tries enabled sources top to bottom and stops at the first valid date.'
+    ),
     masterToggle: {
       key: 'toggle_action_security_patch',
       defaultVal: '0',
@@ -41,14 +45,6 @@ export function openActionSecurityPatchDialog() {
         ],
       },
     ],
-    infoCard: {
-      icon: 'info',
-      title: t('action_sp_info_title', 'About Security Patch'),
-      text: t(
-        'action_sp_dialog_desc',
-        'Action tries enabled sources top to bottom and stops at the first valid date.'
-      ),
-    },
   });
 }
 

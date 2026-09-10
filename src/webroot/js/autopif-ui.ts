@@ -12,6 +12,7 @@ export function openAutopifDialog() {
   openSubPage({
     id: 'autopif',
     title: t('autopif_title', 'Auto PIF'),
+    description: t('autopif_desc', 'Automatically fetches new Play Integrity fingerprints at a set interval.'),
     masterToggle: {
       key: 'toggle_autopif',
       defaultVal: '0',
@@ -41,11 +42,6 @@ export function openAutopifDialog() {
         ],
       },
     ],
-    infoCard: {
-      icon: 'info',
-      title: t('autopif_info_title', 'About Auto PIF'),
-      text: t('autopif_desc', 'Automatically fetches new Play Integrity fingerprints at a set interval.'),
-    },
   });
 }
 

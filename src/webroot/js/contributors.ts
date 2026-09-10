@@ -17,8 +17,8 @@ export async function loadContributors() {
   }
 
   grid.innerHTML = devs.map(dev => `
-    <md-outlined-card class="contributor-card"
-               data-url="${encodeURIComponent(dev.github || '')}">
+    <div class="contributor-card"
+         data-url="${encodeURIComponent(dev.github || '')}">
       <img class="contributor-avatar"
            src="${escapeHtml(dev.avatar || '')}"
            alt="${escapeHtml(dev.name)}"
@@ -31,7 +31,8 @@ export async function loadContributors() {
           ${escapeHtml(getTranslation('role_' + dev.role) || dev.role)}
         </p>
       </div>
-    </md-outlined-card>
+      <md-ripple></md-ripple>
+    </div>
   `).join('');
 
   grid.querySelectorAll('.contributor-avatar').forEach(img => {

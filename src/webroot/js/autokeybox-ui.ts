@@ -12,6 +12,7 @@ export function openAutokeyboxDialog() {
   openSubPage({
     id: 'autokeybox',
     title: t('autokeybox_title', 'Auto Keybox'),
+    description: t('autokeybox_desc', 'Automatically fetches a new valid keybox at a set interval.'),
     masterToggle: {
       key: 'toggle_autokeybox',
       defaultVal: '0',
@@ -41,11 +42,6 @@ export function openAutokeyboxDialog() {
         ],
       },
     ],
-    infoCard: {
-      icon: 'info',
-      title: t('autokeybox_info_title', 'About Auto Keybox'),
-      text: t('autokeybox_desc', 'Automatically fetches a new valid keybox at a set interval.'),
-    },
   });
 }
 

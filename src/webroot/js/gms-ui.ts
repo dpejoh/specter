@@ -8,6 +8,10 @@ export function openGmsDialog() {
   openSubPage({
     id: 'gms-cleanup',
     title: t('gms_dialog_title', 'Kill Play Store'),
+    description: t(
+      'gms_dialog_desc',
+      'Choose which GMS cleanup actions to run when triggered. Killing GMS processes forces Google Play Services to reload fresh integrity tokens and device profiles.'
+    ),
     masterToggle: {
       key: 'toggle_action_gms',
       defaultVal: '1',
@@ -34,14 +38,6 @@ export function openGmsDialog() {
         ],
       },
     ],
-    infoCard: {
-      icon: 'info',
-      title: t('gms_info_title', 'About GMS Cleanup'),
-      text: t(
-        'gms_dialog_desc',
-        'Choose which GMS cleanup actions to run when triggered. Killing GMS processes forces Google Play Services to reload fresh integrity tokens and device profiles.'
-      ),
-    },
   });
 }
 

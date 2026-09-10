@@ -52,6 +52,15 @@ function wireOne(font: FontDef, switchId: string): void {
   sw.addEventListener('change', () => {
     toggleOne(font, sw.selected);
   });
+
+  const row = sw.closest('.list-item');
+  if (row) {
+    row.addEventListener('click', e => {
+      if (e.composedPath().some(n => n instanceof Element && n.localName === 'md-switch')) return;
+      sw.selected = !sw.selected;
+      toggleOne(font, sw.selected);
+    });
+  }
 }
 
 function toggleOne(font: FontDef, on: boolean): void {

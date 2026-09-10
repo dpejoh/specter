@@ -63,9 +63,17 @@ interface MdOutlinedSegmentedButton extends HTMLElement {
   value: string;
 }
 
+interface MdRadio extends HTMLElement {
+  checked: boolean;
+  value: string;
+  name: string;
+  disabled: boolean;
+}
+
 declare global {
   interface HTMLElementTagNameMap {
     'md-switch': MdSwitch;
+    'md-radio': MdRadio;
     'md-dialog': MdDialog;
     'md-chip': MdChip;
     'md-filter-chip': MdFilterChip;

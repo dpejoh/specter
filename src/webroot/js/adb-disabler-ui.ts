@@ -8,6 +8,10 @@ export function openAdbDisablerDialog() {
   openSubPage({
     id: 'adb-disabler',
     title: t('control_toggle_adb_disabler', 'ADB Lock'),
+    description: t(
+      'adb_disabler_dialog_desc',
+      'Choose which developer settings to disable at boot to prevent detection by banking apps, games, and security frameworks that check for ADB or developer mode.'
+    ),
     masterToggle: {
       key: 'toggle_adb_disabler',
       defaultVal: '1',
@@ -41,14 +45,6 @@ export function openAdbDisablerDialog() {
         ],
       },
     ],
-    infoCard: {
-      icon: 'info',
-      title: t('adb_disabler_info_title', 'About ADB Lock'),
-      text: t(
-        'adb_disabler_dialog_desc',
-        'Choose which developer settings to disable at boot to prevent detection by banking apps, games, and security frameworks that check for ADB or developer mode.'
-      ),
-    },
   });
 }
 

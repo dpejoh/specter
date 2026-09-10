@@ -8,6 +8,10 @@ export function openRomFingerprintDialog() {
   openSubPage({
     id: 'rom-fingerprint',
     title: t('rom_fingerprint_dialog_title', 'ROM & Build Cleanup'),
+    description: t(
+      'rom_fingerprint_dialog_desc',
+      'Clean custom ROM traces, debug build types, and module residue from properties.'
+    ),
     masterToggle: {
       key: 'toggle_rom_fingerprint',
       defaultVal: '1',
@@ -57,10 +61,9 @@ export function openRomFingerprintDialog() {
     ],
     infoCard: {
       icon: 'info',
-      title: t('rom_fingerprint_info_title', 'About ROM Cleaning'),
       text: t(
         'rom_fingerprint_info_desc',
-        'Clean custom ROM traces, debug build types, and module residue from properties. Stripping custom ROM identifiers helps prevent detection, but removing custom props may disable ROM-specific features or OTA updates.'
+        'Stripping custom ROM identifiers helps prevent detection, but removing custom props may disable ROM-specific features or OTA updates.'
       ),
     },
   });

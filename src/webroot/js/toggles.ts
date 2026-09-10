@@ -128,4 +128,13 @@ export function wireDevMode() {
     setDevMode(sw.selected);
     cfgSet('dev_mode', sw.selected ? 'true' : 'false');
   });
+  const row = sw.closest('.list-item');
+  if (row) {
+    row.addEventListener('click', e => {
+      if (e.composedPath().some(n => n instanceof Element && n.localName === 'md-switch')) return;
+      sw.selected = !sw.selected;
+      setDevMode(sw.selected);
+      cfgSet('dev_mode', sw.selected ? 'true' : 'false');
+    });
+  }
 }

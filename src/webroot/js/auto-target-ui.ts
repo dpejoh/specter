@@ -11,6 +11,7 @@ export function openAutoTargetDialog() {
   openSubPage({
     id: 'auto-target',
     title: t('auto_target_title', 'Auto Targeting'),
+    description: t('auto_target_desc', 'Automatically watches for newly installed apps and adds them to Tricky Store target.txt.'),
     masterToggle: {
       key: 'toggle_auto_target',
       defaultVal: '1',
@@ -89,11 +90,6 @@ export function openAutoTargetDialog() {
         ],
       },
     ],
-    infoCard: {
-      icon: 'info',
-      title: t('auto_target_title', 'Auto Targeting'),
-      text: t('auto_target_desc', 'Automatically watches for newly installed apps and adds them to Tricky Store target.txt.'),
-    },
   });
 }
 

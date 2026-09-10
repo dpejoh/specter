@@ -43,7 +43,19 @@ export interface SubPageCustomItem {
   render: (container: HTMLElement, isEnabled: () => boolean, posClass?: string) => void;
 }
 
-export type SubPageItem = SubPageSwitchItem | SubPageInputItem | SubPageCustomItem;
+export interface SubPageRadioItem {
+  type: 'radio';
+  id: string;
+  name: string;
+  value: string;
+  title: string;
+  description?: string;
+  icon?: string;
+  selected?: boolean;
+  onSelect?: (value: string) => void;
+}
+
+export type SubPageItem = SubPageSwitchItem | SubPageInputItem | SubPageCustomItem | SubPageRadioItem;
 
 export interface SubPageGroup {
   title?: string;
@@ -52,12 +64,14 @@ export interface SubPageGroup {
 }
 
 export interface SubPageMasterToggle {
-  key: string;
+  key?: string;
   defaultVal?: string;
   title: string;
   description?: string;
   syncSwitchId?: string;
   onChange?: (enabled: boolean) => void;
+  getValue?: () => Promise<boolean> | boolean;
+  setValue?: (enabled: boolean) => Promise<void> | void;
 }
 
 export interface SubPageInfoCard {
@@ -69,6 +83,7 @@ export interface SubPageInfoCard {
 export interface SubPageConfig {
   id: string;
   title: string;
+  description?: string;
   icon?: string;
   masterToggle?: SubPageMasterToggle;
   groups: SubPageGroup[];
@@ -92,8 +107,12 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
 
   let masterEnabled = true;
   if (config.masterToggle) {
-    const raw = await cfgGet(config.masterToggle.key, config.masterToggle.defaultVal ?? '1');
-    masterEnabled = raw !== '0';
+    if (config.masterToggle.getValue) {
+      masterEnabled = await config.masterToggle.getValue();
+    } else if (config.masterToggle.key) {
+      const raw = await cfgGet(config.masterToggle.key, config.masterToggle.defaultVal ?? '1');
+      masterEnabled = raw !== '0';
+    }
   }
 
   // Pre-fetch all switch and input config states concurrently
@@ -146,6 +165,9 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
       </header>
 
       <div class="subpage-content" id="subpage-scroll-area">
+        ${config.description ? `
+          <p class="subpage-top-desc">${config.description}</p>
+        ` : ''}
         ${config.masterToggle ? `
           <div class="subpage-master-container">
             <div class="list-item list-item--toggle subpage-master-item ${masterEnabled ? 'subpage-master-item--active' : ''}" id="subpage-master-card">
@@ -169,6 +191,20 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
                 const posClass = total === 1 ? 'list-item--only' : iIdx === 0 ? 'list-item--first' : iIdx === total - 1 ? 'list-item--last' : 'list-item--middle';
                 if (item.type === 'custom') {
                   return `<div class="subpage-custom-item" id="subpage-custom-${gIdx}-${iIdx}"></div>`;
+                }
+                if (item.type === 'radio') {
+                  const rItem = item as SubPageRadioItem;
+                  const isChecked = !!rItem.selected;
+                  return `
+                    <div class="list-item list-item--radio ${posClass}" id="${rItem.id}-row" data-radio-group="${rItem.name}" data-radio-value="${rItem.value}">
+                      <md-radio name="${rItem.name}" value="${rItem.value}" id="${rItem.id}" ${isChecked ? 'checked' : ''} aria-label="${rItem.title}"></md-radio>
+                      <div class="list-item-content">
+                        <div class="toggle-text">${rItem.title}</div>
+                        ${rItem.description ? `<span class="supporting-text">${rItem.description}</span>` : ''}
+                      </div>
+                      <md-ripple></md-ripple>
+                    </div>
+                  `;
                 }
                 if (item.type === 'input') {
                   const inpItem = item as SubPageInputItem;
@@ -285,9 +321,13 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
 
   if (masterSwitch && config.masterToggle) {
     const mt = config.masterToggle;
-    const onMasterToggle = (val: boolean) => {
+    const onMasterToggle = async (val: boolean) => {
       masterEnabled = val;
-      cfgSet(mt.key, masterEnabled ? '1' : '0');
+      if (mt.setValue) {
+        await mt.setValue(masterEnabled);
+      } else if (mt.key) {
+        cfgSet(mt.key, masterEnabled ? '1' : '0');
+      }
 
       if (masterCard) {
         masterCard.classList.toggle('subpage-master-item--active', masterEnabled);
@@ -337,6 +377,32 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
             sw.selected = !sw.selected;
             cfgSet(swItem.key, sw.selected ? '1' : '0');
             swItem.onChange?.(sw.selected);
+          });
+        }
+      } else if (item.type === 'radio') {
+        const rItem = item as SubPageRadioItem;
+        const radio = overlay.querySelector(`#${rItem.id}`) as (HTMLElement & { checked: boolean }) | null;
+        const row = overlay.querySelector(`#${rItem.id}-row`) as HTMLElement | null;
+
+        const selectRadio = () => {
+          if (!radio) return;
+          overlay.querySelectorAll(`md-radio[name="${rItem.name}"]`).forEach(r => {
+            (r as HTMLElement & { checked: boolean }).checked = false;
+          });
+          radio.checked = true;
+          rItem.onSelect?.(rItem.value);
+        };
+
+        if (radio) {
+          radio.addEventListener('change', () => {
+            if (radio.checked) selectRadio();
+          });
+        }
+
+        if (row) {
+          row.addEventListener('click', (e) => {
+            if (e.composedPath().some(n => n instanceof Element && n.localName === 'md-radio')) return;
+            selectRadio();
           });
         }
       } else if (item.type === 'input') {

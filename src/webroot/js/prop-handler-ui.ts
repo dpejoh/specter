@@ -8,6 +8,10 @@ export function openPropHandlerDialog() {
   openSubPage({
     id: 'prop-handler',
     title: t('prop_handler_dialog_title', 'Boot Spoofing'),
+    description: t(
+      'prop_handler_dialog_desc',
+      'Manage boot-time property spoofing and cleanup. Locks bootloader state, verified boot, flash.locked, and hides recovery bootmode to prevent root and bootloader detection.'
+    ),
     masterToggle: {
       key: 'toggle_prop_handler',
       defaultVal: '1',
@@ -34,14 +38,6 @@ export function openPropHandlerDialog() {
         ],
       },
     ],
-    infoCard: {
-      icon: 'info',
-      title: t('prop_handler_info_title', 'About Boot Spoofing'),
-      text: t(
-        'prop_handler_dialog_desc',
-        'Manage boot-time property spoofing and cleanup. Locks bootloader state, verified boot, flash.locked, and hides recovery bootmode to prevent root and bootloader detection.'
-      ),
-    },
   });
 }
 
