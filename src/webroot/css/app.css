@@ -1219,10 +1219,30 @@ md-dialog {
 }
 
 .fb-footer {
-  padding: 14px 20px 20px;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 16px 24px calc(24px + var(--window-inset-bottom, env(safe-area-inset-bottom, 16px)));
   border-top: 1px solid var(--md-sys-color-outline-variant);
-  background: var(--md-sys-color-surface);
-  z-index: 1;
+  background: var(--md-sys-color-surface-container);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.fb-footer md-filled-button {
+  --md-filled-button-container-shape: 9999px;
+  min-height: 44px;
+  flex-shrink: 0;
+}
+
+.fb-footer md-text-button {
+  min-height: 44px;
+  flex-shrink: 0;
 }
 
 .list-item--selected {

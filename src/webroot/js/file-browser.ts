@@ -96,24 +96,23 @@ export async function openFileBrowser(
         </div>
 
         <div class="subpage-content" id="fb-scroll-area" style="padding-bottom: 24px;">
-          ${!isAtRoot ? `
-            <div class="list-container" style="margin-bottom: 12px;">
-              <div class="list-item" data-path=".." id="fb-up-row">
-                <div class="li-icon" style="background: var(--md-sys-color-surface-variant);">
-                  <md-icon style="color: var(--md-sys-color-on-surface-variant);" aria-hidden="true">arrow_upward</md-icon>
-                </div>
-                <div class="list-item-content">
-                  <div class="toggle-text">${t('fb_parent_folder', 'Parent folder')}</div>
-                </div>
-                <div class="spacer"></div>
-                <md-ripple></md-ripple>
-              </div>
-            </div>
-          ` : ''}
-
-          ${dirs.length > 0 ? `
+          ${(dirs.length > 0 || !isAtRoot) ? `
             <h2 class="list-title">${t('fb_folder', 'Folders')}</h2>
             <div class="list-container" style="margin-bottom: 16px;">
+              ${!isAtRoot ? `
+                <div class="list-item" data-path=".." id="fb-up-row">
+                  <div class="li-icon" style="background: var(--md-sys-color-primary-container);">
+                    <md-icon style="color: var(--md-sys-color-on-primary-container);" aria-hidden="true">folder</md-icon>
+                  </div>
+                  <div class="list-item-content">
+                    <div class="toggle-text" style="font-size: 1.25rem; font-weight: 700; letter-spacing: 2px; line-height: 1;">...</div>
+                    <span class="supporting-text">${t('fb_parent_folder', 'Parent folder')}</span>
+                  </div>
+                  <div class="spacer"></div>
+                  <md-icon style="color: var(--md-sys-color-outline);" aria-hidden="true">chevron_right</md-icon>
+                  <md-ripple></md-ripple>
+                </div>
+              ` : ''}
               ${dirs.map(d => `
                 <div class="list-item" data-path="${escapeHtml(d.path)}">
                   <div class="li-icon" style="background: var(--md-sys-color-primary-container);">
