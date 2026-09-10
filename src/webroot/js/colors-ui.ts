@@ -24,9 +24,7 @@ export function updateColorsSummary() {
 
   if (summaryEl) {
     if (current === 'monet') {
-      const sys = t('theme_preset_monet', 'System');
-      const dyn = t('colors_dynamic_name', 'Dynamic');
-      summaryEl.textContent = `${sys} (${dyn})`;
+      summaryEl.textContent = t('colors_dynamic_name', 'System (Dynamic)');
     } else {
       const found = BASIC_COLORS.find(c => c.id === current);
       summaryEl.textContent = found ? t(found.nameKey, found.defaultName) : current;
