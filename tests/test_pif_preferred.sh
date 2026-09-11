@@ -73,6 +73,36 @@ check_network() { return 1; }
 pif_apply_preferred "Play Integrity Fork"
 assert_eq "apply preferred needs network" "2" "$?"
 
+# Test blacklist filtering
+_sample_pool="Pixel 6|oriole_beta
+Pixel 8|shiba_beta
+Pixel 9a|tegu_beta"
+
+_filtered=$(pif_filter_blacklist "$_sample_pool" "")
+assert_eq "filter empty blacklist keeps all" "$_sample_pool" "$_filtered"
+
+_filtered=$(pif_filter_blacklist "$_sample_pool" "tegu_beta")
+assert_eq "filter blacklist removes matching product" "Pixel 6|oriole_beta
+Pixel 8|shiba_beta" "$_filtered"
+
+_filtered=$(pif_filter_blacklist "$_sample_pool" "Pixel 9a|tegu_beta
+Pixel 6|oriole_beta")
+assert_eq "filter multi blacklist leaves single item" "Pixel 8|shiba_beta" "$_filtered"
+
+# Test pif_apply_preferred with blacklist when preferred_devices is unset
+set_cfg pif_preferred_devices ""
+set_cfg pif_preferred_product ""
+set_cfg pif_preferred_model ""
+set_cfg pif_blacklist ""
+pif_apply_preferred "Play Integrity Fork"
+assert_eq "apply preferred returns 1 when no target and no blacklist" "1" "$?"
+
+# When blacklist is set, pif_apply_preferred activates random canary selection
+set_cfg pif_blacklist "oriole_beta"
+check_network() { return 1; }
+pif_apply_preferred "Play Integrity Fork"
+assert_eq "apply preferred with blacklist activates random canary (needs net)" "2" "$?"
+
 done_testing
 
 

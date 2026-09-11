@@ -28,6 +28,56 @@ pif_prop_dest() {
   esac
 }
 
+: "${PIF_CANARY_DEVICES:=Pixel 6|oriole_beta
+Pixel 6 Pro|raven_beta
+Pixel 6a|bluejay_beta
+Pixel 7|panther_beta
+Pixel 7 Pro|cheetah_beta
+Pixel 7a|lynx_beta
+Pixel Fold|felix_beta
+Pixel Tablet|tangorpro_beta
+Pixel 8|shiba_beta
+Pixel 8 Pro|husky_beta
+Pixel 8a|akita_beta
+Pixel 9|tokay_beta
+Pixel 9 Pro|caiman_beta
+Pixel 9 Pro XL|komodo_beta
+Pixel 9 Pro Fold|comet_beta
+Pixel 9a|tegu_beta}"
+
+# $1 = lines of MODEL|PRODUCT
+# $2 = blacklist string (containing products or MODEL|PRODUCT)
+pif_filter_blacklist() {
+  _pfb_list="$1"
+  _pfb_bl="$2"
+  [ -n "$_pfb_bl" ] || { printf '%s\n' "$_pfb_list"; unset _pfb_list _pfb_bl; return 0; }
+  while IFS= read -r _pfb_line || [ -n "$_pfb_line" ]; do
+    [ -n "$_pfb_line" ] || continue
+    _pfb_prod="${_pfb_line##*\|}"
+    [ -n "$_pfb_prod" ] || continue
+    case "$_pfb_bl" in
+      *"$_pfb_prod"*) continue ;;
+    esac
+    printf '%s\n' "$_pfb_line"
+  done <<EOF
+$_pfb_list
+EOF
+  unset _pfb_list _pfb_bl _pfb_line _pfb_prod
+}
+
+# $1 = blacklist string (e.g. from cfg_get pif_blacklist '')
+# Prints one non-blacklisted canary device line ("MODEL|PRODUCT")
+pif_choose_random_canary() {
+  _pcrc_bl="$1"
+  _pcrc_pool=$(pif_filter_blacklist "$PIF_CANARY_DEVICES" "$_pcrc_bl")
+  if [ -z "$_pcrc_pool" ]; then
+    log_w "PIF" "All Canary devices blacklisted, ignoring blacklist"
+    _pcrc_pool="$PIF_CANARY_DEVICES"
+  fi
+  pif_choose_preferred "$_pcrc_pool"
+  unset _pcrc_bl _pcrc_pool
+}
+
 # $1 = preferred lines "MODEL|PRODUCT" or "MODEL|imported:ID"
 # Prints one surviving line; return 1 if none remain.
 pif_choose_preferred() {
@@ -53,20 +103,22 @@ pif_choose_preferred() {
 $_cpp_prefs
 EOF
   [ "$_cpp_n" -gt 0 ] || { unset _cpp_prefs _cpp_ok _cpp_n _cpp_product _cpp_pick _cpp_line _cpp_id; return 1; }
-  _cpp_pick=$(($$ % _cpp_n))
+  _cpp_seed="${RANDOM:-$$}"
+  case "$_cpp_seed" in *[!0-9]*) _cpp_seed="$$" ;; esac
+  _cpp_pick=$((_cpp_seed % _cpp_n))
   _cpp_n=0
   while IFS= read -r _cpp_line || [ -n "$_cpp_line" ]; do
     [ -n "$_cpp_line" ] || continue
     if [ "$_cpp_n" -eq "$_cpp_pick" ]; then
       printf '%s\n' "$_cpp_line"
-      unset _cpp_prefs _cpp_ok _cpp_n _cpp_product _cpp_pick _cpp_line _cpp_id
+      unset _cpp_prefs _cpp_ok _cpp_n _cpp_product _cpp_pick _cpp_line _cpp_id _cpp_seed
       return 0
     fi
     _cpp_n=$((_cpp_n + 1))
   done <<EOF
 $_cpp_ok
 EOF
-  unset _cpp_prefs _cpp_ok _cpp_n _cpp_product _cpp_pick _cpp_line _cpp_id
+  unset _cpp_prefs _cpp_ok _cpp_n _cpp_product _cpp_pick _cpp_line _cpp_id _cpp_seed
   return 1
 }
 
@@ -118,6 +170,68 @@ EOF
   return 1
 }
 
+# $1 = model, $2 = product, $3 = dest, $4 = module name
+# returns 0 = applied, 1 = failure, 2 = network error
+pif_apply_device() {
+  _pad_model="$1"
+  _pad_product="$2"
+  _pad_dest="$3"
+  _pad_name="$4"
+  _pad_applied=0
+
+  case "$_pad_product" in
+    imported:*)
+      _pad_imp="${_pad_product#imported:}"
+      log_i "PIF" "Using imported device: $_pad_model ($_pad_imp)"
+      if pif_apply_imported "$_pad_imp" "$_pad_dest"; then
+        _pif_model="$_pad_model"
+        _pad_applied=1
+      else
+        log_w "PIF" "Failed to apply imported device $_pad_imp"
+      fi
+      unset _pad_imp
+      ;;
+    *)
+      log_i "PIF" "Using target device: $_pad_model ($_pad_product)"
+      if ! check_network; then
+        log_e "PIF" "No internet connection"
+        unset _pad_model _pad_product _pad_dest _pad_name _pad_applied
+        return 2
+      fi
+      case "$_pad_name" in
+        *Fork*)
+          _pad_dev="${_pad_product%_beta}"
+          if (cd "$PIF_DIR" && DEVICE="$_pad_dev" MODEL="$_pad_model" PRODUCT="$_pad_product" sh ./autopif4.sh >/dev/null 2>&1); then
+            _pif_model=$(pif_prop_get "$_pad_dest" MODEL)
+            [ -n "$_pif_model" ] || _pif_model="$_pad_model"
+            _pad_applied=1
+          elif pif_apply_github_prop "$_pad_product" "$_pad_dest"; then
+            _pif_model=$(pif_prop_get "$_pad_dest" MODEL)
+            [ -n "$_pif_model" ] || _pif_model="$_pad_model"
+            _pad_applied=1
+          else
+            log_w "PIF" "Fork autopif4 failed for $_pad_product"
+          fi
+          unset _pad_dev
+          ;;
+        *)
+          if pif_apply_github_prop "$_pad_product" "$_pad_dest"; then
+            _pif_model=$(pif_prop_get "$_pad_dest" MODEL)
+            _pad_applied=1
+          else
+            log_w "PIF" "Failed to fetch GitHub prop for $_pad_product"
+          fi
+          ;;
+      esac
+      ;;
+  esac
+  [ -n "$_pif_model" ] && log_i "PIF" "Selected Device: $_pif_model"
+  unset _pad_model _pad_product _pad_dest _pad_name _pif_model
+  [ "$_pad_applied" = "1" ] || { unset _pad_applied; return 1; }
+  unset _pad_applied
+  return 0
+}
+
 # $1 = module name (from module.prop name=)
 # 0 = applied, 1 = soft-fail (caller may random), 2 = Canary needs network
 pif_apply_preferred() {
@@ -129,62 +243,39 @@ pif_apply_preferred() {
     [ -n "$_legacy_p" ] && _prefs="${_legacy_m}|${_legacy_p}"
     unset _legacy_p _legacy_m
   fi
-  [ -n "$_prefs" ] || { unset _pap_name _prefs; return 1; }
 
-  _choice=$(pif_choose_preferred "$_prefs") || _choice=""
-  if [ -z "$_choice" ]; then
-    log_w "PIF" "No preferred devices left, falling back to random"
-    unset _pap_name _prefs _choice
-    return 1
+  _choice=""
+  if [ -n "$_prefs" ]; then
+    _choice=$(pif_choose_preferred "$_prefs") || _choice=""
+    if [ -z "$_choice" ]; then
+      log_w "PIF" "No preferred devices left, falling back to random"
+    fi
   fi
+
+  # If no fixed target, check if blacklist is configured for random mode
+  if [ -z "$_choice" ]; then
+    _bl=$(cfg_get pif_blacklist '')
+    if [ -n "$_bl" ]; then
+      log_i "PIF" "Blacklist configured, Specter selecting random Canary device..."
+      _choice=$(pif_choose_random_canary "$_bl") || _choice=""
+      if [ -z "$_choice" ]; then
+        log_w "PIF" "Failed to select device from Canary pool"
+        unset _pap_name _prefs _choice _bl
+        return 1
+      fi
+    fi
+    unset _bl
+  fi
+
+  [ -n "$_choice" ] || { unset _pap_name _prefs _choice; return 1; }
 
   _dest=$(pif_prop_dest "$_pap_name")
   _pref_model="${_choice%\|*}"
   _pref_product="${_choice##*\|}"
-  _applied=0
-  case "$_pref_product" in
-    imported:*)
-      _imp_id="${_pref_product#imported:}"
-      log_i "PIF" "Using imported device: $_pref_model ($_imp_id)"
-      if pif_apply_imported "$_imp_id" "$_dest"; then
-        _pif_model="$_pref_model"
-        _applied=1
-      else
-        log_w "PIF" "Failed to apply imported device $_imp_id"
-      fi
-      unset _imp_id
-      ;;
-    *)
-      log_i "PIF" "Using preferred device: $_pref_model ($_pref_product)"
-      if ! check_network; then
-        log_e "PIF" "No internet connection"
-        unset _pap_name _prefs _choice _dest _pref_model _pref_product _applied _pif_model
-        return 2
-      fi
-      case "$_pap_name" in
-        *Fork*)
-          if MODEL="$_pref_model" PRODUCT="$_pref_product" sh "$PIF_DIR/autopif4.sh" >/dev/null 2>&1; then
-            _pif_model=$(pif_prop_get "$_dest" MODEL)
-            [ -n "$_pif_model" ] || _pif_model="$_pref_model"
-            _applied=1
-          else
-            log_w "PIF" "Fork autopif4 failed for $_pref_product"
-          fi
-          ;;
-        *)
-          if pif_apply_github_prop "$_pref_product" "$_dest"; then
-            _pif_model=$(pif_prop_get "$_dest" MODEL)
-            _applied=1
-          else
-            log_w "PIF" "Failed to fetch GitHub prop for $_pref_product"
-          fi
-          ;;
-      esac
-      ;;
-  esac
-  [ -n "$_pif_model" ] && log_i "PIF" "Selected Device: $_pif_model"
-  unset _pref_model _pref_product _choice _prefs _dest _pif_model _pap_name
-  [ "$_applied" = "1" ] || { unset _applied; return 1; }
-  unset _applied
-  return 0
+  unset _prefs _choice
+
+  _rc=0
+  pif_apply_device "$_pref_model" "$_pref_product" "$_dest" "$_pap_name" || _rc=$?
+  unset _pref_model _pref_product _dest _pap_name
+  return "$_rc"
 }
