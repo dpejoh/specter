@@ -230,7 +230,16 @@ export async function openPifDeviceSubpage() {
 
   const selectProduct = (prod: string) => {
     selectedProduct = prod;
-    renderLists();
+    if (!listHostRef) return;
+    listHostRef.querySelectorAll<MdRadio>('md-radio[name="pif-device"]').forEach(r => {
+      r.checked = r.value === selectedProduct;
+    });
+    const isRandomActive = selectedProduct === '';
+    listHostRef.querySelectorAll<HTMLElement>('.pif-device-row').forEach(row => {
+      const product = row.dataset.product ?? '';
+      if (!product) return;
+      row.classList.toggle('pif-device-row--blacklisted', isRandomActive && blacklist.has(product));
+    });
   };
 
   const toggleBlacklistDevice = (prod: string) => {

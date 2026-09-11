@@ -1515,6 +1515,7 @@ md-dialog {
 .pif-blacklist-row {
   cursor: pointer;
   user-select: none;
+  transition: opacity 320ms cubic-bezier(0.4, 0, 0.2, 1), filter 320ms cubic-bezier(0.4, 0, 0.2, 1), background-color 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .pif-device-row md-radio,
@@ -1546,7 +1547,6 @@ md-dialog {
 .pif-device-row--blacklisted {
   opacity: 0.38;
   filter: grayscale(0.6);
-  transition: opacity 0.2s ease, filter 0.2s ease;
 }
 
 .pif-device-row--blacklisted:hover {

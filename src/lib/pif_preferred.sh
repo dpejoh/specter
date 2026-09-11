@@ -103,6 +103,7 @@ pif_choose_preferred() {
 $_cpp_prefs
 EOF
   [ "$_cpp_n" -gt 0 ] || { unset _cpp_prefs _cpp_ok _cpp_n _cpp_product _cpp_pick _cpp_line _cpp_id; return 1; }
+  # shellcheck disable=SC3028
   _cpp_seed="${RANDOM:-$$}"
   case "$_cpp_seed" in *[!0-9]*) _cpp_seed="$$" ;; esac
   _cpp_pick=$((_cpp_seed % _cpp_n))
