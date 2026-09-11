@@ -1,6 +1,18 @@
 import '@material/web/button/filled-button.js';
+import '@material/web/button/text-button.js';
 import '@material/web/iconbutton/icon-button.js';
 import '@material/web/icon/icon.js';
+import '@material/web/radio/radio.js';
+import type { MdRadio } from '@material/web/radio/radio.js';
+import '@material/web/checkbox/checkbox.js';
+import type { MdCheckbox } from '@material/web/checkbox/checkbox.js';
+import '@material/web/menu/menu.js';
+import '@material/web/menu/menu-item.js';
+import type { MdMenu } from '@material/web/menu/menu.js';
+import '@material/web/textfield/outlined-text-field.js';
+import type { MdOutlinedTextField } from '@material/web/textfield/outlined-text-field.js';
+import '@material/web/fab/fab.js';
+import '@material/web/progress/circular-progress.js';
 import { exec, getDataDir } from './bridge.js';
 import { cfgGet, cfgSet } from './cfg.js';
 import { openFileBrowser } from './file-browser.js';
@@ -8,6 +20,7 @@ import { showConfirm } from './dialog.js';
 import { showToast } from './toast.js';
 import { escapeHtml, shellEscape, updateListContainerCorners } from './utils.js';
 import { getTranslation } from './i18n.js';
+import { openSubPage } from './subpage.js';
 
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
@@ -22,7 +35,26 @@ const pifBotUrls = (path: string): string[] => [
 ];
 const DEVICE_LIST_URLS = pifBotUrls('bot/device_list.json');
 
-type PifDevice = { model: string; product: string; imported?: boolean };
+const FALLBACK_CANARY_DEVICES: PifDevice[] = [
+  { model: 'Pixel 6', product: 'oriole_beta' },
+  { model: 'Pixel 6 Pro', product: 'raven_beta' },
+  { model: 'Pixel 6a', product: 'bluejay_beta' },
+  { model: 'Pixel 7', product: 'panther_beta' },
+  { model: 'Pixel 7 Pro', product: 'cheetah_beta' },
+  { model: 'Pixel 7a', product: 'lynx_beta' },
+  { model: 'Pixel Fold', product: 'felix_beta' },
+  { model: 'Pixel Tablet', product: 'tangorpro_beta' },
+  { model: 'Pixel 8', product: 'shiba_beta' },
+  { model: 'Pixel 8 Pro', product: 'husky_beta' },
+  { model: 'Pixel 8a', product: 'akita_beta' },
+  { model: 'Pixel 9', product: 'tokay_beta' },
+  { model: 'Pixel 9 Pro', product: 'caiman_beta' },
+  { model: 'Pixel 9 Pro XL', product: 'komodo_beta' },
+  { model: 'Pixel 9 Pro Fold', product: 'comet_beta' },
+  { model: 'Pixel 9a', product: 'tegu_beta' },
+];
+
+export type PifDevice = { model: string; product: string; imported?: boolean };
 
 function importedDir(): string {
   return (getDataDir() || '/data/adb/specter') + '/pif_imported';
@@ -66,6 +98,22 @@ async function loadPreferred(): Promise<PifDevice[]> {
   return product ? [{ model, product }] : [];
 }
 
+async function loadBlacklist(): Promise<Set<string>> {
+  const raw = (await cfgGet('pif_blacklist', '')) || '';
+  const set = new Set<string>();
+  for (const line of raw.split('\n').map(l => l.trim()).filter(Boolean)) {
+    const prod = line.includes('|') ? line.split('|')[1]?.trim() : line;
+    if (prod) set.add(prod);
+  }
+  return set;
+}
+
+async function saveBlacklist(set: Set<string>, allDevices: PifDevice[]): Promise<void> {
+  const devices = allDevices.filter(d => set.has(d.product));
+  const encoded = encodePreferred(devices);
+  await cfgSet('pif_blacklist', encoded);
+}
+
 let canaryListPromise: Promise<PifDevice[]> | null = null;
 
 async function fetchDeviceListJson(): Promise<PifDevice[]> {
@@ -75,12 +123,13 @@ async function fetchDeviceListJson(): Promise<PifDevice[]> {
       if (!res.ok) continue;
       const data: unknown = await res.json();
       if (!Array.isArray(data)) continue;
-      return (data as PifDevice[]).filter(d => d?.model && d?.product);
+      const filtered = (data as PifDevice[]).filter(d => d?.model && d?.product);
+      if (filtered.length > 0) return filtered;
     } catch {
       /* try next */
     }
   }
-  return [];
+  return FALLBACK_CANARY_DEVICES;
 }
 
 function ensureCanaryList(): Promise<PifDevice[]> {
@@ -104,116 +153,355 @@ async function loadImported(): Promise<PifDevice[]> {
   return out;
 }
 
-async function refreshChooseDesc() {
+export async function refreshChooseDesc() {
   const desc = document.getElementById('pif-choose-device-desc');
   if (!desc) return;
-  const preferred = await loadPreferred();
-  if (preferred.length === 0) {
-    desc.textContent = t('menu_pif_choose_desc', 'Pick which Pixel Canary models Specter may fetch');
-    return;
-  }
+  const [preferred, blacklist] = await Promise.all([loadPreferred(), loadBlacklist()]);
   if (preferred.length === 1) {
     const label = preferred[0]?.model || preferred[0]?.product || '';
     desc.textContent = t('menu_pif_choose_current', 'Current: {0}').replace('{0}', label);
     return;
   }
-  desc.textContent = t('menu_pif_choose_current_many', 'Current: {0} devices').replace(
-    '{0}',
-    String(preferred.length)
-  );
+  if (preferred.length > 1) {
+    desc.textContent = t('menu_pif_choose_current_many', 'Current: {0} devices').replace(
+      '{0}',
+      String(preferred.length)
+    );
+    return;
+  }
+  if (blacklist.size > 0) {
+    desc.textContent = `Random Canary (${blacklist.size} blacklisted)`;
+    return;
+  }
+  desc.textContent = t('menu_pif_choose_desc', 'Pick which Pixel Canary models Specter may fetch');
 }
 
-async function openPifDeviceDialog() {
-  const dialog = document.createElement('md-dialog');
-  dialog.className = 'pif-device-dialog';
-  dialog.innerHTML = `
-    <div slot="headline">${t('menu_pif_choose', 'Choose PIF Device')}</div>
-    <div slot="content" class="pif-device-content">
-      <div id="pif-device-pane" class="pif-device-pane pif-device-loading" style="height:380px">
-        <div class="pif-device-spinner">
-          <md-circular-progress indeterminate></md-circular-progress>
-        </div>
-      </div>
-    </div>
-    <div slot="actions" class="fb-actions">
-      <md-text-button id="pif-dev-add">${t('menu_pif_choose_add_file', 'Add from file')}</md-text-button>
-      <div class="spacer"></div>
-      <md-text-button id="pif-dev-cancel">${t('dialog_cancel', 'Cancel')}</md-text-button>
-      <md-filled-button id="pif-dev-save" disabled>${t('dialog_save', 'Save')}</md-filled-button>
-    </div>
-  `;
-  document.body.appendChild(dialog);
-  dialog.quick = true;
-  let closed = false;
-  dialog.addEventListener('close', () => {
-    closed = true;
-    document.body.removeChild(dialog);
-  });
-  dialog.querySelector('#pif-dev-cancel')!.addEventListener('click', () => dialog.close());
+export async function openPifDeviceSubpage() {
+  const [saved, initialImported, initialCanary, initialBlacklist] = await Promise.all([
+    loadPreferred(),
+    loadImported(),
+    ensureCanaryList(),
+    loadBlacklist(),
+  ]);
 
-  const savedProducts = new Set<string>();
-  let dirty = false;
-  let listed: PifDevice[] = [];
-  const content = dialog.querySelector('#pif-device-pane') as HTMLElement;
-  const saveBtn = dialog.querySelector('#pif-dev-save') as HTMLButtonElement;
+  let selectedProduct = saved[0]?.product || '';
+  let blacklist = new Set(initialBlacklist);
+  let mode: 'target' | 'blacklist' = 'target';
+  let imported = initialImported;
+  let canary = initialCanary;
+  let searchQuery = '';
 
-  const selectedFromDom = (): PifDevice[] => {
-    const checked = new Set(
-      Array.from(content.querySelectorAll('input[name="pif-dev"]:checked')).map(
-        el => (el as HTMLInputElement).value
-      )
-    );
-    return listed.filter(d => checked.has(d.product));
+  let listHostRef: HTMLElement | null = null;
+  let searchFieldRef: MdOutlinedTextField | null = null;
+  let clearBtnRef: HTMLElement | null = null;
+  let updateHeaderFn: (() => void) | null = null;
+
+  const getAllDevices = (): PifDevice[] => [...imported, ...canary];
+
+  const getFilteredDevices = (): { filteredImported: PifDevice[]; filteredCanary: PifDevice[] } => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) {
+      return { filteredImported: imported, filteredCanary: canary };
+    }
+    const match = (d: PifDevice) =>
+      d.model.toLowerCase().includes(q) || d.product.toLowerCase().includes(q);
+    return {
+      filteredImported: imported.filter(match),
+      filteredCanary: canary.filter(match),
+    };
   };
 
-  const markDirty = () => {
-    dirty = true;
-    saveBtn.disabled = false;
+  const persistTarget = async () => {
+    if (!selectedProduct) {
+      await cfgSet('pif_preferred_devices', '');
+      await cfgSet('pif_preferred_product', '');
+      await cfgSet('pif_preferred_model', '');
+    } else {
+      const all = getAllDevices();
+      const chosen = all.find(d => d.product === selectedProduct);
+      if (chosen) {
+        await cfgSet('pif_preferred_devices', encodePreferred([chosen]));
+        await cfgSet('pif_preferred_product', '');
+        await cfgSet('pif_preferred_model', '');
+      }
+    }
+    void refreshChooseDesc();
   };
 
-  const render = (devices: PifDevice[]) => {
-    listed = devices;
-    content.classList.remove('pif-device-loading');
-    const rows = devices.map(d => {
-      const badge = d.imported
-        ? `<span class="supporting-text">${t('menu_pif_choose_imported', 'Imported')}</span>`
-        : `<span class="supporting-text">${escapeHtml(d.product)}</span>`;
-      const trash = d.imported
-        ? `<md-icon-button class="pif-dev-trash" data-id="${escapeHtml(d.product.slice(IMPORTED_PREFIX.length))}" aria-label="${t('menu_pif_choose_delete', 'Remove imported device')}"><md-icon>delete</md-icon></md-icon-button>`
-        : '';
-      return `<label class="list-item" style="cursor:pointer">
-        <input type="checkbox" name="pif-dev" value="${escapeHtml(d.product)}"${
-          savedProducts.has(d.product) ? ' checked' : ''
-        } style="margin-inline-end:12px">
-        <div class="list-item-content"><div class="toggle-text">${escapeHtml(d.model)}</div>
-        ${badge}</div>
-        ${trash}
-      </label>`;
+  const selectProduct = (prod: string) => {
+    selectedProduct = prod;
+    listHostRef?.querySelectorAll<MdRadio>('md-radio[name="pif-device"]').forEach(r => {
+      r.checked = r.value === selectedProduct;
     });
-    content.innerHTML = `
-      <p class="ap-dialog-desc">${t('menu_pif_choose_multi_hint', 'Select one or more devices. None selected = random.')}</p>
-      ${rows.join('') || `<p class="ap-dialog-desc">${t('menu_pif_choose_empty', 'No devices yet. Add a pif.prop file or wait for the Canary list.')}</p>`}
-    `;
-    content.querySelectorAll('input[name="pif-dev"]').forEach(el => {
-      el.addEventListener('change', markDirty);
-    });
-    content.querySelectorAll('.pif-dev-trash').forEach(el => {
-      el.addEventListener('click', async ev => {
-        ev.preventDefault();
-        ev.stopPropagation();
-        const id = (el as HTMLElement).dataset.id;
-        if (!id) return;
-        const product = IMPORTED_PREFIX + id;
-        const path = `${importedDir()}/${id}.prop`;
-        await exec(`rm -f ${shellEscape(path)} 2>/dev/null || true`);
-        savedProducts.delete(product);
-        const stored = (await loadPreferred()).filter(d => d.product !== product);
-        cfgSet('pif_preferred_devices', encodePreferred(stored));
-        render(listed.filter(d => d.product !== product));
-        markDirty();
-        void refreshChooseDesc();
+  };
+
+  const toggleBlacklistDevice = (prod: string) => {
+    if (blacklist.has(prod)) {
+      blacklist.delete(prod);
+    } else {
+      blacklist.add(prod);
+    }
+    updateHeaderFn?.();
+    renderLists();
+  };
+
+  const clearAllBlacklist = () => {
+    if (blacklist.size === 0) return;
+    blacklist.clear();
+    updateHeaderFn?.();
+    renderLists();
+  };
+
+  const renderLists = () => {
+    if (!listHostRef) return;
+    const { filteredImported, filteredCanary } = getFilteredDevices();
+    const q = searchQuery.trim().toLowerCase();
+
+    if (mode === 'target') {
+      const showRandom = !q || 'random'.includes(q) || 'default'.includes(q);
+      const totalFiltered = filteredImported.length + filteredCanary.length + (showRandom ? 1 : 0);
+
+      if (totalFiltered === 0) {
+        listHostRef.innerHTML = `
+          <div class="pif-device-empty">
+            <md-icon aria-hidden="true">search_off</md-icon>
+            <p>${escapeHtml(searchQuery ? `No devices matching "${searchQuery}"` : t('menu_pif_choose_empty', 'No devices found'))}</p>
+          </div>
+        `;
+        return;
+      }
+
+      let html = '';
+
+      if (showRandom) {
+        const isChecked = selectedProduct === '';
+        const blNotice = blacklist.size > 0
+          ? ` (${blacklist.size} excluded by blacklist)`
+          : '';
+        html += `
+          <h2 class="list-title">Default</h2>
+          <div class="list-container">
+            <div class="list-item list-item--only pif-device-row" data-product="" role="button" tabindex="0">
+              <md-radio name="pif-device" value="" ${isChecked ? 'checked' : ''} aria-label="Random Canary (Default)"></md-radio>
+              <div class="list-item-content">
+                <div class="toggle-text">Random Canary (Default)</div>
+                <span class="supporting-text">Randomly emulate any Pixel Canary model${escapeHtml(blNotice)}</span>
+              </div>
+              <md-ripple></md-ripple>
+            </div>
+          </div>
+        `;
+      }
+
+      const renderGroup = (title: string, list: PifDevice[]) => {
+        if (list.length === 0) return '';
+        const itemsHtml = list
+          .map((d, i) => {
+            const total = list.length;
+            const posClass =
+              total === 1
+                ? 'list-item--only'
+                : i === 0
+                ? 'list-item--first'
+                : i === total - 1
+                ? 'list-item--last'
+                : 'list-item--middle';
+            const isChecked = selectedProduct === d.product;
+            const subText = d.imported
+              ? t('menu_pif_choose_imported', 'Imported')
+              : d.product;
+            const trash = d.imported
+              ? `<md-icon-button class="pif-dev-trash" data-id="${escapeHtml(
+                  d.product.slice(IMPORTED_PREFIX.length)
+                )}" aria-label="${t('menu_pif_choose_delete', 'Remove imported device')}">
+                  <md-icon aria-hidden="true">delete</md-icon>
+                </md-icon-button>`
+              : '';
+
+            return `
+              <div class="list-item ${posClass} pif-device-row" data-product="${escapeHtml(d.product)}" role="button" tabindex="0">
+                <md-radio name="pif-device" value="${escapeHtml(d.product)}" ${isChecked ? 'checked' : ''} aria-label="${escapeHtml(d.model)}"></md-radio>
+                <div class="list-item-content">
+                  <div class="toggle-text">${escapeHtml(d.model)}</div>
+                  <span class="supporting-text">${escapeHtml(subText)}</span>
+                </div>
+                ${trash}
+                <md-ripple></md-ripple>
+              </div>
+            `;
+          })
+          .join('');
+
+        return `
+          <h2 class="list-title">${escapeHtml(title)} (${list.length})</h2>
+          <div class="list-container">
+            ${itemsHtml}
+          </div>
+        `;
+      };
+
+      if (filteredImported.length > 0) {
+        html += renderGroup(t('menu_pif_choose_imported', 'Imported Devices'), filteredImported);
+      }
+      if (filteredCanary.length > 0) {
+        html += renderGroup('Pixel Canary', filteredCanary);
+      }
+
+      listHostRef.innerHTML = html;
+      updateListContainerCorners();
+
+      // Wire clicks on target rows
+      listHostRef.querySelectorAll<HTMLElement>('.pif-device-row').forEach(row => {
+        const product = row.dataset.product ?? '';
+        const radio = row.querySelector('md-radio') as MdRadio | null;
+
+        radio?.addEventListener('change', () => {
+          void selectProduct(radio.value);
+        });
+
+        const handleTrigger = (ev: Event) => {
+          const target = ev.target as HTMLElement;
+          if (target.closest('.pif-dev-trash') || target.closest('md-radio')) return;
+          if (radio) radio.checked = true;
+          void selectProduct(product);
+        };
+
+        row.addEventListener('click', handleTrigger);
+        row.addEventListener('keydown', (ev: KeyboardEvent) => {
+          if (ev.key === 'Enter' || ev.key === ' ') {
+            ev.preventDefault();
+            handleTrigger(ev);
+          }
+        });
       });
-    });
+
+      // Wire trash buttons
+      listHostRef.querySelectorAll<HTMLElement>('.pif-dev-trash').forEach(btn => {
+        btn.addEventListener('click', async ev => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          const id = btn.dataset.id;
+          if (!id) return;
+          const ok = await showConfirm(
+            t('dialog_confirm', 'Confirm'),
+            t('menu_pif_choose_delete', 'Remove imported device') + '?'
+          );
+          if (!ok) return;
+
+          const product = IMPORTED_PREFIX + id;
+          const path = `${importedDir()}/${id}.prop`;
+          await exec(`rm -f ${shellEscape(path)} 2>/dev/null || true`);
+          if (selectedProduct === product) {
+            selectedProduct = '';
+          }
+          if (blacklist.has(product)) {
+            blacklist.delete(product);
+            await saveBlacklist(blacklist, getAllDevices());
+          }
+          imported = imported.filter(d => d.product !== product);
+          await persistTarget();
+          renderLists();
+          showToast(t('menu_pif_choose_delete', 'Device removed'), {
+            icon: 'delete',
+            type: 'info',
+            autoCloseDelay: 2000,
+          });
+        });
+      });
+    } else {
+      // BLACKLIST MODE (Checkboxes)
+      const totalFiltered = filteredImported.length + filteredCanary.length;
+
+      if (totalFiltered === 0) {
+        listHostRef.innerHTML = `
+          <div class="pif-device-empty">
+            <md-icon aria-hidden="true">search_off</md-icon>
+            <p>${escapeHtml(searchQuery ? `No devices matching "${searchQuery}"` : t('menu_pif_choose_empty', 'No devices found'))}</p>
+          </div>
+        `;
+        return;
+      }
+
+      let html = '';
+
+      const renderBlacklistGroup = (title: string, list: PifDevice[]) => {
+        if (list.length === 0) return '';
+        const itemsHtml = list
+          .map((d, i) => {
+            const total = list.length;
+            const posClass =
+              total === 1
+                ? 'list-item--only'
+                : i === 0
+                ? 'list-item--first'
+                : i === total - 1
+                ? 'list-item--last'
+                : 'list-item--middle';
+            const isBlacklisted = blacklist.has(d.product);
+            const subText = d.imported
+              ? t('menu_pif_choose_imported', 'Imported')
+              : d.product;
+            const excludedClass = isBlacklisted ? ' pif-blacklist-row--excluded' : '';
+
+            return `
+              <div class="list-item ${posClass} pif-blacklist-row${excludedClass}" data-product="${escapeHtml(d.product)}" role="button" tabindex="0">
+                <md-checkbox touch-target="wrapper" data-product="${escapeHtml(d.product)}" ${isBlacklisted ? 'checked' : ''} aria-label="${escapeHtml(d.model)}"></md-checkbox>
+                <div class="list-item-content">
+                  <div class="toggle-text">${escapeHtml(d.model)}</div>
+                  <span class="supporting-text">${escapeHtml(subText)}</span>
+                </div>
+                <md-ripple></md-ripple>
+              </div>
+            `;
+          })
+          .join('');
+
+        return `
+          <h2 class="list-title">${escapeHtml(title)}</h2>
+          <div class="list-container">
+            ${itemsHtml}
+          </div>
+        `;
+      };
+
+      if (filteredImported.length > 0) {
+        html += renderBlacklistGroup(t('menu_pif_choose_imported', 'Imported Devices'), filteredImported);
+      }
+      if (filteredCanary.length > 0) {
+        const canaryTitle = blacklist.size > 0
+          ? `Pixel Canary (${blacklist.size} excluded)`
+          : 'Pixel Canary';
+        html += renderBlacklistGroup(canaryTitle, filteredCanary);
+      }
+
+      listHostRef.innerHTML = html;
+      updateListContainerCorners();
+
+      // Wire checkbox & row toggles
+      listHostRef.querySelectorAll<HTMLElement>('.pif-blacklist-row').forEach(row => {
+        const product = row.dataset.product ?? '';
+        const checkbox = row.querySelector('md-checkbox') as MdCheckbox | null;
+
+        checkbox?.addEventListener('change', () => {
+          void toggleBlacklistDevice(product);
+        });
+
+        const handleTrigger = (ev: Event) => {
+          const target = ev.target as HTMLElement;
+          if (target.closest('md-checkbox')) return;
+          if (checkbox) checkbox.checked = !checkbox.checked;
+          void toggleBlacklistDevice(product);
+        };
+
+        row.addEventListener('click', handleTrigger);
+        row.addEventListener('keydown', (ev: KeyboardEvent) => {
+          if (ev.key === 'Enter' || ev.key === ' ') {
+            ev.preventDefault();
+            handleTrigger(ev);
+          }
+        });
+      });
+    }
   };
 
   const importFile = async (filePath: string) => {
@@ -224,10 +512,7 @@ async function openPifDeviceDialog() {
     if (!fp || !model) {
       const ok = await showConfirm(
         t('menu_pif_choose_invalid_title', 'Invalid PIF file'),
-        t(
-          'menu_pif_choose_invalid_msg',
-          'This file is missing FINGERPRINT or MODEL. Import anyway?'
-        )
+        t('menu_pif_choose_invalid_msg', 'This file is missing FINGERPRINT or MODEL. Import anyway?')
       );
       if (!ok) return;
       if (!model) {
@@ -248,48 +533,216 @@ async function openPifDeviceDialog() {
       });
       return;
     }
+
     const product = IMPORTED_PREFIX + id;
-    savedProducts.add(product);
-    const next = listed.filter(d => d.product !== product);
-    next.unshift({ model, product, imported: true });
-    render(next);
-    markDirty();
-  };
-
-  dialog.querySelector('#pif-dev-add')!.addEventListener('click', () => {
-    openFileBrowser(path => {
-      void importFile(path);
-    }, {
-      extensions: ['.prop'],
-      emptyLabel: t('menu_pif_choose_fb_empty', 'No .prop files found'),
-    });
-  });
-
-  saveBtn.addEventListener('click', () => {
-    if (!dirty) return;
-    const picked = selectedFromDom();
-    cfgSet('pif_preferred_devices', encodePreferred(picked));
-    cfgSet('pif_preferred_product', '');
-    cfgSet('pif_preferred_model', '');
-    showToast(t('menu_pif_choose_saved', 'PIF device preference saved'), {
-      icon: 'check_circle',
-      type: 'success',
+    selectedProduct = product;
+    imported = imported.filter(d => d.product !== product);
+    imported.unshift({ model, product, imported: true });
+    renderLists();
+    showToast(`${model} imported. Tap Apply to save.`, {
+      icon: 'upload_file',
+      type: 'info',
       autoCloseDelay: 2500,
     });
-    refreshChooseDesc();
-    dialog.close();
+  };
+
+  await openSubPage({
+    id: 'pif-devices',
+    title: t('menu_pif_choose', 'Choose PIF Device'),
+    description: t('menu_pif_choose_desc', 'Pick which Pixel Canary models Specter may fetch'),
+    headerAction: (container, instance) => {
+      container.innerHTML = `
+        <div style="position: relative; display: flex; align-items: center;">
+          <button type="button" class="subpage-action-btn" id="pif-menu-btn" aria-label="${t('ta_menu_more', 'More options')}">
+            <md-icon aria-hidden="true">more_vert</md-icon>
+            <md-ripple></md-ripple>
+          </button>
+          <md-menu id="pif-menu" class="pif-menu" anchor="pif-menu-btn" positioning="fixed">
+            <md-menu-item id="pif-menu-import" class="first">
+              <md-icon slot="start" aria-hidden="true">upload_file</md-icon>
+              <div slot="headline">${t('menu_pif_choose_add_file', 'Add from file')}</div>
+            </md-menu-item>
+            <md-menu-item id="pif-menu-mode">
+              <md-icon slot="start" aria-hidden="true" id="pif-menu-mode-icon">block</md-icon>
+              <div slot="headline" id="pif-menu-mode-text">${t('ta_edit_blacklist', 'Edit blacklist')}</div>
+            </md-menu-item>
+            <md-menu-item id="pif-menu-reset" class="last">
+              <md-icon slot="start" aria-hidden="true" id="pif-menu-reset-icon">restart_alt</md-icon>
+              <div slot="headline" id="pif-menu-reset-text">Reset to Random</div>
+            </md-menu-item>
+          </md-menu>
+        </div>
+      `;
+
+      const menuBtn = container.querySelector('#pif-menu-btn') as HTMLElement;
+      const menu = container.querySelector('#pif-menu') as MdMenu;
+
+      menuBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (menu) menu.open = !menu.open;
+      });
+
+      container.querySelector('#pif-menu-import')?.addEventListener('click', () => {
+        if (menu) menu.open = false;
+        openFileBrowser(
+          path => {
+            void importFile(path);
+          },
+          {
+            extensions: ['.prop'],
+            emptyLabel: t('menu_pif_choose_fb_empty', 'No .prop files found'),
+          }
+        );
+      });
+
+      updateHeaderFn = () => {
+        const titleEl = instance.overlay.querySelector('.subpage-title') as HTMLElement | null;
+        const descEl = instance.overlay.querySelector('.subpage-top-desc') as HTMLElement | null;
+        const modeIcon = container.querySelector('#pif-menu-mode-icon') as HTMLElement | null;
+        const modeText = container.querySelector('#pif-menu-mode-text') as HTMLElement | null;
+        const resetText = container.querySelector('#pif-menu-reset-text') as HTMLElement | null;
+
+        if (mode === 'blacklist') {
+          if (titleEl) titleEl.textContent = t('bl_title', 'Blacklist');
+          if (descEl) descEl.textContent = 'Checked devices will never be picked when Random Canary is active';
+          if (modeIcon) modeIcon.textContent = 'devices';
+          if (modeText) modeText.textContent = t('ta_edit_target', 'Choose target device');
+          if (resetText) resetText.textContent = blacklist.size > 0 ? `Clear blacklist (${blacklist.size})` : 'Clear blacklist';
+        } else {
+          if (titleEl) titleEl.textContent = t('menu_pif_choose', 'Choose PIF Device');
+          if (descEl) descEl.textContent = t('menu_pif_choose_desc', 'Pick which Pixel Canary models Specter may fetch');
+          if (modeIcon) modeIcon.textContent = 'block';
+          if (modeText) modeText.textContent = blacklist.size > 0 ? `Edit blacklist (${blacklist.size})` : t('ta_edit_blacklist', 'Edit blacklist');
+          if (resetText) resetText.textContent = 'Reset to Random';
+        }
+      };
+
+      container.querySelector('#pif-menu-mode')?.addEventListener('click', () => {
+        if (menu) menu.open = false;
+        mode = mode === 'target' ? 'blacklist' : 'target';
+        updateHeaderFn?.();
+        renderLists();
+      });
+
+      container.querySelector('#pif-menu-reset')?.addEventListener('click', () => {
+        if (menu) menu.open = false;
+        if (mode === 'target') {
+          selectProduct('');
+          renderLists();
+        } else {
+          clearAllBlacklist();
+        }
+      });
+
+      // Intercept back button when in blacklist mode to smoothly return to target mode
+      const backBtn = instance.overlay.querySelector('#subpage-back') as HTMLElement | null;
+      backBtn?.addEventListener('click', (ev) => {
+        if (mode === 'blacklist') {
+          ev.preventDefault();
+          ev.stopImmediatePropagation();
+          mode = 'target';
+          updateHeaderFn?.();
+          renderLists();
+        }
+      }, true);
+    },
+    fab: container => {
+      container.innerHTML = `
+        <md-fab id="pif-apply" class="subpage-fab" label="${t('dialog_apply', 'Apply')}">
+          <md-icon slot="icon" aria-hidden="true">check</md-icon>
+        </md-fab>
+      `;
+
+      const applyBtn = container.querySelector('#pif-apply') as HTMLButtonElement | null;
+      applyBtn?.addEventListener('click', async () => {
+        if (applyBtn.disabled) return;
+        applyBtn.disabled = true;
+        try {
+          await Promise.all([
+            persistTarget(),
+            saveBlacklist(blacklist, getAllDevices()),
+          ]);
+          void refreshChooseDesc();
+          updateHeaderFn?.();
+          renderLists();
+
+          if (mode === 'blacklist') {
+            showToast(
+              blacklist.size > 0
+                ? `Blacklist saved (${blacklist.size} excluded)`
+                : 'Blacklist saved (all allowed)',
+              { icon: 'check_circle', type: 'success', autoCloseDelay: 2000 }
+            );
+          } else {
+            const all = getAllDevices();
+            const chosen = all.find(d => d.product === selectedProduct);
+            const label = chosen?.model || 'Random Canary (Default)';
+            showToast(`${label} applied`, {
+              icon: 'check_circle',
+              type: 'success',
+              autoCloseDelay: 2000,
+            });
+          }
+        } catch (e) {
+          showToast(`Failed to apply: ${e}`, {
+            icon: 'error',
+            type: 'error',
+            autoCloseDelay: 2500,
+          });
+        } finally {
+          applyBtn.disabled = false;
+        }
+      });
+    },
+    groups: [
+      {
+        items: [
+          {
+            type: 'custom',
+            render: host => {
+              host.className = 'pif-subpage-wrapper';
+              host.innerHTML = `
+                <div class="pif-search-container">
+                  <md-outlined-text-field
+                    id="pif-search"
+                    class="pif-search"
+                    placeholder="${t('menu_pif_search', 'Search devices...')}"
+                    aria-label="${t('menu_pif_search', 'Search devices...')}"
+                  >
+                    <md-icon slot="leading-icon" aria-hidden="true">search</md-icon>
+                    <md-icon-button slot="trailing-icon" id="pif-search-clear" style="display:none;" aria-label="Clear search">
+                      <md-icon aria-hidden="true">close</md-icon>
+                    </md-icon-button>
+                  </md-outlined-text-field>
+                </div>
+                <div id="pif-devices-list-host"></div>
+              `;
+
+              listHostRef = host.querySelector('#pif-devices-list-host');
+              searchFieldRef = host.querySelector('#pif-search') as MdOutlinedTextField | null;
+              clearBtnRef = host.querySelector('#pif-search-clear');
+
+              searchFieldRef?.addEventListener('input', () => {
+                searchQuery = searchFieldRef?.value || '';
+                if (clearBtnRef) {
+                  clearBtnRef.style.display = searchQuery ? 'inline-flex' : 'none';
+                }
+                renderLists();
+              });
+
+              clearBtnRef?.addEventListener('click', () => {
+                if (searchFieldRef) searchFieldRef.value = '';
+                searchQuery = '';
+                if (clearBtnRef) clearBtnRef.style.display = 'none';
+                renderLists();
+              });
+              renderLists();
+            },
+          },
+        ],
+      },
+    ],
   });
-
-  dialog.show();
-
-  const [saved, imported, canary] = await Promise.all([
-    loadPreferred(),
-    loadImported(),
-    ensureCanaryList(),
-  ]);
-  if (closed) return;
-  for (const d of saved) savedProducts.add(d.product);
-  render([...imported, ...canary]);
 }
 
 export async function wirePifDevice() {
@@ -299,7 +752,13 @@ export async function wirePifDevice() {
   updateListContainerCorners();
   void ensureCanaryList();
   row.addEventListener('click', () => {
-    void openPifDeviceDialog();
+    void openPifDeviceSubpage();
+  });
+  row.addEventListener('keydown', (ev: KeyboardEvent) => {
+    if (ev.key === 'Enter' || ev.key === ' ') {
+      ev.preventDefault();
+      void openPifDeviceSubpage();
+    }
   });
   void refreshChooseDesc();
 }
