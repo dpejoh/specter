@@ -230,9 +230,7 @@ export async function openPifDeviceSubpage() {
 
   const selectProduct = (prod: string) => {
     selectedProduct = prod;
-    listHostRef?.querySelectorAll<MdRadio>('md-radio[name="pif-device"]').forEach(r => {
-      r.checked = r.value === selectedProduct;
-    });
+    renderLists();
   };
 
   const toggleBlacklistDevice = (prod: string) => {
@@ -307,6 +305,8 @@ export async function openPifDeviceSubpage() {
                 ? 'list-item--last'
                 : 'list-item--middle';
             const isChecked = selectedProduct === d.product;
+            const isGreyedOut = selectedProduct === '' && blacklist.has(d.product);
+            const greyClass = isGreyedOut ? ' pif-device-row--blacklisted' : '';
             const subText = d.imported
               ? t('menu_pif_choose_imported', 'Imported')
               : d.product;
@@ -319,7 +319,7 @@ export async function openPifDeviceSubpage() {
               : '';
 
             return `
-              <div class="list-item ${posClass} pif-device-row" data-product="${escapeHtml(d.product)}" role="button" tabindex="0">
+              <div class="list-item ${posClass} pif-device-row${greyClass}" data-product="${escapeHtml(d.product)}" role="button" tabindex="0">
                 <md-radio name="pif-device" value="${escapeHtml(d.product)}" ${isChecked ? 'checked' : ''} aria-label="${escapeHtml(d.model)}"></md-radio>
                 <div class="list-item-content">
                   <div class="toggle-text">${escapeHtml(d.model)}</div>

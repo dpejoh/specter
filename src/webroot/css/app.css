@@ -1543,6 +1543,16 @@ md-dialog {
   color: var(--md-sys-color-error);
 }
 
+.pif-device-row--blacklisted {
+  opacity: 0.38;
+  filter: grayscale(0.6);
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+.pif-device-row--blacklisted:hover {
+  opacity: 0.7;
+}
+
 .pif-device-empty {
   display: flex;
   flex-direction: column;
