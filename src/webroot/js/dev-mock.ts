@@ -126,9 +126,48 @@ const MOCK_VALID_PROP = [
 
 const MOCK_INVALID_PROP = 'MANUFACTURER=Google\nspoofBuild=true\n';
 
+const MOCK_ACTION_LOG = [
+  'Running full integrity pipeline',
+  '',
+  '-> Play Store:',
+  'Play Store force-stopped',
+  'Play Store management complete',
+  '',
+  '-> App Targeting:',
+  'Mode: merge',
+  'Checked 50 entries, added 0',
+  'Target management complete',
+  '',
+  '-> Keybox:',
+  'Fetching available keyboxes...',
+  'Auto-selected: @Xiaomi_Lei_Jun v6 (dickbox)',
+  'Downloading keybox...',
+  'Checking Google revocation for serial 1698420960673666191',
+  'Keybox is not revoked',
+  'Keybox installed successfully',
+  'Keybox install complete',
+  '',
+  '-> Play Integrity Fix:',
+  'Starting PIF fingerprint update',
+  'Detected: Play Integrity Fork',
+  'Selected Device: Pixel 9',
+  'PIF fingerprint updating complete',
+  '',
+  'Full integrity pipeline completed',
+].join('\n') + '\n';
+
+const MOCK_BOOT_LOG = [
+  'Running Specter boot tasks',
+  'Boot-time features done',
+  'Scheduler launched (PID 2671)',
+  'Specter boot tasks complete',
+].join('\n') + '\n';
+
 const mockFs: Record<string, string> = {
   '/sdcard/valid.prop': MOCK_VALID_PROP,
   '/sdcard/invalid.prop': MOCK_INVALID_PROP,
+  '/data/adb/specter/log/action.log': MOCK_ACTION_LOG,
+  '/data/adb/specter/log/boot.log': MOCK_BOOT_LOG,
 };
 
 function mockUnquote(s: string): string {
