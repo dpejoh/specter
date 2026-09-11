@@ -519,32 +519,26 @@
 
           <!-- 4. Advanced -->
           <h2 class="list-title" data-i18n="settings_advanced">Advanced</h2>
-          <div class="settings-advanced-group">
-            <div class="list-container dev-mode-container" id="dev-mode-container">
-              <div class="list-item list-item--toggle">
-                <div class="li-icon"><md-icon aria-hidden="true">developer_mode</md-icon></div>
-                <div class="list-item-content">
-                  <div class="toggle-text" data-i18n="settings_dev_mode">Developer Mode</div>
-                  <span class="supporting-text" data-i18n="settings_dev_mode_desc">Show raw script names and terminal output</span>
-                </div>
-                <div class="spacer"></div>
-                <md-switch icons id="dev-mode-switch" aria-label="Developer Mode" data-i18n-aria="settings_dev_mode"></md-switch>
-                <md-ripple></md-ripple>
+          <div class="list-container">
+            <div class="list-item" id="row-logs" role="button" tabindex="0">
+              <div class="li-icon"><md-icon aria-hidden="true">terminal</md-icon></div>
+              <div class="list-item-content">
+                <div class="toggle-text" data-i18n="terminal_title">Logs</div>
+                <span class="supporting-text" data-i18n="settings_logs_desc">View terminal output and execution logs</span>
               </div>
+              <div class="spacer"></div>
+              <md-icon class="subpage-nav-cue" aria-hidden="true">chevron_right</md-icon>
+              <md-ripple></md-ripple>
             </div>
-
-            <div class="output-terminal" id="settings-terminal">
-              <div class="output-terminal-header">
-                <div class="output-terminal-title">
-                  <md-icon class="output-terminal-icon" aria-hidden="true">terminal</md-icon>
-                  <span data-i18n="terminal_title">Logs</span>
-                </div>
-                <div class="output-terminal-actions">
-                  <md-text-button id="copy-terminal" data-i18n="terminal_copy">Copy</md-text-button>
-                  <md-text-button id="clear-terminal" data-i18n="terminal_clear">Clear</md-text-button>
-                </div>
+            <div class="list-item list-item--toggle">
+              <div class="li-icon"><md-icon aria-hidden="true">developer_mode</md-icon></div>
+              <div class="list-item-content">
+                <div class="toggle-text" data-i18n="settings_dev_mode">Developer Mode</div>
+                <span class="supporting-text" data-i18n="settings_dev_mode_desc">Enable verbose script logging</span>
               </div>
-              <div class="output-terminal-content"></div>
+              <div class="spacer"></div>
+              <md-switch icons id="dev-mode-switch" aria-label="Developer Mode" data-i18n-aria="settings_dev_mode"></md-switch>
+              <md-ripple></md-ripple>
             </div>
           </div>
 
