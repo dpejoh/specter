@@ -86,6 +86,7 @@ code, pre {
 
 .app-layout main {
   flex: 1;
+  overflow-x: clip;
 }
 
 .app-top-bar {
@@ -121,72 +122,42 @@ code, pre {
 }
 
 #pages {
-  padding: 16px;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  width: 100%;
   padding-bottom: 88px;
-  overflow-x: clip;
+  box-sizing: border-box;
+  will-change: transform;
+  touch-action: pan-y pinch-zoom;
 }
 
-section:not([hidden]) {
+#pages > section {
+  flex: 0 0 100%;
+  width: 100%;
+  min-width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
+#pages > section.page--suppressed {
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 #pages > section[hidden] {
   display: none;
-}
-
-.page-enter-forward {
-  animation: page-slide-from-right 280ms cubic-bezier(0.1, 0.9, 0.2, 1) both;
-}
-
-.page-enter-backward {
-  animation: page-slide-from-left 280ms cubic-bezier(0.1, 0.9, 0.2, 1) both;
-}
-
-.page-enter-initial {
-  animation: page-enter-fade 200ms cubic-bezier(0.1, 0.9, 0.2, 1) both;
-}
-
-@keyframes page-slide-from-right {
-  from {
-    opacity: 0;
-    transform: translate3d(36px, 0, 0);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@keyframes page-slide-from-left {
-  from {
-    opacity: 0;
-    transform: translate3d(-36px, 0, 0);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@keyframes page-enter-fade {
-  from {
-    opacity: 0;
-    transform: scale(0.985);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-[dir="rtl"] .page-enter-forward {
-  animation-name: page-slide-from-left;
-}
-
-[dir="rtl"] .page-enter-backward {
-  animation-name: page-slide-from-right;
 }
 
 @keyframes pulse-glow {
