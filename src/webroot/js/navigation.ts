@@ -14,6 +14,7 @@ export function wireNavigation() {
   const pages = pageIds.map(id => document.getElementById(id)!).filter(Boolean);
   let exitStatePushed = false;
   const loadedMWC = new Set<string>();
+  let currentActiveIndex = -1;
 
   function reposition(tab: HTMLElement) {
     indicator.style.left = tab.offsetLeft + 'px';
@@ -38,13 +39,50 @@ export function wireNavigation() {
 
   async function activateTab(tab: HTMLElement) {
     const pageId = tab.dataset.page || '';
-    await loadPageMWC(pageId);
+    const nextIndex = pageIds.indexOf(pageId);
+    if (nextIndex === -1) return;
+    if (nextIndex === currentActiveIndex && tab.classList.contains('nav-tab--active')) {
+      return;
+    }
+
+    const prevIndex = currentActiveIndex;
+    currentActiveIndex = nextIndex;
+
+    const mwcPromise = loadPageMWC(pageId);
+
     document.querySelector('.nav-tab--active')?.classList.remove('nav-tab--active');
     tab.classList.add('nav-tab--active');
     reposition(tab);
-    pages.forEach(el => { el.hidden = el.id !== pageId; });
+
+    let animClass = '';
+    if (prevIndex !== -1 && prevIndex !== nextIndex) {
+      animClass = nextIndex > prevIndex ? 'page-enter-forward' : 'page-enter-backward';
+    } else if (prevIndex === -1) {
+      animClass = 'page-enter-initial';
+    }
+
+    pages.forEach(el => {
+      if (el.id === pageId) {
+        el.classList.remove('page-enter-forward', 'page-enter-backward', 'page-enter-initial');
+        if (animClass) {
+          void el.offsetWidth;
+          el.classList.add(animClass);
+        }
+        el.hidden = false;
+      } else {
+        el.hidden = true;
+        el.classList.remove('page-enter-forward', 'page-enter-backward', 'page-enter-initial');
+      }
+    });
+
+    if (prevIndex !== -1 && prevIndex !== nextIndex) {
+      window.scrollTo(0, 0);
+    }
+
     if (pageId === 'home-page') homeCallbacks.forEach(cb => cb());
     if (pageId !== 'home-page' && !exitStatePushed) { history.pushState(null, ''); exitStatePushed = true; }
+
+    await mwcPromise;
   }
 
   window.addEventListener('popstate', () => {
