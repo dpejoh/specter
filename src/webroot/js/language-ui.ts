@@ -43,7 +43,7 @@ export async function openLanguageDialog() {
           title: item.native,
           description: item.code === 'auto'
             ? t('settings_theme_status_auto', 'Follow system')
-            : (item.native !== item.name ? item.name : undefined),
+            : item.name,
           selected: item.code === currentCode,
           onSelect: async (val: string) => {
             await applyLanguage(val);
