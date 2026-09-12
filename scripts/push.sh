@@ -11,7 +11,7 @@ ZIP="${1:-}"
 SDIR="${2:-/storage/emulated/0/specter-update}"
 
 if [ -z "$ZIP" ]; then
-  ZIP=$(ls "$SCRIPT_DIR"/Specter-*.zip 2>/dev/null | sort | tail -1)
+  ZIP=$(ls -t "$SCRIPT_DIR"/Specter-*.zip 2>/dev/null | head -1)
 fi
 
 if [ -z "$ZIP" ] || [ ! -f "$ZIP" ]; then
