@@ -30,8 +30,6 @@ describe('wireNavigation directional animations', () => {
     const track = document.getElementById('pages')!;
     const homePage = document.getElementById('home-page')!;
     const toolsPage = document.getElementById('tools-page')!;
-    const controlPage = document.getElementById('control-page')!;
-    const settingsPage = document.getElementById('settings-page')!;
 
     const homeTab = document.querySelector('[data-page="home-page"]') as HTMLElement;
     const toolsTab = document.querySelector('[data-page="tools-page"]') as HTMLElement;

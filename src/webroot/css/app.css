@@ -324,7 +324,7 @@ code, pre {
 .list-container--keybox .list-item,
 .list-container.list-container--keybox .list-item,
 .list-container.list-container--keybox .list-item.list-item--only {
-  border-radius: 4px 4px 28px 28px !important;
+  border-radius: 4px 4px 24px 24px !important;
 }
 
 .list-container--google .li-icon,
@@ -377,8 +377,8 @@ code, pre {
 
 .keybox-install-card {
   --md-filled-card-container-color: var(--md-sys-color-surface-container-high);
-  --md-filled-card-container-shape: 28px 28px 4px 4px;
-  border-radius: 28px 28px 4px 4px;
+  --md-filled-card-container-shape: 24px 24px 4px 4px;
+  border-radius: 24px 24px 4px 4px;
   width: 100%;
   max-width: 800px;
   margin: 0 auto;
@@ -728,11 +728,11 @@ code, pre {
 
 /* Grouped M3 Expressive corner radii for list items */
 .list-container:not(.list-container--keybox) .list-item:only-child {
-  border-radius: 28px;
+  border-radius: 24px;
 }
 
 .list-container:not(.list-container--keybox) .list-item:first-child:not(:only-child) {
-  border-radius: 28px 28px 4px 4px;
+  border-radius: 24px 24px 4px 4px;
 }
 
 .list-container:not(.list-container--keybox) .list-item:not(:first-child):not(:last-child) {
@@ -740,7 +740,7 @@ code, pre {
 }
 
 .list-container:not(.list-container--keybox) .list-item:last-child:not(:only-child) {
-  border-radius: 4px 4px 28px 28px;
+  border-radius: 4px 4px 24px 24px;
 }
 
 /* CSS Selectors Level 4: automatically adapt corner radii ignoring [hidden] / .hidden */
@@ -750,27 +750,27 @@ code, pre {
   }
 
   .list-container:not(.list-container--keybox) .list-item:not(.list-item--first):not(.list-item--middle):not(.list-item--last):not(.list-item--only):nth-child(1 of .list-item:not([hidden]):not(.hidden):not([style*="display: none"])):nth-last-child(1 of .list-item:not([hidden]):not(.hidden):not([style*="display: none"])) {
-    border-radius: 28px !important;
+    border-radius: 24px !important;
   }
 
   .list-container:not(.list-container--keybox) .list-item:not(.list-item--first):not(.list-item--middle):not(.list-item--last):not(.list-item--only):nth-child(1 of .list-item:not([hidden]):not(.hidden):not([style*="display: none"])):not(:nth-last-child(1 of .list-item:not([hidden]):not(.hidden):not([style*="display: none"]))) {
-    border-radius: 28px 28px 4px 4px !important;
+    border-radius: 24px 24px 4px 4px !important;
   }
 
   .list-container:not(.list-container--keybox) .list-item:not(.list-item--first):not(.list-item--middle):not(.list-item--last):not(.list-item--only):nth-last-child(1 of .list-item:not([hidden]):not(.hidden):not([style*="display: none"])):not(:nth-child(1 of .list-item:not([hidden]):not(.hidden):not([style*="display: none"]))) {
-    border-radius: 4px 4px 28px 28px !important;
+    border-radius: 4px 4px 24px 24px !important;
   }
 }
 
 /* Explicit adaptive classes for dynamically hidden/shown or custom items - highest precedence */
 .list-item.list-item--only,
 .subpage-options-wrapper .list-container .list-item.list-item--only {
-  border-radius: 28px !important;
+  border-radius: 24px !important;
 }
 
 .list-item.list-item--first,
 .subpage-options-wrapper .list-container .list-item.list-item--first {
-  border-radius: 28px 28px 4px 4px !important;
+  border-radius: 24px 24px 4px 4px !important;
 }
 
 .list-item.list-item--middle,
@@ -780,7 +780,7 @@ code, pre {
 
 .list-item.list-item--last,
 .subpage-options-wrapper .list-container .list-item.list-item--last {
-  border-radius: 4px 4px 28px 28px !important;
+  border-radius: 4px 4px 24px 24px !important;
 }
 
 .list-item[hidden] {
@@ -1972,7 +1972,7 @@ md-filled-tonal-button {
   min-height: calc(100vh - 200px);
   background: var(--md-sys-color-surface-container-lowest, #0e0e11);
   border: 1px solid var(--md-sys-color-outline-variant, rgba(255, 255, 255, 0.08));
-  border-radius: var(--md-sys-shape-corner-extra-large, 28px);
+  border-radius: 20px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -3482,11 +3482,11 @@ md-filled-tonal-button {
 }
 
 .subpage-options-wrapper .list-container .list-item:only-child:not(.list-item--first):not(.list-item--middle):not(.list-item--last) {
-  border-radius: 28px;
+  border-radius: 24px;
 }
 
 .subpage-options-wrapper .list-container .list-item:first-child:not(:only-child) {
-  border-radius: 28px 28px 4px 4px;
+  border-radius: 24px 24px 4px 4px;
 }
 
 .subpage-options-wrapper .list-container .list-item:not(:first-child):not(:last-child) {
@@ -3494,7 +3494,7 @@ md-filled-tonal-button {
 }
 
 .subpage-options-wrapper .list-container .list-item:last-child:not(:only-child) {
-  border-radius: 4px 4px 28px 28px;
+  border-radius: 4px 4px 24px 24px;
 }
 
 .subpage-options-wrapper .list-container .list-item:active {

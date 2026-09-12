@@ -85,6 +85,7 @@ export function wireNavigation() {
     const tab = navTabs[nextIndex];
     if (!tab) return;
     const pageId = pageIds[nextIndex];
+    if (!pageId) return;
 
     const prevIndex = currentActiveIndex;
     currentActiveIndex = nextIndex;
@@ -146,7 +147,7 @@ export function wireNavigation() {
   let touchIntent: 'none' | 'pending' | 'drag' | 'scroll' = 'none';
 
   document.addEventListener('touchstart', (e: TouchEvent) => {
-    if (e.touches.length !== 1) return;
+    if (e.touches.length !== 1 || !e.touches[0]) return;
     if (window.isOverlayOpen) return;
     if (document.querySelector('md-dialog[open]')) return;
     const target = e.target;
@@ -154,23 +155,27 @@ export function wireNavigation() {
       return;
     }
 
-    startX = e.touches[0].clientX;
-    startY = e.touches[0].clientY;
+    const firstTouch = e.touches[0];
+    startX = firstTouch.clientX;
+    startY = firstTouch.clientY;
     startTime = Date.now();
     touchIntent = 'pending';
 
     // Unsuppress adjacent pages so they are rendered and visible during drag
     updatePageSuppression(currentActiveIndex, true);
-    if (currentActiveIndex + 1 < pageIds.length) loadPageMWC(pageIds[currentActiveIndex + 1]);
-    if (currentActiveIndex - 1 >= 0) loadPageMWC(pageIds[currentActiveIndex - 1]);
+    const nextId = pageIds[currentActiveIndex + 1];
+    if (nextId) loadPageMWC(nextId);
+    const prevId = pageIds[currentActiveIndex - 1];
+    if (prevId) loadPageMWC(prevId);
   }, { passive: true });
 
   document.addEventListener('touchmove', (e: TouchEvent) => {
     if (touchIntent === 'none' || touchIntent === 'scroll') return;
-    if (e.touches.length !== 1) return;
+    if (e.touches.length !== 1 || !e.touches[0]) return;
 
-    const currentX = e.touches[0].clientX;
-    const currentY = e.touches[0].clientY;
+    const moveTouch = e.touches[0];
+    const currentX = moveTouch.clientX;
+    const currentY = moveTouch.clientY;
     const dx = currentX - startX;
     const dy = currentY - startY;
 
@@ -221,6 +226,7 @@ export function wireNavigation() {
 
     touchIntent = 'none';
     const touch = e.changedTouches[0];
+    if (!touch) return;
     const dx = touch.clientX - startX;
     const dt = Date.now() - startTime;
     const screenW = track.offsetWidth || window.innerWidth || 1;
