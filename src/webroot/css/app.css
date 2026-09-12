@@ -274,19 +274,86 @@ section:not([hidden]) {
   fill: currentColor;
 }
 
-.list-container--keybox .li-icon { background: var(--md-sys-color-tertiary-container); }
-.list-container--keybox .li-icon md-icon { color: var(--md-sys-color-on-tertiary-container); }
+.list-container--keybox .li-icon,
+.list-container--config .li-icon,
+.list-container--fonts .li-icon,
+.list-container--support .li-icon,
+.list-container--tertiary .li-icon,
+.list-item--tertiary .li-icon,
+.li-icon--tertiary {
+  background: var(--md-sys-color-tertiary-container);
+}
+
+.list-container--keybox .li-icon md-icon,
+.list-container--keybox .li-icon svg,
+.list-container--config .li-icon md-icon,
+.list-container--config .li-icon svg,
+.list-container--fonts .li-icon md-icon,
+.list-container--fonts .li-icon svg,
+.list-container--support .li-icon md-icon,
+.list-container--support .li-icon svg,
+.list-container--tertiary .li-icon md-icon,
+.list-container--tertiary .li-icon svg,
+.list-item--tertiary .li-icon md-icon,
+.list-item--tertiary .li-icon svg,
+.li-icon--tertiary md-icon,
+.li-icon--tertiary svg {
+  color: var(--md-sys-color-on-tertiary-container);
+}
+
 .list-container--keybox .list-item,
 .list-container.list-container--keybox .list-item,
 .list-container.list-container--keybox .list-item.list-item--only {
   border-radius: 4px 4px 28px 28px !important;
 }
 
-.list-container--google .li-icon { background: var(--md-sys-color-secondary-container); }
-.list-container--google .li-icon md-icon { color: var(--md-sys-color-on-secondary-container); }
+.list-container--google .li-icon,
+.list-container--pif .li-icon,
+.list-container--language .li-icon,
+.list-container--advanced .li-icon,
+.list-container--secondary .li-icon,
+.list-item--secondary .li-icon,
+.li-icon--secondary {
+  background: var(--md-sys-color-secondary-container);
+}
 
-.list-container--config .li-icon { background: var(--md-sys-color-tertiary-container); }
-.list-container--config .li-icon md-icon { color: var(--md-sys-color-on-tertiary-container); }
+.list-container--google .li-icon md-icon,
+.list-container--google .li-icon svg,
+.list-container--pif .li-icon md-icon,
+.list-container--pif .li-icon svg,
+.list-container--language .li-icon md-icon,
+.list-container--language .li-icon svg,
+.list-container--advanced .li-icon md-icon,
+.list-container--advanced .li-icon svg,
+.list-container--secondary .li-icon md-icon,
+.list-container--secondary .li-icon svg,
+.list-item--secondary .li-icon md-icon,
+.list-item--secondary .li-icon svg,
+.li-icon--secondary md-icon,
+.li-icon--secondary svg {
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.list-container--tricky .li-icon,
+.list-container--appearance .li-icon,
+.list-container--primary .li-icon,
+.list-item--primary .li-icon,
+.li-icon--primary {
+  background: var(--md-sys-color-primary-container);
+}
+
+.list-container--tricky .li-icon md-icon,
+.list-container--tricky .li-icon svg,
+.list-container--appearance .li-icon md-icon,
+.list-container--appearance .li-icon svg,
+.list-container--primary .li-icon md-icon,
+.list-container--primary .li-icon svg,
+.list-item--primary .li-icon md-icon,
+.list-item--primary .li-icon svg,
+.li-icon--primary md-icon,
+.li-icon--primary svg {
+  color: var(--md-sys-color-on-primary-container);
+}
 
 .keybox-install-card {
   --md-filled-card-container-color: var(--md-sys-color-surface-container-high);
@@ -3601,215 +3668,212 @@ md-filled-tonal-button {
 }
 
 /* ==========================================================================
-   Material 3 Component Showcase Preview (Inspired by m3.material.io)
+   Material 3 Phone Showcase Preview (Cut Phone Mockup with Specter Control UI)
    ========================================================================== */
 
 .colors-preview-showcase {
   width: 100%;
+  height: 295px;
   border-radius: 28px;
-  background-color: var(--md-sys-color-surface-container-high);
-  border: 1px solid var(--md-sys-color-outline-variant, rgba(255, 255, 255, 0.08));
-  padding: 22px 20px;
+  background-color: var(--md-sys-color-surface-container);
+  padding: 24px 16px 0;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  box-shadow: none;
+  border: none;
+  transition: background-color 0.25s ease;
+  user-select: none;
+  overflow: hidden;
+}
+
+.phone-frame-wrapper {
+  position: relative;
+  width: 254px;
+  height: 271px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+}
+
+/* Hardware side buttons on phone chassis (Pixel style: power on top, volume below) */
+.phone-hw-btn {
+  position: absolute;
+  right: -5.5px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background-color: var(--md-sys-color-outline-variant, #49454f);
+  box-shadow: none;
+  pointer-events: none;
+  transition: background-color 0.25s ease;
+}
+
+.phone-hw-btn--pwr {
+  top: 54px;
+  height: 16px;
+}
+
+.phone-hw-btn--vol {
+  top: 80px;
+  height: 34px;
+}
+
+/* Phone Chassis (Cut cleanly at the bottom, zero drop shadows) */
+.phone-mockup {
+  width: 254px;
+  height: 100%;
+  background-color: var(--md-sys-color-surface);
+  border-top: 3.5px solid var(--md-sys-color-outline-variant, #49454f);
+  border-left: 3.5px solid var(--md-sys-color-outline-variant, #49454f);
+  border-right: 3.5px solid var(--md-sys-color-outline-variant, #49454f);
+  border-bottom: none;
+  border-radius: 24px 24px 0 0;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  box-shadow: none;
   transition: background-color 0.25s ease, border-color 0.25s ease;
-  user-select: none;
-  pointer-events: none;
-}
-
-.showcase-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.showcase-row--spread {
-  justify-content: space-between;
-}
-
-/* Filled Pill Button */
-.showcase-pill-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 40px;
-  padding: 0 22px;
-  border-radius: 9999px;
-  background-color: var(--md-sys-color-primary);
-  color: var(--md-sys-color-on-primary);
-  font-size: 0.875rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-  transition: background-color 0.25s ease, color 0.25s ease;
-}
-
-/* M3 Switch Mockup */
-.showcase-switch {
-  width: 44px;
-  height: 26px;
-  border-radius: 9999px;
-  background-color: var(--md-sys-color-primary);
+  overflow: hidden;
   position: relative;
-  flex-shrink: 0;
-  transition: background-color 0.25s ease;
 }
 
-.showcase-switch-thumb {
-  position: absolute;
-  right: 3px;
-  top: 3px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background-color: var(--md-sys-color-on-primary);
+.phone-screen-viewport {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.phone-screen-inner {
+  width: 380px;
+  transform: scale(calc(247 / 380));
+  transform-origin: top left;
+  user-select: none;
+  pointer-events: auto;
+}
+
+/* Phone Status Bar (Equal spacing left and right, generous breathing room) */
+.phone-status-bar {
   display: flex;
   align-items: center;
-  justify-content: center;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
-  transition: background-color 0.25s ease;
+  justify-content: space-between;
+  padding: 16px 26px 8px;
+  color: var(--md-sys-color-on-surface);
+  box-sizing: border-box;
+  transition: color 0.25s ease;
 }
 
-.showcase-switch-thumb::after {
-  content: '';
-  width: 3.5px;
-  height: 8px;
-  border: solid var(--md-sys-color-primary);
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
-  margin-top: -1px;
-}
-
-/* Icon Buttons Group */
-.showcase-icon-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.showcase-icon-btn {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: background-color 0.25s ease, color 0.25s ease;
-}
-
-.showcase-icon-btn md-icon {
-  font-size: 20px;
-  color: inherit;
-}
-
-.showcase-icon-btn--tonal {
-  background-color: var(--md-sys-color-secondary-container);
-  color: var(--md-sys-color-on-secondary-container);
-}
-
-.showcase-icon-btn--primary {
-  background-color: var(--md-sys-color-primary);
-  color: var(--md-sys-color-on-primary);
-}
-
-/* Material You Chips */
-.showcase-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 32px;
-  padding: 0 14px;
-  border-radius: 8px;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  background-color: var(--md-sys-color-surface-container-highest);
-  color: var(--md-sys-color-on-surface-variant);
-  border: 1px solid var(--md-sys-color-outline-variant, rgba(255, 255, 255, 0.1));
-  transition: all 0.25s ease;
-}
-
-.showcase-chip--active {
-  background-color: var(--md-sys-color-primary-container);
-  color: var(--md-sys-color-on-primary-container);
-  border-color: transparent;
+.phone-status-time {
+  font-size: 13px;
   font-weight: 600;
+  letter-spacing: -0.2px;
 }
 
-.showcase-chip md-icon {
-  font-size: 16px;
-  color: inherit;
-}
-
-/* M3 Progress Indicators Showcase Row */
-.showcase-row--progress {
+.phone-status-icons {
   display: flex;
   align-items: center;
-  gap: 16px;
-  width: 100%;
-  padding-top: 4px;
+  gap: 5px;
+  opacity: 0.9;
 }
 
-.showcase-linear-wrap {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+.phone-status-svg {
+  display: block;
+}
+
+/* Scoped Specter Control Page items inside the phone mockup */
+.phone-mockup .list-title {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: var(--md-sys-color-on-surface) !important;
+  margin: 10px 0 14px !important;
+  padding: 0 18px !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.phone-mockup .list-title:first-of-type {
+  margin-top: 22px !important;
+  margin-bottom: 14px !important;
+}
+
+.phone-mockup .list-title:not(:first-of-type) {
+  margin-top: 36px !important;
+  margin-bottom: 14px !important;
+}
+
+.phone-mockup .list-container {
+  margin: 0 14px 10px !important;
+  width: auto !important;
+  gap: 2px !important;
+  overflow: clip;
+}
+
+.phone-mockup .list-item--secondary md-switch {
+  --md-switch-selected-track-color: var(--md-sys-color-secondary);
+  --md-switch-selected-handle-color: var(--md-sys-color-on-secondary);
+  --md-switch-selected-icon-color: var(--md-sys-color-on-secondary-container);
+  --md-switch-selected-hover-track-color: var(--md-sys-color-secondary);
+  --md-switch-selected-focus-track-color: var(--md-sys-color-secondary);
+  --md-switch-selected-pressed-track-color: var(--md-sys-color-secondary);
+}
+
+.phone-mockup .list-item--tertiary md-switch {
+  --md-switch-selected-track-color: var(--md-sys-color-tertiary);
+  --md-switch-selected-handle-color: var(--md-sys-color-on-tertiary);
+  --md-switch-selected-icon-color: var(--md-sys-color-on-tertiary-container);
+  --md-switch-selected-hover-track-color: var(--md-sys-color-tertiary);
+  --md-switch-selected-focus-track-color: var(--md-sys-color-tertiary);
+  --md-switch-selected-pressed-track-color: var(--md-sys-color-tertiary);
+}
+
+.phone-mockup .list-item {
+  min-height: 48px;
+  padding: 8px 14px;
   gap: 12px;
-  min-width: 0;
+  cursor: pointer;
 }
 
-/* Single M3 Expressive Linear Progress Bar (Wavy Active + Straight Empty Track + Stop Dot) */
-.showcase-expressive-bar {
-  width: 100%;
-  height: 16px;
-  display: block;
-  overflow: visible;
+.phone-mockup .toggle-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface);
+  line-height: 1.2;
 }
 
-.showcase-wave-active {
-  stroke: var(--md-sys-color-primary);
-  transition: stroke 0.25s ease;
+.phone-mockup .supporting-text {
+  font-size: 11px;
+  line-height: 1.25;
+  color: var(--md-sys-color-on-surface-variant);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.showcase-straight-track {
-  stroke: color-mix(in srgb, var(--md-sys-color-primary) 22%, var(--md-sys-color-surface-container-highest));
-  transition: stroke 0.25s ease;
-}
-
-.showcase-stop-dot {
-  fill: var(--md-sys-color-primary);
-  transition: fill 0.25s ease;
-}
-
-/* M3 Circular Progress Indicator */
-.showcase-circular-wrap {
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0;
+.phone-mockup .li-toggle-action {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 12px;
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
-.showcase-circular-svg {
-  width: 40px;
-  height: 40px;
-  display: block;
-  overflow: visible;
+.phone-mockup .li-config-divider {
+  width: 1px;
+  height: 36px;
+  background-color: currentColor;
+  opacity: 0.3;
+  flex-shrink: 0;
 }
 
-.showcase-circle-track {
-  stroke: color-mix(in srgb, var(--md-sys-color-primary) 22%, var(--md-sys-color-surface-container-highest));
-  transition: stroke 0.25s ease;
-}
-
-.showcase-circle-active {
-  stroke: var(--md-sys-color-primary);
-  transition: stroke 0.25s ease;
+.phone-mockup .li-config-chevron {
+  width: 7px;
+  height: 12px;
+  opacity: 0.6;
+  flex-shrink: 0;
 }
 
 /* Basic Colors Grid & Buttons */
@@ -3822,8 +3886,28 @@ md-filled-tonal-button {
   transition: opacity 0.25s ease;
 }
 
+.colors-grid--disabled,
 .colors-grid--monet-active {
-  opacity: 0.65;
+  opacity: 0.38;
+  filter: grayscale(1);
+  pointer-events: none;
+  user-select: none;
+}
+
+.colors-grid--disabled .colors-swatch-btn,
+.colors-grid--monet-active .colors-swatch-btn {
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+}
+
+.colors-grid--disabled .colors-swatch--selected .colors-swatch-outer,
+.colors-grid--monet-active .colors-swatch--selected .colors-swatch-outer {
+  outline: none !important;
+}
+
+.colors-grid--disabled .colors-swatch--selected .colors-swatch-circle::after,
+.colors-grid--monet-active .colors-swatch--selected .colors-swatch-circle::after {
+  display: none !important;
 }
 
 .colors-swatch-btn {
@@ -3838,15 +3922,20 @@ md-filled-tonal-button {
   cursor: pointer;
   outline: none;
   font-family: inherit;
-  transition: background-color 0.2s ease, transform 0.15s ease, opacity 0.2s ease;
+  transition: background-color 0.2s ease, transform 0.15s ease, opacity 0.2s ease, filter 0.2s ease;
 }
 
-.colors-swatch-btn:hover {
+.colors-swatch-btn:hover:not(:disabled) {
   background-color: var(--md-sys-color-surface-container-highest);
 }
 
-.colors-swatch-btn:active {
+.colors-swatch-btn:active:not(:disabled) {
   transform: scale(0.96);
+}
+
+.colors-swatch-btn:disabled {
+  cursor: not-allowed;
+  transform: none;
 }
 
 .colors-swatch-outer {
