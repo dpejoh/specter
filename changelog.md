@@ -1,3 +1,26 @@
+# v1.5.0
+
+### Highlights:
+
+- **Dedicated Subpages Everywhere**  
+  Ditched all the clunky popups and dialogs. Pages like Language, Theme (Dark / AMOLED), Dynamic Colors, Custom Keybox, File Browser, and ROM Cleaner are now full, native Material 3 subpages with smooth navigation and back gestures.
+- **Brand New Logs Subpage**  
+  The old terminal box is now a full logs viewer. You can switch between **Action**, **Boot**, and **Live** logs via tabs, refresh in place, or copy/clear logs with one tap.
+- **PIF Device Targeting & Canary Blacklist**  
+  - Pick a specific Pixel Canary model to lock it as your fixed target (both in the WebUI and the action pipeline).  
+  - You can now **blacklist** Canary models you don't want. When a blacklist is active, Specter handles the random canary selection itself to guarantee blacklisted devices are never chosen.  
+  - When "Random Canary" is active, blacklisted devices smoothly fade and grey out with an easy-ease transition so you always know what's in the rotation.  
+  - Replaced hot-applying with normal in-memory selections and a clean **Apply** button at the bottom. File importing is tucked neatly into the top-right menu.
+- **Real-Time ViewPager Swipe Navigation**  
+  Smooth 1:1 real-time finger tracking between tabs with side-by-side page rendering, flick detection, and proportional bottom navigation pill indicator animation.
+
+### System & Backend
+
+- **Boot Hash Resolution**: Completely reworked the boot hash resolution. The old implementation was a bit of a mess, it's now much cleaner, self-contained, and properly cached.  
+- **Boot Props**: Force-set `ro.boot.flash.locked` even if it was completely missing from the device props.  
+- **UI Polish**: Reactive rounded corners on grouped lists, refined 24px card and 20px logs radii, cleaner hero card typography, improved ripples, and updated top contributors.  
+- **Theme Defaults**: Monet dynamic theming is now set as the default preset on supported Android versions.
+
 # v1.4.5-2
 
 **New**
