@@ -48,7 +48,10 @@ if [ -f "$KEYBOX_FILE" ]; then
       log_w "KEYBOX_INFO" "Revoked by Google"
     fi
 
-    if check_network; then
+    if [ "$KSM" = "omk" ] && cmp -s "$OMK_MODULE/keybox.xml" "$KEYBOX_FILE"; then
+      _source="OhMyKeymint"
+      _text="Default keybox"
+    elif check_network; then
       _history_json=$(download "$CATALOG_URL" 2>/dev/null)
       if [ -n "$_history_json" ]; then
         log_d "KEYBOX_INFO" "Catalog response length: ${#_history_json}"
@@ -95,7 +98,7 @@ if [ -f "$KEYBOX_FILE" ]; then
 fi
 
 if [ "$_installed" != "true" ] || [ -n "$_source" ] || [ ! -f "$INFO_PATH" ] ||
-   { [ -n "$_serial" ] && ! grep -q '"serial": "'"'$_serial'"'"' "$INFO_PATH" 2>/dev/null; }; then
+   { [ -n "$_serial" ] && ! grep -q '"serial": "'"$_serial"'"' "$INFO_PATH" 2>/dev/null; }; then
   cat <<EOF > "$INFO_PATH"
 {
   "installed": $_installed,
