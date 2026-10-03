@@ -187,15 +187,14 @@ export async function openLogsSubPage() {
               activeViewportEl = host.querySelector('#logs-viewport');
               activeEmptyEl = host.querySelector('#logs-empty-view');
 
-              host.querySelectorAll('#logs-tab-set md-outlined-segmented-button').forEach(b => {
-                b.addEventListener('click', async () => {
-                  const val = (b as HTMLElement & { value: string }).value as LogTab;
-                  if (val && val !== currentLogType) {
-                    currentLogType = val;
-                    host.querySelectorAll('#logs-tab-set md-outlined-segmented-button').forEach(other => {
-                      (other as HTMLElement & { selected: boolean }).selected = ((other as HTMLElement & { value: string }).value === val);
-                    });
-                    await renderCurrentLog();
+              host.querySelectorAll('#logs-tab-set md-outlined-segmented-button').forEach((button) => {
+                button.addEventListener('click', () => {
+                  const tab = button.getAttribute('value');
+                  if (tab === 'action' || tab === 'boot' || tab === 'live') {
+                    if (tab !== currentLogType) {
+                      currentLogType = tab;
+                      renderCurrentLog().catch(console.error);
+                    }
                   }
                 });
               });
