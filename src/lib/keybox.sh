@@ -54,19 +54,61 @@ decode_keybox_serial() {
   echo "$_serial"
 }
 
+# Android has no bc, and a certificate serial does not fit in $(( )).
+_dec_mul_add() {
+  _dma_n=$1 _dma_mul=$2 _dma_add=$3
+  _dma_out="" _dma_carry=$_dma_add
+  while [ -n "$_dma_n" ]; do
+    _dma_d=${_dma_n#"${_dma_n%?}"}
+    _dma_n=${_dma_n%?}
+    _dma_prod=$((_dma_d * _dma_mul + _dma_carry))
+    _dma_out="$((_dma_prod % 10))${_dma_out}"
+    _dma_carry=$((_dma_prod / 10))
+  done
+  while [ "$_dma_carry" -gt 0 ]; do
+    _dma_out="$((_dma_carry % 10))${_dma_out}"
+    _dma_carry=$((_dma_carry / 10))
+  done
+  printf '%s' "${_dma_out:-0}"
+  unset _dma_n _dma_mul _dma_add _dma_out _dma_carry _dma_d _dma_prod
+}
+
+hex_to_dec() {
+  _htd=$(printf '%s' "$1" | tr 'A-F' 'a-f' | sed 's/^0*//')
+  [ -n "$_htd" ] || { printf '%s' 0; unset _htd; return 0; }
+  _htd_dec=0
+  while [ -n "$_htd" ]; do
+    _htd_c=${_htd%"${_htd#?}"}
+    _htd=${_htd#?}
+    case $_htd_c in
+      a) _htd_c=10 ;; b) _htd_c=11 ;; c) _htd_c=12 ;;
+      d) _htd_c=13 ;; e) _htd_c=14 ;; f) _htd_c=15 ;;
+    esac
+    _htd_dec=$(_dec_mul_add "$_htd_dec" 16 "$_htd_c")
+  done
+  printf '%s' "$_htd_dec"
+  unset _htd _htd_dec _htd_c
+}
+
 check_google_revocation() {
-  _gr_serial="$1"
-  _gr_resp=$(download "$GOOGLE_REVOCATION_URL" 2>/dev/null)
-  [ -z "$_gr_resp" ] && return 1
-
-  echo "$_gr_resp" | grep -q "\"$_gr_serial\"" && return 0
-
-  if command -v bc >/dev/null 2>&1; then
-    _gr_dec=$(echo "ibase=16; $(echo "$_gr_serial" | tr 'a-f' 'A-F')" | bc 2>/dev/null)
-    [ -n "$_gr_dec" ] && echo "$_gr_resp" | grep -q "\"$_gr_dec\"" && return 0
+  _gr_serial=$1
+  _gr_resp=$(download "$GOOGLE_REVOCATION_URL" 2>/dev/null) || _gr_resp=""
+  _gr_list=/tmp/gr_$$.lst
+  [ -d /data/local/tmp ] && _gr_list=/data/local/tmp/gr_$$.lst
+  cat > "$_gr_list" <<EOF
+$_gr_resp
+EOF
+  if ! grep -q '"entries"' "$_gr_list"; then
+    rm -f "$_gr_list"
+    unset _gr_serial _gr_resp _gr_list
+    return 1
   fi
-
-  return 1
+  _gr_dec=$(hex_to_dec "$_gr_serial")
+  _gr_rc=1
+  tr '"' '\n' < "$_gr_list" | grep -Fxq "$_gr_dec" && _gr_rc=0
+  rm -f "$_gr_list"
+  unset _gr_serial _gr_resp _gr_dec _gr_list
+  return $_gr_rc
 }
 
 find_kmInstallKeybox() {

@@ -42,4 +42,13 @@ assert_eq "latest_for_provider: softbanned when no active" "8" "$_ver_yuri"
 _ver_bad=$(keybox_latest_for_provider "$_CATALOG" "badprov")
 assert_eq "latest_for_provider: empty when all revoked" "" "$_ver_bad"
 
+assert_eq "hex_to_dec: issue serial" "3207438651777393527" "$(hex_to_dec 2c831c75c60ca377)"
+download() { printf '%s' '{"entries":{"10":{"status":"REVOKED"},"3207438651777393527":{"status":"REVOKED"}}}'; }
+check_google_revocation 2c831c75c60ca377
+assert_eq "crl: issue serial is revoked" "0" "$?"
+check_google_revocation a
+assert_eq "crl: hex a is decimal 10" "0" "$?"
+check_google_revocation 10
+assert_eq "crl: hex 10 is not decimal 10" "1" "$?"
+
 done_testing
