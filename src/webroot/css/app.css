@@ -2743,6 +2743,30 @@ md-filled-tonal-button {
   max-width: 120px;
 }
 
+.hero-clip {
+  cursor: pointer;
+}
+
+.hero-clip:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.hero-clip:focus-visible {
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: 2px;
+}
+
+.hero-clip--open {
+  white-space: normal;
+  overflow-wrap: break-word;
+  overflow: visible;
+  text-overflow: unset;
+  max-width: 100%;
+  flex-basis: 100%;
+  min-width: 0;
+}
+
 .info-card-mini {
   --md-filled-card-container-color: var(--md-sys-color-surface-container-highest);
   padding: 14px 12px;

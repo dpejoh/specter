@@ -5,6 +5,53 @@ import { API_URLS } from './constants.js';
 import { getTranslation } from './i18n.js';
 import type { InfoJson, KeyboxInfoJson, KeystoreManagerJson } from './types.js';
 
+const HERO_CLIP = 'hero-clip';
+const HERO_CLIP_OPEN = 'hero-clip--open';
+
+function bindHeroClip(el: HTMLElement) {
+  if (el.dataset.heroClip) return;
+  el.dataset.heroClip = '1';
+  el.addEventListener('click', () => {
+    if (!el.classList.contains(HERO_CLIP)) return;
+    const open = !el.classList.contains(HERO_CLIP_OPEN);
+    el.classList.toggle(HERO_CLIP_OPEN, open);
+    el.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  el.addEventListener('keydown', (e) => {
+    if (!el.classList.contains(HERO_CLIP)) return;
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    if (e.repeat) return;
+    e.preventDefault();
+    el.click();
+  });
+}
+
+function syncHeroClip(el: HTMLElement) {
+  bindHeroClip(el);
+  const wasOpen = el.classList.contains(HERO_CLIP_OPEN);
+  el.classList.remove(HERO_CLIP_OPEN);
+  const clipped = el.scrollWidth > el.clientWidth;
+  const open = clipped && wasOpen;
+  el.classList.toggle(HERO_CLIP, clipped);
+  el.classList.toggle(HERO_CLIP_OPEN, open);
+  if (clipped) {
+    el.tabIndex = 0;
+    el.setAttribute('role', 'button');
+    el.setAttribute('aria-expanded', open ? 'true' : 'false');
+  } else {
+    el.removeAttribute('tabindex');
+    el.removeAttribute('role');
+    el.removeAttribute('aria-expanded');
+  }
+}
+
+function setClipped(el: HTMLElement, text: string) {
+  el.textContent = text;
+  if (text) el.title = text;
+  else el.removeAttribute('title');
+  syncHeroClip(el);
+}
+
 export async function initDevice() {
   document.getElementById('kb-refresh-btn')?.addEventListener('click', () => {
     recomputeKeyboxStatus().catch(() => {});
@@ -71,8 +118,7 @@ function applyKeystoreManager(data: KeystoreManagerJson) {
   const backendEl = document.getElementById('sp-backend');
   if (backendEl) {
     const text = data.name || (data.id && data.id !== 'none' ? data.id : (getTranslation('device_not_installed') || 'Not Installed'));
-    backendEl.textContent = text;
-    backendEl.title = text;
+    setClipped(backendEl, text);
   }
   updateListContainerCorners();
 }
@@ -92,10 +138,10 @@ export function applyKeyboxStatus(data: KeyboxInfoJson) {
 
   const setName = (text: string, isNeutral = false) => {
     if (nameEl) {
-      nameEl.textContent = text;
-      nameEl.title = text;
-      nameEl.className = isNeutral ? 'kb-hero-keybox-name kb-hero-keybox-name--neutral' : 'kb-hero-keybox-name';
+      nameEl.classList.add('kb-hero-keybox-name');
+      nameEl.classList.toggle('kb-hero-keybox-name--neutral', isNeutral);
       nameEl.style.display = '';
+      setClipped(nameEl, text);
     }
   };
 
@@ -107,9 +153,8 @@ export function applyKeyboxStatus(data: KeyboxInfoJson) {
   };
 
   const setSource = (text: string) => {
-    source.textContent = text;
-    source.title = text;
     source.style.display = text ? '' : 'none';
+    setClipped(source, text);
   };
 
   if (!data.installed) {
@@ -188,10 +233,7 @@ function applySecurityPatch(data: InfoJson) {
   const pifEl = document.getElementById('sp-pif');
   if (!dateEl) return;
   dateEl.textContent = data.security_patch || data.build_patch || '—';
-  if (pifEl) {
-    pifEl.textContent = data.pif_model || '—';
-    if (data.pif_model) pifEl.title = data.pif_model;
-  }
+  if (pifEl) setClipped(pifEl, data.pif_model || '—');
 }
 
 interface ConflictModule {
