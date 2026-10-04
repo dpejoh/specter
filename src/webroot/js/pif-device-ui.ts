@@ -23,6 +23,8 @@ import { getTranslation } from './i18n.js';
 import { openSubPage } from './subpage.js';
 
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
+const tf = (key: string, fallback: string, value: string): string =>
+  t(key, fallback).replaceAll('{0}', value);
 
 const IMPORTED_PREFIX = 'imported:';
 
@@ -170,7 +172,11 @@ export async function refreshChooseDesc() {
     return;
   }
   if (blacklist.size > 0) {
-    desc.textContent = `Random Canary (${blacklist.size} blacklisted)`;
+    desc.textContent = tf(
+      'menu_pif_random_blacklisted',
+      'Random Canary ({0} blacklisted)',
+      String(blacklist.size)
+    );
     return;
   }
   desc.textContent = t('menu_pif_choose_desc', 'Pick which Pixel Canary models Specter may fetch');
@@ -265,14 +271,21 @@ export async function openPifDeviceSubpage() {
     const q = searchQuery.trim().toLowerCase();
 
     if (mode === 'target') {
-      const showRandom = !q || 'random'.includes(q) || 'default'.includes(q);
+      const randomLabel = t('menu_pif_random', 'Random Canary (Default)');
+      const defaultLabel = t('menu_pif_default', 'Default');
+      const showRandom =
+        !q ||
+        'random'.includes(q) ||
+        'default'.includes(q) ||
+        randomLabel.toLowerCase().includes(q) ||
+        defaultLabel.toLowerCase().includes(q);
       const totalFiltered = filteredImported.length + filteredCanary.length + (showRandom ? 1 : 0);
 
       if (totalFiltered === 0) {
         listHostRef.innerHTML = `
           <div class="pif-device-empty">
             <md-icon aria-hidden="true">search_off</md-icon>
-            <p>${escapeHtml(searchQuery ? `No devices matching "${searchQuery}"` : t('menu_pif_choose_empty', 'No devices found'))}</p>
+            <p>${escapeHtml(searchQuery ? tf('menu_pif_no_match', 'No devices matching "{0}"', searchQuery) : t('menu_pif_choose_empty', 'No devices found'))}</p>
           </div>
         `;
         return;
@@ -283,16 +296,16 @@ export async function openPifDeviceSubpage() {
       if (showRandom) {
         const isChecked = selectedProduct === '';
         const blNotice = blacklist.size > 0
-          ? ` (${blacklist.size} excluded by blacklist)`
+          ? ' ' + tf('menu_pif_random_excluded', '({0} excluded by blacklist)', String(blacklist.size))
           : '';
         html += `
-          <h2 class="list-title">Default</h2>
+          <h2 class="list-title">${escapeHtml(defaultLabel)}</h2>
           <div class="list-container">
             <div class="list-item list-item--only pif-device-row" data-product="" role="button" tabindex="0">
-              <md-radio name="pif-device" value="" ${isChecked ? 'checked' : ''} aria-label="Random Canary (Default)"></md-radio>
+              <md-radio name="pif-device" value="" ${isChecked ? 'checked' : ''} aria-label="${escapeHtml(randomLabel)}"></md-radio>
               <div class="list-item-content">
-                <div class="toggle-text">Random Canary (Default)</div>
-                <span class="supporting-text">Randomly emulate any Pixel Canary model${escapeHtml(blNotice)}</span>
+                <div class="toggle-text">${escapeHtml(randomLabel)}</div>
+                <span class="supporting-text">${escapeHtml(t('menu_pif_random_desc', 'Randomly emulate any Pixel Canary model') + blNotice)}</span>
               </div>
               <md-ripple></md-ripple>
             </div>
@@ -353,7 +366,7 @@ export async function openPifDeviceSubpage() {
         html += renderGroup(t('menu_pif_choose_imported', 'Imported Devices'), filteredImported);
       }
       if (filteredCanary.length > 0) {
-        html += renderGroup('Pixel Canary', filteredCanary);
+        html += renderGroup(t('menu_pif_canary', 'Pixel Canary'), filteredCanary);
       }
 
       listHostRef.innerHTML = html;
@@ -425,7 +438,7 @@ export async function openPifDeviceSubpage() {
         listHostRef.innerHTML = `
           <div class="pif-device-empty">
             <md-icon aria-hidden="true">search_off</md-icon>
-            <p>${escapeHtml(searchQuery ? `No devices matching "${searchQuery}"` : t('menu_pif_choose_empty', 'No devices found'))}</p>
+            <p>${escapeHtml(searchQuery ? tf('menu_pif_no_match', 'No devices matching "{0}"', searchQuery) : t('menu_pif_choose_empty', 'No devices found'))}</p>
           </div>
         `;
         return;
@@ -478,8 +491,8 @@ export async function openPifDeviceSubpage() {
       }
       if (filteredCanary.length > 0) {
         const canaryTitle = blacklist.size > 0
-          ? `Pixel Canary (${blacklist.size} excluded)`
-          : 'Pixel Canary';
+          ? tf('menu_pif_canary_excluded', 'Pixel Canary ({0} excluded)', String(blacklist.size))
+          : t('menu_pif_canary', 'Pixel Canary');
         html += renderBlacklistGroup(canaryTitle, filteredCanary);
       }
 
@@ -548,7 +561,7 @@ export async function openPifDeviceSubpage() {
     imported = imported.filter(d => d.product !== product);
     imported.unshift({ model, product, imported: true });
     renderLists();
-    showToast(`${model} imported. Tap Apply to save.`, {
+    showToast(tf('menu_pif_imported_pending', '{0} imported. Tap Apply to save.', model), {
       icon: 'upload_file',
       type: 'info',
       autoCloseDelay: 2500,
@@ -577,7 +590,7 @@ export async function openPifDeviceSubpage() {
             </md-menu-item>
             <md-menu-item id="pif-menu-reset" class="last">
               <md-icon slot="start" aria-hidden="true" id="pif-menu-reset-icon">restart_alt</md-icon>
-              <div slot="headline" id="pif-menu-reset-text">Reset to Random</div>
+              <div slot="headline" id="pif-menu-reset-text">${escapeHtml(t('menu_pif_reset_random', 'Reset to Random'))}</div>
             </md-menu-item>
           </md-menu>
         </div>
@@ -613,16 +626,18 @@ export async function openPifDeviceSubpage() {
 
         if (mode === 'blacklist') {
           if (titleEl) titleEl.textContent = t('bl_title', 'Blacklist');
-          if (descEl) descEl.textContent = 'Checked devices will never be picked when Random Canary is active';
+          if (descEl) descEl.textContent = t('menu_pif_blacklist_desc', 'Checked devices will never be picked when Random Canary is active');
           if (modeIcon) modeIcon.textContent = 'devices';
           if (modeText) modeText.textContent = t('ta_edit_target', 'Choose target device');
-          if (resetText) resetText.textContent = blacklist.size > 0 ? `Clear blacklist (${blacklist.size})` : 'Clear blacklist';
+          const clearLabel = t('menu_pif_clear_blacklist', 'Clear blacklist');
+          if (resetText) resetText.textContent = blacklist.size > 0 ? `${clearLabel} (${blacklist.size})` : clearLabel;
         } else {
           if (titleEl) titleEl.textContent = t('menu_pif_choose', 'Choose PIF Device');
           if (descEl) descEl.textContent = t('menu_pif_choose_desc', 'Pick which Pixel Canary models Specter may fetch');
           if (modeIcon) modeIcon.textContent = 'block';
-          if (modeText) modeText.textContent = blacklist.size > 0 ? `Edit blacklist (${blacklist.size})` : t('ta_edit_blacklist', 'Edit blacklist');
-          if (resetText) resetText.textContent = 'Reset to Random';
+          const editLabel = t('ta_edit_blacklist', 'Edit blacklist');
+          if (modeText) modeText.textContent = blacklist.size > 0 ? `${editLabel} (${blacklist.size})` : editLabel;
+          if (resetText) resetText.textContent = t('menu_pif_reset_random', 'Reset to Random');
         }
       };
 
@@ -678,22 +693,22 @@ export async function openPifDeviceSubpage() {
           if (mode === 'blacklist') {
             showToast(
               blacklist.size > 0
-                ? `Blacklist saved (${blacklist.size} excluded)`
-                : 'Blacklist saved (all allowed)',
+                ? tf('menu_pif_blacklist_saved_count', 'Blacklist saved ({0} excluded)', String(blacklist.size))
+                : t('menu_pif_blacklist_saved_all', 'Blacklist saved (all allowed)'),
               { icon: 'check_circle', type: 'success', autoCloseDelay: 2000 }
             );
           } else {
             const all = getAllDevices();
             const chosen = all.find(d => d.product === selectedProduct);
-            const label = chosen?.model || 'Random Canary (Default)';
-            showToast(`${label} applied`, {
+            const label = chosen?.model || t('menu_pif_random', 'Random Canary (Default)');
+            showToast(tf('menu_pif_applied', '{0} applied', label), {
               icon: 'check_circle',
               type: 'success',
               autoCloseDelay: 2000,
             });
           }
         } catch (e) {
-          showToast(`Failed to apply: ${e}`, {
+          showToast(tf('menu_pif_apply_failed', 'Failed to apply: {0}', String(e)), {
             icon: 'error',
             type: 'error',
             autoCloseDelay: 2500,
@@ -719,7 +734,7 @@ export async function openPifDeviceSubpage() {
                     aria-label="${t('menu_pif_search', 'Search devices...')}"
                   >
                     <md-icon slot="leading-icon" aria-hidden="true">search</md-icon>
-                    <md-icon-button slot="trailing-icon" id="pif-search-clear" style="display:none;" aria-label="Clear search">
+                    <md-icon-button slot="trailing-icon" id="pif-search-clear" style="display:none;" aria-label="${escapeHtml(t('menu_pif_search_clear', 'Clear search'))}">
                       <md-icon aria-hidden="true">close</md-icon>
                     </md-icon-button>
                   </md-outlined-text-field>

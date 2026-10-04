@@ -40,10 +40,12 @@ export async function openLanguageDialog() {
           id: `lang-option-${item.code}`,
           name: 'specter_language_radio',
           value: item.code,
-          title: item.native,
+          title: item.code === 'auto'
+            ? t('language_auto_title', 'System default')
+            : item.native,
           description: item.code === 'auto'
             ? t('settings_theme_status_auto', 'Follow system')
-            : item.name,
+            : t(`lang_name_${item.code}`, item.name),
           selected: item.code === currentCode,
           onSelect: async (val: string) => {
             await applyLanguage(val);
