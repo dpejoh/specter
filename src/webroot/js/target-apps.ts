@@ -857,6 +857,7 @@ export async function openTargetAppsManager() {
         await writeTargetList(content);
         appendToOutput(`[TARGET] Wrote target list (${lines.length} selected + FIXED_TARGETS)`);
         showToast(t('ta_prompt_saved', 'Target list saved'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
+        await new Promise(resolve => setTimeout(resolve, 2500));
         await exec(`sh ${shellEscape(getModuleDir() + '/refresh_desc.sh')}`);
       } catch (e) {
         appendToOutput(`[TARGET] Failed to save target list: ${e}`, true);
