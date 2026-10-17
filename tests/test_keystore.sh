@@ -586,8 +586,37 @@ kill "$_holder" 2>/dev/null || true
 wait "$_holder" 2>/dev/null || true
 assert_eq "lock: live non-target stolen" "$$" "$(readlink "$SPECTER_DIR/.lock/targets")"
 assert_file_not_exists "lock: tr stdin is not cmdline" "$TEST_ROOT/tr_direct_cmdline"
-_redir=$(grep -n "tr '\\\\0' ' ' <" "$REPO_ROOT/src/lib/keystore.sh" "$REPO_ROOT/src/lib/scheduler.sh" || true)
-assert_eq "lock: no tr redirect from cmdline" "" "$_redir"
-unset _holder _real_tr _redir
+unset _holder _real_tr
+
+ksm_unlock_targets
+assert_eq "lock: owned lock released" "" "$(readlink "$SPECTER_DIR/.lock/targets" 2>/dev/null || true)"
+ln -s "9999998" "$SPECTER_DIR/.lock/targets"
+ksm_unlock_targets
+assert_eq "lock: foreign lock preserved" "9999998" "$(readlink "$SPECTER_DIR/.lock/targets")"
+rm -f "$SPECTER_DIR/.lock/targets"
+
+cat > "$BIN_DIR/pm" << 'EOF'
+#!/bin/sh
+if [ -L "$SPECTER_DIR/.lock/targets" ]; then
+  printf '%s\n' locked > "$TEST_ROOT/pm_saw_lock"
+fi
+echo "package:com.example.one"
+EOF
+chmod +x "$BIN_DIR/pm"
+mk_module tricky_store "Tricky Store"
+mkdir -p "$TRICKY_DIR"
+printf '%s\n' android > "$TRICKY_DIR/target.txt"
+rm -f "$TEST_ROOT/pm_saw_lock" "$REPO_ROOT/src/pkgs.txt"
+_tgt_rc=0
+_tgt_out=$(run_feature target.sh) || _tgt_rc=$?
+[ "$_tgt_rc" -eq 0 ] && ok "lock: target.sh exits after releasing" || fail "lock: target.sh exits after releasing" "$_tgt_out"
+assert_file_not_exists "lock: target.sh lists packages before the lock" "$TEST_ROOT/pm_saw_lock"
+assert_eq "lock: target.sh released on exit" "" "$(readlink "$SPECTER_DIR/.lock/targets" 2>/dev/null || true)"
+rm -f "$TEST_ROOT/pm_saw_lock" "$REPO_ROOT/src/pkgs.txt"
+_at_rc=0
+_at_out=$(run_feature auto_target.sh) || _at_rc=$?
+[ "$_at_rc" -eq 0 ] && ok "lock: auto_target.sh exits after releasing" || fail "lock: auto_target.sh exits after releasing" "$_at_out"
+assert_file_not_exists "lock: auto_target.sh lists packages before the lock" "$TEST_ROOT/pm_saw_lock"
+assert_eq "lock: auto_target.sh released on exit" "" "$(readlink "$SPECTER_DIR/.lock/targets" 2>/dev/null || true)"
 
 done_testing

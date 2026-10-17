@@ -11,7 +11,7 @@ BLACKLIST_ENABLED="$SPECTER_DIR/blacklist_enabled"
 KNOWN_PKGS="$SPECTER_DIR/auto_known_packages.txt"
 TEMP_LIST="$SPECTER_DIR/.auto_target_scan.$$"
 _INSTALLED="$SPECTER_DIR/.auto_target_installed.$$"
-trap 'rm -f "$TEMP_LIST" "$_INSTALLED" "$SPECTER_DIR/.auto_target_existing.$$" "$SPECTER_DIR/.auto_target_staging.$$" "$SPECTER_DIR/.auto_target_adds.$$" "$SPECTER_DIR/.auto_target_clean.$$" "$SPECTER_DIR/.auto_target_seen.$$"' EXIT
+trap 'rm -f "$TEMP_LIST" "$_INSTALLED" "$SPECTER_DIR/.auto_target_existing.$$" "$SPECTER_DIR/.auto_target_staging.$$" "$SPECTER_DIR/.auto_target_adds.$$" "$SPECTER_DIR/.auto_target_clean.$$" "$SPECTER_DIR/.auto_target_seen.$$"; ksm_unlock_targets' EXIT
 
 _feature_should_run "target" || { log_d "AUTO_TARGET" "target disabled or claimed, skipping"; exit 0; }
 
@@ -19,8 +19,6 @@ log_i "AUTO_TARGET" "Scanning for new packages"
 
 ksm_available || { log_d "AUTO_TARGET" "no keystore manager, skipping"; exit 0; }
 [ -f "$KSM_TARGETS" ] || { log_w "AUTO_TARGET" "target list missing, skipping"; exit 0; }
-
-ksm_lock_targets || { log_e "AUTO_TARGET" "failed to lock target list"; exit 1; }
 
 pkgs=$(pm list packages -3 2>/dev/null) || { log_e "AUTO_TARGET" "pm list packages failed"; exit 1; }
 echo "$pkgs" | cut -d ":" -f 2 | sort -u > "$TEMP_LIST"
@@ -30,6 +28,8 @@ _all=$(pm list packages 2>/dev/null) || _all=""
 echo "$_all" | cut -d ":" -f 2 | sort -u > "$_INSTALLED"
 [ -s "$_INSTALLED" ] || cp "$TEMP_LIST" "$_INSTALLED"
 unset _all
+
+ksm_lock_targets || { log_e "AUTO_TARGET" "failed to lock target list"; exit 1; }
 
 _EXISTING="$SPECTER_DIR/.auto_target_existing.$$"
 ksm_read_targets > "$_EXISTING" || true

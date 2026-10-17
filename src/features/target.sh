@@ -22,9 +22,35 @@ case "${1:-}" in
     ;;
 esac
 
-ksm_lock_targets || die "Failed to lock target list"
+_target_cleanup() {
+  [ -n "${TEMP_PKGS:-}" ] && rm -f "$TEMP_PKGS" "${TEMP_PKGS}.filtered"
+  [ -n "${_TMP_TARGET:-}" ] && rm -f "$_TMP_TARGET"
+  [ -n "${_TMP_EXIST:-}" ] && rm -f "$_TMP_EXIST"
+  [ -n "${_TMP_ADD:-}" ] && rm -f "$_TMP_ADD"
+  [ -n "${_set_out:-}" ] && rm -f "$_set_out"
+  [ -n "${_set_bases:-}" ] && rm -f "$_set_bases"
+  ksm_unlock_targets
+}
+trap _target_cleanup EXIT
 
 _ensure_blacklist
+
+MODULE_ROOT="${MODDIR%/features}"
+TEMP_PKGS="$MODULE_ROOT/pkgs.txt"
+
+case "${1:-}" in
+  --set|--merge-denylist) ;;
+  *)
+    pkgs=$(pm list packages -3 2>/dev/null) || log_w "TARGET" "Failed to list packages"
+    if [ -n "${pkgs:-}" ]; then
+      echo "$pkgs" | cut -d ":" -f 2 > "$TEMP_PKGS"
+      _filter_blacklist "$TEMP_PKGS"
+    fi
+    unset pkgs
+    ;;
+esac
+
+ksm_lock_targets || die "Failed to lock target list"
 
 case "${1:-}" in
   --set)
@@ -58,8 +84,6 @@ case "${1:-}" in
     ;;
 esac
 
-MODULE_ROOT="${MODDIR%/features}"
-TEMP_PKGS="$MODULE_ROOT/pkgs.txt"
 _TMP_TARGET="$SPECTER_DIR/.target_new.$$"
 
 _parse_customize
@@ -83,7 +107,6 @@ case "${1}" in
     log_i "TARGET" "Mode: merge-denylist"
     command -v magisk >/dev/null 2>&1 || { log_w "TARGET" "magisk not found, skipping"; exit 0; }
     _merge_setup
-    trap 'rm -f "$_TMP_TARGET" "$_TMP_EXIST" "$_TMP_ADD"' EXIT
     _merge_load_existing
 
     _denylist=$(magisk --denylist ls 2>/dev/null | awk -F'|' '{print $1}' | grep -v "isolated" || true)
@@ -104,20 +127,13 @@ case "${1}" in
   --merge)
     log_i "TARGET" "Mode: merge"
     _merge_setup
-    trap 'rm -f "$TEMP_PKGS" "${TEMP_PKGS}.filtered" "$_TMP_TARGET" "$_TMP_EXIST" "$_TMP_ADD"' EXIT
     _merge_load_existing
 
     for entry in $FIXED_TARGETS; do
       _append_missing "$entry"
     done
 
-    pkgs=$(pm list packages -3 2>/dev/null) || {
-      log_w "TARGET" "Failed to list packages"
-    }
-    if [ -n "$pkgs" ]; then
-      echo "$pkgs" | cut -d ":" -f 2 > "$TEMP_PKGS"
-      _filter_blacklist "$TEMP_PKGS"
-
+    if [ -s "$TEMP_PKGS" ]; then
       while read -r pkg; do
         [ -z "$pkg" ] && continue
         _compute_suffix "$pkg"
@@ -134,20 +150,13 @@ case "${1}" in
   *)
     log_i "TARGET" "Mode: overwrite"
     _count=0
-    trap 'rm -f "$TEMP_PKGS" "${TEMP_PKGS}.filtered" "$_TMP_TARGET"' EXIT
 
     for entry in $FIXED_TARGETS; do
       echo "$entry" >> "$_TMP_TARGET"
       _count=$((_count + 1))
     done
 
-    pkgs=$(pm list packages -3 2>/dev/null) || {
-      log_w "TARGET" "Failed to list packages"
-    }
-    if [ -n "$pkgs" ]; then
-      echo "$pkgs" | cut -d ":" -f 2 > "$TEMP_PKGS"
-      _filter_blacklist "$TEMP_PKGS"
-
+    if [ -s "$TEMP_PKGS" ]; then
       while read -r pkg; do
         [ -z "$pkg" ] && continue
         _suffix=""

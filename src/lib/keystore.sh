@@ -249,6 +249,14 @@ ksm_lock_targets() {
   unset _klt _klt_n _klt_pid _klt_cmd
 }
 
+ksm_unlock_targets() {
+  _kut="$SPECTER_DIR/.lock/targets"
+  if [ -L "$_kut" ] && [ "$(readlink "$_kut" 2>/dev/null)" = "$$" ]; then
+    rm -f "$_kut"
+  fi
+  unset _kut
+}
+
 ksm_commit_targets() {
   _kct_src="$1"
   case "$KSM_FORMAT" in

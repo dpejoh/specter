@@ -42,6 +42,50 @@ assert_eq "latest_for_provider: softbanned when no active" "8" "$_ver_yuri"
 _ver_bad=$(keybox_latest_for_provider "$_CATALOG" "badprov")
 assert_eq "latest_for_provider: empty when all revoked" "" "$_ver_bad"
 
+_entries='{"source":"first","version":"1"}
+{"source":"second","version":"2"}
+{"source":"third","version":"3"}'
+assert_eq "entry selection: first" '{"source":"first","version":"1"}' "$(keybox_select_entry "$_entries" 1)"
+assert_eq "entry selection: third" '{"source":"third","version":"3"}' "$(keybox_select_entry "$_entries" 3)"
+assert_eq "entry selection: out of bounds" "" "$(keybox_select_entry "$_entries" 4)"
+keybox_select_entry "$_entries" nope >/dev/null
+assert_eq "entry selection: rejects invalid index" 1 "$?"
+
+cat > "$BIN_DIR/busybox" << 'EOF'
+#!/bin/sh
+exit 1
+EOF
+cat > "$BIN_DIR/curl" << 'EOF'
+#!/bin/sh
+if [ "$1" = "--version" ]; then
+  echo "curl 8"
+  exit 0
+fi
+_out="" _prev="" _saw_f=0
+for _a in "$@"; do
+  [ "$_prev" = "-o" ] && _out=$_a
+  case "$_a" in
+    -fLs|-fsSL) _saw_f=1 ;;
+  esac
+  _prev=$_a
+done
+if [ "$_saw_f" -ne 1 ]; then
+  echo "curl invoked without -f" >&2
+  exit 2
+fi
+if [ "${CURL_FAIL:-}" = 1 ]; then
+  printf '%s\n' "error-body" > "$_out"
+  printf '%s' "404"
+  exit 22
+fi
+printf '%s' "catalog-ok" > "$_out"
+printf '%s' "200"
+exit 0
+EOF
+chmod +x "$BIN_DIR/busybox" "$BIN_DIR/curl"
+_dl_body=$(download "http://example.test/catalog")
+assert_eq "download: success returns body" "catalog-ok" "$_dl_body"
+
 assert_eq "hex_to_dec: issue serial" "3207438651777393527" "$(hex_to_dec 2c831c75c60ca377)"
 download() { printf '%s' '{"entries":{"10":{"status":"REVOKED"},"3207438651777393527":{"status":"REVOKED"}}}'; }
 check_google_revocation 2c831c75c60ca377
@@ -50,5 +94,18 @@ check_google_revocation a
 assert_eq "crl: hex a is decimal 10" "0" "$?"
 check_google_revocation 10
 assert_eq "crl: hex 10 is not decimal 10" "1" "$?"
+
+printf '%s\n' '#!/bin/sh' 'exit 0' > "$BIN_DIR/ping"
+chmod +x "$BIN_DIR/ping"
+export CURL_FAIL=1
+mk_module tricky_store "Tricky Store"
+mkdir -p "$TRICKY_DIR"
+printf '%s\n' android > "$TRICKY_DIR/target.txt"
+_kb_out=$(run_feature keybox.sh || true)
+assert_contains "download: http failure reports curl status" "$_kb_out" "curl_rc=22"
+assert_contains "download: http failure reports http status" "$_kb_out" "http=404"
+assert_contains "download: catalog failure still falls back" "$_kb_out" "Catalog fetch failed"
+assert_not_contains "download: http body is not the catalog" "$_kb_out" "error-body"
+unset CURL_FAIL
 
 done_testing
