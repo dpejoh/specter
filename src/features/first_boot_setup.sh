@@ -50,11 +50,6 @@ log_i "FIRST_BOOT" "Waiting for network..."
 for _sec in 1 2 3 4 5 6 7 8 9 10; do check_network 2>/dev/null && break; sleep 1; done
 unset _sec
 
-if _hma_installed | grep -Fxq "$HMAOSS_PKG"; then
-  log_i "FIRST_BOOT" "Generating HMA-OSS config"
-  sh "$MODDIR/hma.sh" || log_w "FIRST_BOOT" "HMA-OSS config generation failed"
-fi
-
 log_i "FIRST_BOOT" "Running full integrity pipeline"
 SPECTER_FIRST_BOOT=1 sh "$MODDIR/../action.sh" || log_e "FIRST_BOOT" "action.sh failed (exit $?)"
 

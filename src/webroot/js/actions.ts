@@ -52,6 +52,7 @@ export async function runAction(scriptName: string) {
     child.stdout.on('data', (line: string) => {
       appendToOutput(line);
       lines.push(line);
+      if (text && /Press Volume/i.test(line)) text.textContent = line;
     });
     child.stderr.on('data', (line: string) => {
       appendToOutput(line, true);

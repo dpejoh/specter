@@ -29,6 +29,15 @@ _first_boot=0
 [ "$SPECTER_FIRST_BOOT" = "1" ] && _first_boot=1
 [ -f "$SPECTER_DIR/.first_boot_pending" ] && _first_boot=1
 
+# The block below pipes stdout through tee, so a terminal test there would be
+# dead. getevent does not need a terminal, and the WebUI shows prompt lines
+# while the action waits, so prompt whenever volume keys can be read.
+if [ "$_first_boot" = "0" ] && command -v getevent >/dev/null 2>&1; then
+  _action_prompt=1
+else
+  _action_prompt=0
+fi
+
 {
   log_i "ACTION" "Running full integrity pipeline"
 
@@ -67,7 +76,7 @@ _first_boot=0
     if [ -z "$_pif_name" ]; then
       if [ "$_first_boot" = "1" ]; then
         log_i "ACTION" "PIF not found, first boot suppress"
-      elif [ -t 1 ]; then
+      elif [ "$_action_prompt" = "1" ]; then
         log_u "ACTION" ""
         log_u "ACTION" "PIF not found — Press Volume UP to install, DOWN to skip..."
         _ap_key=$(timeout 10 getevent -l 2>/dev/null | grep -oE "KEY_VOLUME(UP|DOWN)" | head -1)
@@ -105,16 +114,18 @@ _first_boot=0
     log_u "ACTION" "-> HMA-OSS Config:"
     SPECTER_HMA_NO_UI_RELOAD=1 sh "$MODDIR/features/hma.sh" || true
 
-    _hma_mode=$(cfg_get "hma_launch_mode" "prompt")
+    _hma_policy=$(_hma_launch_policy)
     _do_launch=0
 
-    if [ "$_hma_mode" = "always" ]; then
+    if [ "$_first_boot" = "1" ]; then
+      log_u "ACTION" "HMA-OSS launch skipped on first boot"
+    elif [ "$_hma_policy" = "open" ]; then
       log_u "ACTION" "Auto-launching HMA-OSS (policy: auto-accept)..."
       _do_launch=1
-    elif [ "$_hma_mode" = "never" ]; then
+    elif [ "$_hma_policy" = "skip" ]; then
       log_u "ACTION" "HMA-OSS launch skipped (policy: auto-refuse)"
       log_u "ACTION" "Config written; reboot or open HMA-OSS to apply"
-    elif [ -t 1 ]; then
+    elif [ "$_action_prompt" = "1" ]; then
       log_u "ACTION" ""
       log_u "ACTION" "HMA-OSS app must open to apply config — open now?"
       log_u "ACTION" "Press Volume UP to open, DOWN to skip (7s timeout)..."
@@ -133,15 +144,12 @@ _first_boot=0
 
     if [ "$_do_launch" = "1" ]; then
       if [ "$(cfg_get toggle_hma_live_reload 1)" = "1" ]; then
-        _hma_request_reload /data/local/tmp || \
-          am start -n "org.frknkrc44.hma_oss/org.frknkrc44.hma_oss.ui.activity.MainActivity" >/dev/null 2>&1 || \
-          monkey -p org.frknkrc44.hma_oss -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 || true
+        _hma_request_reload /data/local/tmp || _hma_open_ui || true
       else
-        am start -n "org.frknkrc44.hma_oss/org.frknkrc44.hma_oss.ui.activity.MainActivity" >/dev/null 2>&1 || \
-        monkey -p org.frknkrc44.hma_oss -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 || true
+        _hma_open_ui || true
       fi
     fi
-    unset _hma_mode _do_launch
+    unset _hma_policy _do_launch
   }
 
   run_device_info "$MODDIR"

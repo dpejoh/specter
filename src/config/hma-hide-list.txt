@@ -9,5 +9,9 @@
 me.weishu.kernelsu
 com.sukisu.ultra
 com.rifsxd.ksunext
+com.resukisu.resukisu
+com.resukisu.resukisu.dev
+me.bmax.apatch
+me.yuki.folk
 com.topjohnwu.magisk
 io.github.huskydg.magisk
