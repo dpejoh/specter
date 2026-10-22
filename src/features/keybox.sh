@@ -109,7 +109,7 @@ _try_keybox_url() {
 _provider=$(cat "$CONFIG_DIR/val/keybox_provider.val" 2>/dev/null || echo "auto")
 
 log_i "KEYBOX" "Fetching available keyboxes..."
-_history=$(download "$CATALOG_URL")
+_history=$(download "$CATALOG_URL") || _history=""
 
 if [ -z "$_history" ]; then
   log_w "KEYBOX" "Catalog fetch failed, trying fallback keyboxes..."
@@ -149,7 +149,7 @@ fi
 _n=0
 while [ "$_n" -lt "$_count" ]; do
   _pos=$(( (_start + _n) % _count + 1 ))
-  _entry=$(printf '%s\n' "$_pool" | sed -n "${_pos}p")
+  _entry=$(keybox_select_entry "$_pool" "$_pos") || die "Failed to select keybox entry"
   _src=$(printf '%s' "$_entry" | sed -n 's/.*"source":"\([^"]*\)".*/\1/p')
   _ver=$(printf '%s' "$_entry" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')
   _text=$(printf '%s' "$_entry" | sed -n 's/.*"text":"\([^"]*\)".*/\1/p')
