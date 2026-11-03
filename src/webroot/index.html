@@ -5,21 +5,40 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="color-scheme" content="dark light" />
+  <link rel="icon" href="data:," />
   <title data-i18n="app_title">Specter</title>
 
-  <link rel="preconnect" href="https://rawbin.dpejoh.com" crossorigin>
-  <style>@font-face{font-family:'Material Icons';font-style:normal;font-weight:400;font-display:swap;src:url(./assets/material-icons.woff2)format('woff2')}@font-face{font-family:'Material Icons Outlined';font-style:normal;font-weight:400;font-display:swap;src:url(./assets/material-icons-outlined.woff2)format('woff2')}</style>
+  <style>@font-face{font-family:'Material Icons';font-style:normal;font-weight:400;font-display:swap;src:url(./assets/material-icons.woff2)format('woff2')}@font-face{font-family:'Material Icons Outlined';font-style:normal;font-weight:400;font-display:swap;src:url(./assets/material-icons-outlined.woff2)format('woff2')}@font-face{font-family:'Google Sans Variable';font-style:normal;font-weight:1 1000;font-stretch:1 100;font-display:swap;src:url(./fonts/GoogleSans-var.woff2)format('woff2-variations')}</style>
   <link rel="stylesheet" href="css/app.css" />
 
   <script>
-    // Kick off JSON fetches during HTML parse — bridge/device consume these promises
-    window.__modulePathsPromise = fetch('./json/module_paths.json').then(function(r){return r.ok?r.json():null}).catch(function(){return null});
-    window.__infoPromise = fetch('./json/info.json').then(function(r){return r.ok?r.json():null}).catch(function(){return null});
-    window.__keyboxInfoPromise = fetch('./json/keybox_info.json').then(function(r){return r.ok?r.json():null}).catch(function(){return null});
-    window.__monetPromise = fetch('./json/monet.json').then(function(r){return r.ok?r.json():null}).catch(function(){return null});
+    // Static module path and one combined state read (four files before).
+    window.__modulePathsPromise = Promise.resolve({ MODDIR: '/data/adb/modules/specter', SPECTER_DIR: '/data/adb/specter' });
+    window.__statePromise = fetch('./json/state.json')
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .catch(function(){ return null; });
+    window.__infoPromise = window.__statePromise.then(function(s){return s && s.info ? s.info : null});
+    window.__keyboxInfoPromise = window.__statePromise.then(function(s){return s && s.keybox ? s.keybox : null});
+    window.__monetPromise = window.__statePromise.then(function(s){return s && s.monet ? s.monet : null});
+    window.__keystoreManagerPromise = window.__statePromise.then(function(s){return s && s.keystore ? s.keystore : null});
     // Pre-populate config cache from localStorage to skip shell exec in cfgInit
     window.__preloadedCfg = {};
-    try { for(var __i=0;__i<localStorage.length;__i++){var __k=localStorage.key(__i);if(__k&&__k.indexOf('sp_cfg_')===0)window.__preloadedCfg[__k.slice(7)]=localStorage.getItem(__k);} } catch(__e){}
+    try { for(var __i=0;__i<localStorage.length;__i++){var __k=localStorage.key(__i);if(__k&&__k.indexOf('sp_cfg_')===0&&__k!=='sp_cfg_ts')window.__preloadedCfg[__k.slice(7)]=localStorage.getItem(__k);} } catch(__e){}
+    (function () {
+      var cfg = window.__preloadedCfg || {};
+      var lang = cfg['lang'] || 'auto';
+      if (lang === 'auto') {
+        var nav = (navigator.language || '').slice(0, 2);
+        var available = ['en', 'zh', 'ru', 'fr', 'es', 'ar', 'pl', 'tr', 'id', 'hu', 'vn'];
+        lang = available.indexOf(nav) !== -1 ? nav : 'en';
+      }
+      window.__langTarget = lang;
+      window.__langPromise = lang === 'en'
+        ? Promise.resolve(null)
+        : fetch('./lang/' + lang + '.json')
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .catch(function () { return null; });
+    })();
     (function () {
       var cfg = window.__preloadedCfg || {};
       var monetSw = cfg['theme_monet_switch'];

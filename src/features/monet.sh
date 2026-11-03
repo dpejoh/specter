@@ -6,6 +6,7 @@
 MODDIR="${0%/*}"
 case "$MODDIR" in */features) MODDIR="${MODDIR%/features}" ;; esac
 [ -n "$MODDIR" ] || exit 1
+. "$MODDIR/lib/common.sh"
 
 # ── 4-command pipeline (same as theme.ts) ──────────────────────────
 _hex=$(cmd overlay lookup com.android.systemui android:color/system_accent1_500 2>/dev/null || \
@@ -35,3 +36,5 @@ _seed=$((_argb & 0xFFFFFF))
 
 # ── Write JSON for WebUI preload ────────────────────────────────────
 printf '{"seed":"#%06x","ts":%s}\n' "$_seed" "$(date +%s)" > "$MODDIR/webroot/json/monet.json" 2>/dev/null
+
+write_webui_state

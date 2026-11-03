@@ -3,33 +3,62 @@ import { shellEscape } from './utils.js';
 
 let DATA_DIR: string | null = null;
 const cache: Record<string, string | undefined | null> = {};
+let snapshotComplete = false;
 
 /** Set the Specter data directory for config file access. */
 export function setDataDir(path: string) { DATA_DIR = path; }
 
-/** Pre-populate the config cache by reading all `.val` files from the config directory. */
+/** Pre-populate the config cache from the module's state snapshot or disk. */
 export async function cfgInit() {
-  const preloaded = (window as any).__preloadedCfg;
-  if (preloaded && typeof preloaded === 'object' && Object.keys(preloaded).length > 0) {
-    const entries = Object.entries(preloaded);
-    for (const [key, val] of entries) {
-      if (typeof val === 'string') cache[key] = val;
-    }
-    return;
-  }
+  // state.json arrives as one async fetch instead of a blocking shell call.
+  let stateConfig: Record<string, string | null> | null = null;
+  let stateConfigTs = 0;
   try {
-    if (typeof localStorage !== 'undefined') {
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && k.startsWith('sp_cfg_')) {
-          cache[k.slice(7)] = localStorage.getItem(k);
-        }
-      }
+    const state = await (window as any).__statePromise;
+    if (state && state.config && typeof state.config === 'object' && Object.keys(state.config).length > 0) {
+      stateConfig = state.config as Record<string, string | null>;
+      stateConfigTs = Number(state.config_ts) || 0;
     }
   } catch {}
-  if (!DATA_DIR) return;
+
+  if (stateConfig) {
+    snapshotComplete = true;
+    for (const [key, val] of Object.entries(stateConfig)) {
+      cache[key] = typeof val === 'string' ? val : undefined;
+    }
+  }
+
+  // Local values win only when they are newer than the state snapshot.
+  const localTs = Number(localStorage.getItem('sp_cfg_ts')) || 0;
+  const useLocal = !stateConfig || localTs > stateConfigTs * 1000;
+  if (useLocal) {
+    const preloaded = (window as any).__preloadedCfg;
+    if (preloaded && typeof preloaded === 'object' && Object.keys(preloaded).length > 0) {
+      const entries = Object.entries(preloaded);
+      for (const [key, val] of entries) {
+        if (typeof val === 'string') cache[key] = val;
+      }
+    } else {
+      try {
+        if (typeof localStorage !== 'undefined') {
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith('sp_cfg_') && k !== 'sp_cfg_ts') {
+              cache[k.slice(7)] = localStorage.getItem(k);
+            }
+          }
+        }
+      } catch {}
+    }
+  }
+
+  if (stateConfig || !DATA_DIR) {
+    return;
+  }
+
+  // Fallback for first boot. The `read` builtin avoids one `cat` per file.
   const cfgDir = shellEscape(DATA_DIR + '/config/val');
-  const cmd = `for f in ${cfgDir}/*.val; do [ -f "\$f" ] || continue; k="\${f##*/}"; k="\${k%.val}"; v="\$(cat "\$f")"; [ -n "\$v" ] || continue; printf 'CFG:%s\n' "\$k"; printf '%s\n' "\$v"; done`;
+  const cmd = `for f in ${cfgDir}/*.val; do [ -f "\$f" ] || continue; k="\${f##*/}"; k="\${k%.val}"; v=''; IFS= read -r v < "\$f" || true; printf 'CFG:%s\n' "\$k"; printf '%s\n' "\$v"; done`;
   const result = await bridgeExec(cmd);
   const stdout = (result.stdout || '').trim();
   if (!stdout) return;
@@ -39,10 +68,10 @@ export async function cfgInit() {
     if (!line || !line.startsWith('CFG:')) continue;
     const key = line.slice(4);
     const next = lines[i + 1];
-    const value = next || '';
-    cache[key] = value;
+    cache[key] = next ? next : undefined;
     i++;
   }
+  snapshotComplete = true;
 }
 
 async function readConfig(key: string): Promise<string | null> {
@@ -62,21 +91,28 @@ function writeConfig(key: string, val: string | undefined | null) {
 
 /** Retrieve a config value by key. Checks the in-memory cache first, then reads from disk. Returns the stored value, `defaultValue`, or `null`. */
 export async function cfgGet(key: string, defaultValue?: string): Promise<string | undefined | null> {
-  if (key in cache) return cache[key];
+  if (key in cache) return cache[key] ?? defaultValue;
+  // A complete snapshot already covers every existing .val file.
+  if (snapshotComplete) return defaultValue;
   const val = await readConfig(key);
-  cache[key] = val ?? defaultValue;
-  return cache[key];
+  cache[key] = val;
+  return cache[key] ?? defaultValue;
 }
 
-/** Set a config value both in cache and on disk. */
+/** Set a config value both in cache and on disk. No-op when the value is unchanged. */
 export function cfgSet(key: string, val: string | undefined | null) {
+  if (key in cache && cache[key] === val) return;
   cache[key] = val;
-  try { localStorage.setItem('sp_cfg_' + key, val ?? ''); } catch {}
+  try {
+    localStorage.setItem('sp_cfg_' + key, val ?? '');
+    localStorage.setItem('sp_cfg_ts', String(Date.now()));
+  } catch {}
   writeConfig(key, val);
 }
 
 /** Remove one key (or all keys when called without argument) from the in-memory cache. */
 export function cfgInvalidate(key?: string) {
+  snapshotComplete = false;
   if (key) {
     delete cache[key];
   } else {

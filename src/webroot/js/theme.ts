@@ -51,7 +51,7 @@ export async function initTheme(savedMode: string) {
   // When user returns to the tab, re-fetch monet.json (written by background inotifyd)
   document.addEventListener('visibilitychange', async () => {
     if (document.hidden || currentPreset !== 'monet') return;
-    const res = await fetch('./json/monet.json?ts=' + Date.now());
+    const res = await fetch('./json/monet.json', { cache: 'no-cache' });
     if (!res.ok) return;
     const data = await res.json();
     if (data?.seed && (!data.ts || data.ts > (Number(localStorage.getItem('monet_seed_ts')) || 0))) {

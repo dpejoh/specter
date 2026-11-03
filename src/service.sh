@@ -62,6 +62,7 @@ unset _bf _bf_default
 ksm_enforce_singleton >/dev/null || true
 
 sh "$MODDIR/features/keystore_info.sh" >"$SPECTER_DIR/log/keystore_info.log" 2>&1 || true
+write_webui_state
 
 log_i "SERVICE" "Boot-time features done"
 

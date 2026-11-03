@@ -16,6 +16,7 @@ if [ "${1:-}" = "--if-needed" ] &&
    [ -f "$INFO_PATH" ] && [ -f "$KEYBOX_FILE" ] && [ "$INFO_PATH" -nt "$KEYBOX_FILE" ] &&
    grep -q '"installed": true' "$INFO_PATH"; then
   log_i "KEYBOX_INFO" "Keybox info is current, skipping refresh"
+  write_webui_state
   exit 0
 fi
 
@@ -136,4 +137,5 @@ if [ "$_installed" = "true" ]; then
 fi
 unset _installed _source _source_version _text _up_to_date _revoked _softbanned _serial _serial_dec _history_json _entry _provider _latest_for_source _is_private_val
 log_i "KEYBOX_INFO" "Keybox info check complete"
+write_webui_state
 exit 0

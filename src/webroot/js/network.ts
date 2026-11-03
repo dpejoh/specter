@@ -34,12 +34,14 @@ async function updateNetworkStatus() {
 
 async function checkOnline(): Promise<boolean> {
   for (const endpoint of ONLINE_ENDPOINTS) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 1500);
     try {
-      const ctrl = new AbortController();
-      setTimeout(() => ctrl.abort(), 1500);
       await fetch(endpoint, { signal: ctrl.signal, mode: 'no-cors' });
       return true;
-    } catch { /* try next */ }
+    } catch { /* try next */ } finally {
+      clearTimeout(timer);
+    }
   }
   return false;
 }

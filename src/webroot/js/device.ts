@@ -1,4 +1,4 @@
-import { fetchJson, updateListContainerCorners } from './utils.js';
+import { afterPaint, fetchJson, updateListContainerCorners } from './utils.js';
 import { runScript } from './bridge.js';
 import { appendToOutput } from './terminal.js';
 import { API_URLS } from './constants.js';
@@ -59,21 +59,42 @@ export async function initDevice() {
   await Promise.all([refreshDevice(), refreshKeyboxStatus(), refreshKeystoreManager()]);
 }
 
-export async function refreshDevice(): Promise<InfoJson | null> {
-  try {
-    const result = await runScript('device-info.sh', 'common');
-    if (result.output) {
-      result.output.split('\n').filter(Boolean).forEach(l => appendToOutput(`[device-info] ${l}`));
-    }
-  } catch (e) {
-    console.warn('Device info script failed:', e);
-  }
+export async function refreshDevice(refreshFromScript = false): Promise<InfoJson | null> {
+  // Use the boot snapshot; refresh explicitly on later Home visits.
   const preloaded = (window as any).__infoPromise;
-  const data = preloaded && typeof preloaded?.then === 'function'
+  const data: InfoJson | null = preloaded && typeof preloaded?.then === 'function'
     ? await preloaded
     : await fetchJson<InfoJson>(API_URLS.INFO!);
-  if (data) applyAllDeviceInfo(data);
-  return data;
+  if (data) {
+    applyAllDeviceInfo(data);
+    if (refreshFromScript) afterPaint(() => { refreshDeviceFromScript().catch(() => {}); });
+    return data;
+  }
+  return refreshDeviceFromScript();
+}
+
+let _deviceRefreshInFlight = false;
+
+async function refreshDeviceFromScript(): Promise<InfoJson | null> {
+  if (_deviceRefreshInFlight) return null;
+  _deviceRefreshInFlight = true;
+  try {
+    try {
+      const result = await runScript('device-info.sh', 'common');
+      if (result.output) {
+        result.output.split('\n').filter(Boolean).forEach(l => appendToOutput(`[device-info] ${l}`));
+      }
+    } catch (e) {
+      console.warn('Device info script failed:', e);
+    }
+    const data = await fetchJson<InfoJson>(API_URLS.INFO!);
+    if (data) {
+      applyAllDeviceInfo(data);
+    }
+    return data;
+  } finally {
+    _deviceRefreshInFlight = false;
+  }
 }
 
 export async function refreshKeyboxStatus(): Promise<KeyboxInfoJson | null> {
@@ -99,14 +120,36 @@ async function recomputeKeyboxStatus(): Promise<KeyboxInfoJson | null> {
 }
 
 export async function refreshKeystoreManager(): Promise<KeystoreManagerJson | null> {
-  try {
-    await runScript('keystore_info.sh', 'feature');
-  } catch (e) {
-    console.warn('Keystore manager info script failed:', e);
+  const w = window as any;
+  const preloaded = w.__keystoreManagerPromise;
+  w.__keystoreManagerPromise = null;
+  const data: KeystoreManagerJson | null = preloaded && typeof preloaded?.then === 'function'
+    ? await preloaded
+    : await fetchJson<KeystoreManagerJson>(API_URLS.KEYSTORE_MANAGER!);
+  if (data) {
+    applyKeystoreManager(data);
+    return data;
   }
-  const data = await fetchJson<KeystoreManagerJson>(API_URLS.KEYSTORE_MANAGER!);
-  if (data) applyKeystoreManager(data);
-  return data;
+  return refreshKeystoreManagerFromScript();
+}
+
+let _keystoreRefreshInFlight = false;
+
+async function refreshKeystoreManagerFromScript(): Promise<KeystoreManagerJson | null> {
+  if (_keystoreRefreshInFlight) return null;
+  _keystoreRefreshInFlight = true;
+  try {
+    try {
+      await runScript('keystore_info.sh', 'feature');
+    } catch (e) {
+      console.warn('Keystore manager info script failed:', e);
+    }
+    const data = await fetchJson<KeystoreManagerJson>(API_URLS.KEYSTORE_MANAGER!);
+    if (data) applyKeystoreManager(data);
+    return data;
+  } finally {
+    _keystoreRefreshInFlight = false;
+  }
 }
 
 function applyKeystoreManager(data: KeystoreManagerJson) {
@@ -127,7 +170,15 @@ function applyAllDeviceInfo(data: InfoJson) {
   applySecurityPatch(data);
 }
 
+let _lastKeyboxData: KeyboxInfoJson | null = null;
+
+/** Re-apply the last keybox snapshot, e.g. after the language changes. */
+export function reapplyKeyboxStatus() {
+  if (_lastKeyboxData) applyKeyboxStatus(_lastKeyboxData);
+}
+
 export function applyKeyboxStatus(data: KeyboxInfoJson) {
+  _lastKeyboxData = data;
   const nameEl = document.getElementById('keybox-name');
   const byEl = document.getElementById('keybox-by');
   const source = document.getElementById('keybox-source')!;

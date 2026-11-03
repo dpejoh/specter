@@ -76,4 +76,5 @@ cat <<EOF > "$INFO_PATH"
   }
 }
 EOF
+write_webui_state
 unset _android_ver _kernel_ver _root_type _version _build_patch _patch_date _pif_model _twrp _blacklist
