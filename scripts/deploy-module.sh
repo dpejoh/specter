@@ -22,6 +22,15 @@ if [ -f "$MODULE_DIR/config/specter.conf" ]; then
   echo "Backed up config"
 fi
 
+# Runtime state is generated on-device and is not in the zip.
+RUNTIME_JSON="/data/local/tmp/specter-webui-json"
+rm -rf "$RUNTIME_JSON"
+mkdir -p "$RUNTIME_JSON"
+for _f in state.json info.json keybox_info.json keystore_manager.json monet.json; do
+  [ -f "$MODULE_DIR/webroot/json/$_f" ] && cp "$MODULE_DIR/webroot/json/$_f" "$RUNTIME_JSON/$_f"
+done
+unset _f
+
 # Clean and extract
 rm -rf "$MODULE_DIR"
 mkdir -p "$MODULE_DIR"
@@ -39,9 +48,23 @@ if [ -f /data/local/tmp/specter.conf.bak ]; then
   echo "Restored config"
 fi
 
+# Restore runtime WebUI state and refresh the combined snapshot.
+if [ -d "$RUNTIME_JSON" ]; then
+  for _f in state.json info.json keybox_info.json keystore_manager.json monet.json; do
+    [ -f "$RUNTIME_JSON/$_f" ] && cp "$RUNTIME_JSON/$_f" "$MODULE_DIR/webroot/json/$_f"
+  done
+  unset _f
+  rm -rf "$RUNTIME_JSON"
+  if [ -f "$MODULE_DIR/lib/common.sh" ]; then
+    ( MODDIR="$MODULE_DIR"; . "$MODULE_DIR/lib/common.sh"; write_webui_state ) >/dev/null 2>&1 || true
+  fi
+  echo "Restored WebUI state"
+fi
+
 # Permissions
 chmod -R 755 "$MODULE_DIR"
 chmod -R 644 "$MODULE_DIR/webroot"/*.html "$MODULE_DIR/webroot/assets"/*.css "$MODULE_DIR/webroot/assets"/*.js 2>/dev/null || true
+chmod 644 "$MODULE_DIR/webroot/json/"*.json 2>/dev/null || true
 
 echo "=== Done! Module files updated at $MODULE_DIR"
 echo "Hard-refresh the webui page to pick up changes."
