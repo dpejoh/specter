@@ -1,4 +1,3 @@
-import { getModuleDir, exec } from './bridge.js';
 import { cfgGet, cfgSet } from './cfg.js';
 
 interface FontDef {
@@ -8,6 +7,8 @@ interface FontDef {
   toggleKey: string;
   cssVar: string;
   styleId: string;
+  /** The @font-face is declared inline in index.html (and inlined by Vite). */
+  staticFace?: boolean;
 }
 
 const FONTS: FontDef[] = [
@@ -18,6 +19,7 @@ const FONTS: FontDef[] = [
     toggleKey: 'toggle_custom_font',
     cssVar: '--md-ref-typeface-brand',
     styleId: 'sp-font-sans',
+    staticFace: true,
   },
   {
     name: 'JetBrains Mono Variable',
@@ -29,16 +31,8 @@ const FONTS: FontDef[] = [
   },
 ];
 
-async function ensureAndApply(font: FontDef): Promise<void> {
-  const mod = getModuleDir();
-  const path = mod ? `${mod}/webroot/fonts/${font.filename}` : null;
-
-  if (path) {
-    const { stdout } = await exec(`test -f ${path} && echo "1" || echo "0"`);
-    if (stdout.trim() === '1') {
-      applyFont(font, `./fonts/${font.filename}`);
-    }
-  }
+function ensureAndApply(font: FontDef): void {
+  applyFont(font, `./fonts/${font.filename}`);
 }
 
 function wireOne(font: FontDef, switchId: string): void {
@@ -75,19 +69,22 @@ function toggleOne(font: FontDef, on: boolean): void {
 function applyFont(font: FontDef, src: string): void {
   removeFont(font);
 
-  const format = font.filename.endsWith('.woff2') ? 'woff2-variations' : 'truetype-variations';
+  if (!font.staticFace) {
+    const format = font.filename.endsWith('.woff2') ? 'woff2-variations' : 'truetype-variations';
 
-  const style = document.createElement('style');
-  style.id = font.styleId;
-  style.textContent = `
-    @font-face {
-      font-family: ${font.family};
-      src: url("${src}") format("${format}");
-      font-weight: 1 1000;
-      font-stretch: 1 100;
-    }
-  `;
-  document.head.appendChild(style);
+    const style = document.createElement('style');
+    style.id = font.styleId;
+    style.textContent = `
+      @font-face {
+        font-family: ${font.family};
+        src: url("${src}") format("${format}");
+        font-weight: 1 1000;
+        font-stretch: 1 100;
+        font-display: swap;
+      }
+    `;
+    document.head.appendChild(style);
+  }
 
   if (font.cssVar === '--md-ref-typeface-brand') {
     document.documentElement.style.setProperty('--md-ref-typeface-brand', font.family);
