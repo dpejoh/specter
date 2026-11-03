@@ -20,6 +20,7 @@ import { showConfirm } from './dialog.js';
 import { showToast } from './toast.js';
 import { escapeHtml, shellEscape, updateListContainerCorners } from './utils.js';
 import { getTranslation } from './i18n.js';
+import { refreshPifChooseDesc as refreshChooseDesc } from './pif-choose-desc.js';
 import { openSubPage } from './subpage.js';
 
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
@@ -153,33 +154,6 @@ async function loadImported(): Promise<PifDevice[]> {
     out.push({ model, product: IMPORTED_PREFIX + id, imported: true });
   }
   return out;
-}
-
-export async function refreshChooseDesc() {
-  const desc = document.getElementById('pif-choose-device-desc');
-  if (!desc) return;
-  const [preferred, blacklist] = await Promise.all([loadPreferred(), loadBlacklist()]);
-  if (preferred.length === 1) {
-    const label = preferred[0]?.model || preferred[0]?.product || '';
-    desc.textContent = t('menu_pif_choose_current', 'Current: {0}').replace('{0}', label);
-    return;
-  }
-  if (preferred.length > 1) {
-    desc.textContent = t('menu_pif_choose_current_many', 'Current: {0} devices').replace(
-      '{0}',
-      String(preferred.length)
-    );
-    return;
-  }
-  if (blacklist.size > 0) {
-    desc.textContent = tf(
-      'menu_pif_random_blacklisted',
-      'Random Canary ({0} blacklisted)',
-      String(blacklist.size)
-    );
-    return;
-  }
-  desc.textContent = t('menu_pif_choose_desc', 'Pick which Pixel Canary models Specter may fetch');
 }
 
 export async function openPifDeviceSubpage() {

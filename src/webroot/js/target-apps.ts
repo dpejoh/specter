@@ -1,6 +1,3 @@
-import '@material/web/labs/segmentedbuttonset/outlined-segmented-button-set.js';
-import '@material/web/labs/segmentedbutton/outlined-segmented-button.js';
-import '@material/web/switch/switch.js';
 import { exec, getModuleDir, getDataDir } from './bridge.js';
 import { cfgGet } from './cfg.js';
 import { shellEscape, fetchJson } from './utils.js';
@@ -226,6 +223,7 @@ function buildOverlayHTML(): string {
 
 
 export async function openTargetAppsManager() {
+  await import('./material-subpages.js');
   const overlay = document.createElement('div');
   overlay.className = 'ta-overlay';
   overlay.innerHTML = buildOverlayHTML();

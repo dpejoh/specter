@@ -1,10 +1,9 @@
-import { escapeHtml, getFriendlyNames } from './utils.js';
+import { afterPaint, escapeHtml, getFriendlyNames } from './utils.js';
 import { STORAGE_KEY, MAX_ENTRIES } from './constants.js';
 import { getTranslation } from './i18n.js';
 import { showToast } from './toast.js';
 import { exec, getDataDir } from './bridge.js';
 import { shellEscape } from './utils.js';
-import '@material/web/iconbutton/icon-button.js';
 
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
@@ -73,6 +72,7 @@ export function formatRelativeTime(iso: string): string {
 }
 
 export async function openRecentActivity(devMode = false) {
+  await import('@material/web/iconbutton/icon-button.js');
   const [device, local] = await Promise.all([fetchDeviceHistory(), Promise.resolve(getHistory())]);
   const entries = mergeHistory(local, device);
   if (!entries || entries.length === 0) {
@@ -132,15 +132,20 @@ export async function openRecentActivity(devMode = false) {
   dialog.show();
 }
 
-export async function renderActivityPreview() {
-  const container = document.getElementById('activity-list');
+let _previewWired = false;
+
+function wirePreviewClear() {
+  if (_previewWired) return;
+  _previewWired = true;
+  document.getElementById('clear-history-btn')?.addEventListener('click', () => {
+    clearHistory();
+    clearDeviceHistory();
+    renderActivityPreview();
+  });
+}
+
+function renderPreviewEntries(container: HTMLElement, allEntries: HistoryEntry[]) {
   const countEl = document.getElementById('activity-count');
-  if (!container) return;
-
-  document.getElementById('clear-history-btn')?.addEventListener('click', () => { clearHistory(); clearDeviceHistory(); renderActivityPreview(); });
-
-  const [device, local] = await Promise.all([fetchDeviceHistory(), Promise.resolve(getHistory())]);
-  const allEntries = mergeHistory(local, device);
   const count = allEntries.length;
   if (countEl) countEl.textContent = `${count} ${t('home_events', 'events')}`;
   container.innerHTML = '';
@@ -177,4 +182,26 @@ export async function renderActivityPreview() {
     });
     container.appendChild(toggle);
   }
+}
+
+export async function renderActivityPreview() {
+  const container = document.getElementById('activity-list');
+  if (!container) return;
+
+  wirePreviewClear();
+
+  // Local history is synchronous; paint it before waiting on the device log.
+  const local = getHistory();
+  renderPreviewEntries(container, local);
+
+  const device = await new Promise<HistoryEntry[]>(resolve => {
+    afterPaint(() => { fetchDeviceHistory().then(resolve).catch(() => resolve([])); });
+  });
+  if (device.length === 0) return;
+
+  const merged = mergeHistory(local, device);
+  const changed = merged.length !== local.length
+    || (merged[0]?.time !== local[0]?.time)
+    || (merged[0]?.script !== local[0]?.script);
+  if (changed) renderPreviewEntries(container, merged);
 }

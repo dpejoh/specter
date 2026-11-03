@@ -62,6 +62,36 @@ export function setText(id: string, value: string) {
   if (el) el.textContent = value;
 }
 
+/** Wire a row/button that loads its module on first activation. Idempotent. */
+export function wireLazyClick(id: string, load: () => Promise<unknown>): void {
+  const el = document.getElementById(id);
+  if (!el || el.dataset.spWired) return;
+  el.dataset.spWired = '1';
+  const isSwitchEvent = (e: Event) =>
+    e.composedPath().some(n => n instanceof Element && n.localName === 'md-switch');
+  el.addEventListener('click', (e) => {
+    if (isSwitchEvent(e)) return;
+    load().catch(() => {});
+  });
+  el.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    if (isSwitchEvent(e)) return;
+    e.preventDefault();
+    load().catch(() => {});
+  });
+}
+
+/** Run work after the current frame, when the browser is idle if possible. */
+export function afterPaint(fn: () => void, timeoutMs = 1500): void {
+  if (typeof window === 'undefined') return;
+  const ric = (window as Window & { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback;
+  if (typeof ric === 'function') {
+    ric(fn, { timeout: timeoutMs });
+  } else {
+    setTimeout(fn, 200);
+  }
+}
+
 let _isUpdatingCorners = false;
 let _cornerRafId: number | null = null;
 let _cornerObserver: MutationObserver | null = null;

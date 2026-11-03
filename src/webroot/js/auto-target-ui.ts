@@ -1,5 +1,3 @@
-import '@material/web/labs/segmentedbuttonset/outlined-segmented-button-set.js';
-import '@material/web/labs/segmentedbutton/outlined-segmented-button.js';
 import { cfgGet, cfgSet } from './cfg.js';
 import { getTranslation } from './i18n.js';
 import { wireRowDialog } from './toggles.js';

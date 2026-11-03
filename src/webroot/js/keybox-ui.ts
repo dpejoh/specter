@@ -3,7 +3,6 @@ import { cfgGet, cfgSet } from './cfg.js';
 import { getTranslation } from './i18n.js';
 import { shellEscape, fetchJson } from './utils.js';
 import { showToast } from './toast.js';
-import { openFileBrowser } from './file-browser.js';
 import { refreshKeyboxStatus } from './device.js';
 import { API_URLS } from './constants.js';
 import { runAction } from './actions.js';
@@ -96,7 +95,8 @@ export function wireKeyboxInstallButton() {
 }
 
 export async function openCustomKeyboxDialog() {
-  const [existingVal] = await Promise.all([
+  const [{ openFileBrowser }, existingVal] = await Promise.all([
+    import('./file-browser.js'),
     cfgGet('keybox_custom_value', ''),
   ]);
 

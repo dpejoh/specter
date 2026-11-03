@@ -9,3 +9,26 @@ html = html.replace(/<link rel="stylesheet" crossorigin[^>]+>/, `<style>${css}</
 fs.writeFileSync('Module/webroot/index.html', html);
 fs.unlinkSync(path.join('Module/webroot/assets', cssFile));
 console.log(`Inlined ${cssFile} (${(css.length / 1024).toFixed(1)} KB)`);
+
+// Preload the dynamic Material component graph.
+const manifestPath = 'Module/webroot/.vite/manifest.json';
+if (fs.existsSync(manifestPath)) {
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+  const files = new Set();
+  const collect = (key) => {
+    const item = manifest[key];
+    if (!item || !item.file || files.has(item.file)) return;
+    files.add(item.file);
+    for (const dep of item.imports || []) collect(dep);
+  };
+  collect('js/material-core.ts');
+
+  const missing = [...files].filter(f => !html.includes(`href="./${f}"`));
+  if (missing.length) {
+    const links = missing.map(f => `<link rel="modulepreload" crossorigin href="./${f}">`).join('\n  ');
+    html = html.replace('</head>', `  ${links}\n</head>`);
+    fs.writeFileSync('Module/webroot/index.html', html);
+    console.log(`Preloaded ${missing.length} Material core chunks`);
+  }
+  fs.rmSync('Module/webroot/.vite', { recursive: true, force: true });
+}

@@ -1,11 +1,35 @@
 export function wireTopBarScroll() {
   const topBar = document.getElementById('top-bar');
   if (!topBar) return;
-  window.addEventListener('scroll', () => topBar.classList.toggle('app-top-bar--scrolled', window.scrollY > 0));
+  window.addEventListener('scroll', () => {
+    topBar.classList.toggle('app-top-bar--scrolled', window.scrollY > 0);
+  }, { passive: true });
 }
 
 const homeCallbacks: (() => void)[] = [];
 export function onHomeShow(cb: () => void) { homeCallbacks.push(cb); }
+
+const pageLoaders = new Map<string, (() => void | Promise<void>)[]>();
+const loadedPageUI = new Set<string>();
+
+/** Register work that runs once, when a page is first opened. */
+export function onPageActivate(pageId: string, loader: () => void | Promise<void>) {
+  const list = pageLoaders.get(pageId);
+  if (list) list.push(loader);
+  else pageLoaders.set(pageId, [loader]);
+  const active = document.querySelector('.nav-tab--active')?.getAttribute('data-page');
+  if (active === pageId) runPageLoaders(pageId);
+}
+
+function runPageLoaders(pageId: string) {
+  if (!pageId || loadedPageUI.has(pageId)) return;
+  const loaders = pageLoaders.get(pageId);
+  if (!loaders) return;
+  loadedPageUI.add(pageId);
+  for (const loader of loaders) {
+    Promise.resolve().then(loader).catch(() => {});
+  }
+}
 
 export function wireNavigation() {
   const navTabs = Array.from(document.querySelectorAll('.nav-tab')) as HTMLElement[];
@@ -91,6 +115,7 @@ export function wireNavigation() {
     currentActiveIndex = nextIndex;
 
     const mwcPromise = loadPageMWC(pageId);
+    runPageLoaders(pageId);
 
     document.querySelector('.nav-tab--active')?.classList.remove('nav-tab--active');
     tab.classList.add('nav-tab--active');
@@ -261,7 +286,11 @@ export function wireNavigation() {
     else { activateTabByIndex(0, true); }
   });
 
-  navTabs.forEach(tab => tab.addEventListener('click', () => activateTab(tab as HTMLElement)));
+  navTabs.forEach(tab => {
+    const pageId = tab.dataset.page || '';
+    tab.addEventListener('pointerdown', () => runPageLoaders(pageId), { passive: true });
+    tab.addEventListener('click', () => activateTab(tab as HTMLElement));
+  });
 
   window.addEventListener('resize', () => {
     const active = document.querySelector('.nav-tab--active') as HTMLElement | null;

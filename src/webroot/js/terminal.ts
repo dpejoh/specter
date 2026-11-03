@@ -1,8 +1,3 @@
-import '@material/web/iconbutton/icon-button.js';
-import '@material/web/icon/icon.js';
-import '@material/web/labs/segmentedbuttonset/outlined-segmented-button-set.js';
-import '@material/web/labs/segmentedbutton/outlined-segmented-button.js';
-import { openSubPage } from './subpage.js';
 import { showToast } from './toast.js';
 import { getTranslation } from './i18n.js';
 import { exec, getDataDir } from './bridge.js';
@@ -120,6 +115,15 @@ export async function clearCurrentLog() {
 
 export async function openLogsSubPage() {
   currentLogType = 'action';
+
+  // The logs UI is only reachable from Settings; load its components on demand.
+  const [{ openSubPage }] = await Promise.all([
+    import('./subpage.js'),
+    import('@material/web/iconbutton/icon-button.js'),
+    import('@material/web/icon/icon.js'),
+    import('@material/web/labs/segmentedbuttonset/outlined-segmented-button-set.js'),
+    import('@material/web/labs/segmentedbutton/outlined-segmented-button.js'),
+  ]);
 
   await openSubPage({
     id: 'logs',

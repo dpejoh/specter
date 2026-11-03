@@ -1,7 +1,7 @@
 import { initBridge, getDataDir, getModuleDir, exec } from './bridge.js';
-import { shellEscape, setDevMode, updateListContainerCorners, initCornerObserver } from './utils.js';
+import { shellEscape, setDevMode, updateListContainerCorners, initCornerObserver, afterPaint, wireLazyClick } from './utils.js';
 import { setDataDir, migrateLocalStorage, cfgInit, cfgGet } from './cfg.js';
-import { initDevice, refreshDevice, refreshKeyboxStatus, refreshConflictStatus } from './device.js';
+import { initDevice, refreshDevice, refreshKeyboxStatus, refreshConflictStatus, reapplyKeyboxStatus } from './device.js';
 import { initNetwork } from './network.js';
 import { initTheme } from './theme.js';
 import { initI18n, getTranslation } from './i18n.js';
@@ -10,10 +10,11 @@ import { initRedirect } from './redirect.js';
 import { showToast } from './toast.js';
 import { initTerminal } from './terminal.js';
 import { renderActivityPreview } from './history.js';
-import { wireTopBarScroll, wireNavigation, onHomeShow } from './navigation.js';
-import { renderControlToggles, wireDevMode } from './toggles.js';
+import { wireTopBarScroll, wireNavigation, onHomeShow, onPageActivate } from './navigation.js';
+import { initFonts } from './font.js';
 import { FEATURE_I18N_KEYS } from './constants.js';
 import { wireActions, buildFriendlyNames } from './actions.js';
+import { wireControlRows } from './control-ui.js';
 
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
@@ -21,28 +22,34 @@ let _homeInitialized = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
   if ((import.meta as { env?: { DEV?: boolean } }).env?.DEV) await import('./dev-mock.js');
-  const coreMWC = import('./material-core.js');
+
+  import('./material-core.js').catch(e => console.warn('Material components failed:', e));
+
   try {
     await initBridge();
     const dataPath = getDataDir();
     if (dataPath) setDataDir(dataPath);
-    await cfgInit();
-    await migrateLocalStorage();
   } catch (e) { console.warn('Bridge init failed:', e); }
 
   wireTopBarScroll();
-  const savedTheme = await cfgGet('theme', 'dark') || 'dark';
-  initTheme(savedTheme);
   wireNavigation();
   initRedirect();
-
   wireActions();
   buildFriendlyNames();
+  updateListContainerCorners();
 
-  const savedDevMode = await cfgGet('dev_mode', 'false') || 'false';
-  setDevMode(savedDevMode === 'true');
-  const sw = document.getElementById('dev-mode-switch') as MdSwitch | null;
-  if (sw) sw.selected = savedDevMode === 'true';
+  const cfgReady = (async () => {
+    try {
+      await cfgInit();
+      await migrateLocalStorage();
+    } catch (e) { console.warn('Config init failed:', e); }
+  })();
+
+  void cfgReady.then(() => {
+    void initFonts().catch(() => {});
+    cfgGet('theme', 'dark').then(mode => initTheme(mode || 'dark')).catch(() => {});
+    cfgGet('dev_mode', 'false').then(v => setDevMode(v === 'true')).catch(() => {});
+  });
 
   document.addEventListener('languageChanged', () => {
     loadContributors().catch(() => {});
@@ -57,61 +64,141 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Wait for MWC (started above) before creating MWC-dependent elements
-  await coreMWC;
+  onPageActivate('tools-page', () => cfgReady.then(loadToolsUI));
+  onPageActivate('control-page', () => cfgReady.then(loadControlUI));
+  onPageActivate('settings-page', () => cfgReady.then(loadSettingsUI));
 
-  renderControlToggles();
-  wireDevMode();
-  initTerminal();
-
-  import('./keybox-ui.js').then(m => { m.wireCustomKeybox(); m.wireKeyboxInstallButton(); }).catch(() => {});
-  import('./target-apps.js').then(m => m.wireTargetApps()).catch(() => {});
-  import('./auto-target-ui.js').then(m => m.wireAutoTarget()).catch(() => {});
-  import('./auto-hma-ui.js').then(m => m.wireAutoHma()).catch(() => {});
-  import('./autopif-ui.js').then(m => m.wireAutopif()).catch(() => {});
-  import('./pif-device-ui.js').then(m => m.wirePifDevice()).catch(() => {});
-  import('./autokeybox-ui.js').then(m => m.wireAutokeybox()).catch(() => {});
-  import('./rom-fingerprint-ui.js').then(m => m.wireRomFingerprint()).catch(() => {});
-  import('./adb-disabler-ui.js').then(m => m.wireAdbDisabler()).catch(() => {});
-  import('./prop-handler-ui.js').then(m => m.wirePropHandler()).catch(() => {});
-  import('./boot-hash-ui.js').then(m => m.wireBootHash()).catch(() => {});
-  import('./gms-ui.js').then(m => m.wireGms()).catch(() => {});
-  import('./hma-ui.js').then(m => m.wireHma()).catch(() => {});
-  import('./action-security-patch-ui.js').then(m => m.wireActionSecurityPatch()).catch(() => {});
-  import('./security-patch-ui.js').then(m => m.wireSecurityPatch()).catch(() => {});
-  import('./omk-trust-ui.js').then(m => m.wireOmkTrust()).catch(() => {});
-  import('./font.js').then(m => m.wireFontToggles()).catch(() => {});
-  import('./dark-theme-ui.js').then(m => m.wireDarkTheme()).catch(() => {});
-  import('./language-ui.js').then(m => m.wireLanguageUI()).catch(() => {});
-  import('./colors-ui.js').then(m => m.wireColorsUI()).catch(() => {});
-
-  initI18n().then(() => { loadContributors().catch(() => {}); }).catch(() => {});
-  initDevice().catch(() => {});
   renderActivityPreview();
+  initDevice().catch(() => {});
+  void cfgReady
+    .then(() => initI18n())
+    .then(() => reapplyKeyboxStatus())
+    .catch(() => {});
   onHomeShow(() => {
     renderActivityPreview();
     if (!_homeInitialized) { _homeInitialized = true; return; }
-    refreshDevice().catch(() => {});
+    refreshDevice(true).catch(() => {});
     refreshKeyboxStatus().catch(() => {});
   });
 
-  initNetwork();
-  import('./keybox-ui.js').then(m => m.populateProviders()).catch(() => {});
-  import('./font.js').then(m => m.initFonts()).catch(() => {});
-
-  wireConflictToggles().catch(() => {});
-
-  // Watch for dialog open/close to toggle blur class
-  const dialogObserver = new MutationObserver(() => {
-    document.body.classList.toggle('dialog-open', !!document.querySelector('md-dialog[open]'));
+  afterPaint(() => {
+    initNetwork();
+    initCornerObserver();
   });
-  dialogObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['open'] });
-  document.getElementById('progress-dialog')?.addEventListener('cancel', (e: Event) => e.preventDefault());
 
-  // Dynamically adapt corner radii for list items when dynamic options are shown/hidden
-  initCornerObserver();
-  updateListContainerCorners();
+  const updateDialogOpen = () => {
+    document.body.classList.toggle('dialog-open', !!document.querySelector('md-dialog[open]'));
+  };
+  const trackDialog = (dialog: Element) => {
+    if (dialog.hasAttribute('data-sp-tracked')) return;
+    dialog.setAttribute('data-sp-tracked', '');
+    // `open` fires before the attribute is set; `closed` fires after removal.
+    dialog.addEventListener('open', () => document.body.classList.add('dialog-open'));
+    dialog.addEventListener('opened', updateDialogOpen);
+    dialog.addEventListener('closed', updateDialogOpen);
+  };
+  document.querySelectorAll('md-dialog').forEach(trackDialog);
+  let dialogScanRaf: number | null = null;
+  const dialogObserver = new MutationObserver(() => {
+    // One scan per frame instead of one per added node.
+    if (dialogScanRaf !== null) return;
+    dialogScanRaf = requestAnimationFrame(() => {
+      dialogScanRaf = null;
+      document.querySelectorAll('md-dialog').forEach(trackDialog);
+      updateDialogOpen();
+    });
+  });
+  dialogObserver.observe(document.body, { childList: true, subtree: true });
+  document.getElementById('progress-dialog')?.addEventListener('cancel', (e: Event) => e.preventDefault());
 });
+
+async function loadToolsUI() {
+  const [keybox, autoTarget, autoHma, autopif, autokeybox, romFp, adb, prop, gms, hma, actionSecurityPatch, securityPatch, omk] = await Promise.all([
+    import('./keybox-ui.js').catch(() => null),
+    import('./auto-target-ui.js').catch(() => null),
+    import('./auto-hma-ui.js').catch(() => null),
+    import('./autopif-ui.js').catch(() => null),
+    import('./autokeybox-ui.js').catch(() => null),
+    import('./rom-fingerprint-ui.js').catch(() => null),
+    import('./adb-disabler-ui.js').catch(() => null),
+    import('./prop-handler-ui.js').catch(() => null),
+    import('./gms-ui.js').catch(() => null),
+    import('./hma-ui.js').catch(() => null),
+    import('./action-security-patch-ui.js').catch(() => null),
+    import('./security-patch-ui.js').catch(() => null),
+    import('./omk-trust-ui.js').catch(() => null),
+  ]);
+
+  keybox?.wireCustomKeybox();
+  keybox?.wireKeyboxInstallButton();
+  autoTarget?.wireAutoTarget();
+  autoHma?.wireAutoHma();
+  autopif?.wireAutopif();
+  autokeybox?.wireAutokeybox();
+  romFp?.wireRomFingerprint();
+  adb?.wireAdbDisabler();
+  prop?.wirePropHandler();
+  gms?.wireGms();
+  hma?.wireHma();
+  actionSecurityPatch?.wireActionSecurityPatch();
+  securityPatch?.wireSecurityPatch();
+  omk?.wireOmkTrust();
+
+  wireLazyClick('target-apps-btn', () => import('./target-apps.js').then(m => m.openTargetAppsManager()));
+  const pifRow = document.getElementById('pif-choose-device');
+  if (pifRow) pifRow.hidden = false;
+  wireLazyClick('pif-choose-device', () => import('./pif-device-ui.js').then(m => m.openPifDeviceSubpage()));
+  wireLazyClick('boot-hash-btn', () => import('./boot-hash-ui.js').then(m => m.openBootHashSubpage()));
+  import('./pif-choose-desc.js').then(m => m.refreshPifChooseDesc()).catch(() => {});
+
+  afterPaint(() => { keybox?.populateProviders().catch(() => {}); });
+  ensureConflicts().catch(() => {});
+  updateListContainerCorners();
+}
+
+async function loadControlUI() {
+  const toggles = await import('./toggles.js').catch(() => null);
+  if (!toggles) return;
+  toggles.renderControlToggles();
+  await wireControlRows();
+  // Control rows may have appeared after the conflict script ran on Tools.
+  applyConflictOwnership();
+  ensureConflicts().then(() => applyConflictOwnership()).catch(() => {});
+  updateListContainerCorners();
+}
+
+async function loadSettingsUI() {
+  const [font, dark, language, colors, toggles] = await Promise.all([
+    import('./font.js').catch(() => null),
+    import('./dark-theme-ui.js').catch(() => null),
+    import('./language-ui.js').catch(() => null),
+    import('./colors-ui.js').catch(() => null),
+    import('./toggles.js').catch(() => null),
+  ]);
+
+  font?.wireFontToggles();
+  dark?.wireDarkTheme();
+  dark?.updateDarkThemeSummary();
+  language?.wireLanguageUI();
+  language?.updateLanguageSummary();
+  colors?.wireColorsUI();
+  colors?.updateColorsSummary();
+  toggles?.wireDevMode();
+  initTerminal();
+  loadContributors().catch(() => {});
+}
+
+let _conflictsPromise: Promise<void> | null = null;
+let _applyConflictOwnership: (() => void) | null = null;
+
+function ensureConflicts(): Promise<void> {
+  if (!_conflictsPromise) _conflictsPromise = wireConflictToggles();
+  return _conflictsPromise;
+}
+
+function applyConflictOwnership() {
+  _applyConflictOwnership?.();
+}
 
 async function wireConflictToggles() {
   const moddir = getModuleDir();
@@ -210,5 +297,7 @@ async function wireConflictToggles() {
     });
   }
 
+  _applyConflictOwnership = applyOwnership;
   applyOwnership();
+  updateListContainerCorners();
 }

@@ -101,6 +101,9 @@ export interface SubPageInstance {
 }
 
 export async function openSubPage(config: SubPageConfig): Promise<SubPageInstance> {
+  // Subpage-only Material components are loaded on first use.
+  await import('./material-subpages.js');
+
   const overlay = document.createElement('div');
   overlay.className = 'subpage-overlay';
   overlay.id = `subpage-${config.id}`;
