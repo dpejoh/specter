@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest'
-import { cfgGet, cfgSet, cfgInvalidate, setDataDir, migrateLocalStorage } from './cfg.js'
+import { cfgGet, cfgSet, cfgInit, cfgInvalidate, setDataDir, migrateLocalStorage } from './cfg.js'
 
 vi.mock('./bridge.js', () => ({
   exec: vi.fn(() => Promise.resolve({ stdout: '', stderr: '', code: 0 })),
@@ -10,6 +10,8 @@ beforeEach(() => {
   setDataDir('/data/adb/specter')
   cfgInvalidate()
   localStorage.clear()
+  delete (window as any).__statePromise
+  delete (window as any).__preloadedCfg
 })
 
 describe('cfg (caching layer)', () => {
@@ -49,6 +51,45 @@ describe('cfg (caching layer)', () => {
     cfgInvalidate()
     expect(await cfgGet('a')).toBeUndefined()
     expect(await cfgGet('b')).toBeUndefined()
+  })
+
+  it('prefers the state snapshot when local cache is older', async () => {
+    ;(window as any).__statePromise = Promise.resolve({
+      config: { theme: 'state', toggle_x: '1' },
+      config_ts: 2000,
+    })
+    localStorage.setItem('sp_cfg_theme', 'local')
+    localStorage.setItem('sp_cfg_ts', '1000')
+
+    await cfgInit()
+
+    expect(await cfgGet('theme')).toBe('state')
+    expect(await cfgGet('toggle_x')).toBe('1')
+  })
+
+  it('prefers a newer local cache over the state snapshot', async () => {
+    ;(window as any).__statePromise = Promise.resolve({
+      config: { theme: 'state' },
+      config_ts: 1000,
+    })
+    ;(window as any).__preloadedCfg = { theme: 'local' }
+    localStorage.setItem('sp_cfg_ts', String(2000 * 1000))
+
+    await cfgInit()
+
+    expect(await cfgGet('theme')).toBe('local')
+  })
+
+  it('does not expose the local cache timestamp as a config key', async () => {
+    ;(window as any).__statePromise = Promise.resolve({
+      config: { theme: 'state' },
+      config_ts: 2000,
+    })
+    localStorage.setItem('sp_cfg_ts', '1000')
+
+    await cfgInit()
+
+    expect(await cfgGet('ts')).toBeUndefined()
   })
 
   it('migrateLocalStorage migrates keys', async () => {
