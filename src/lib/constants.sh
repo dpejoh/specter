@@ -72,6 +72,7 @@ cfg_set() {
 # gms_clear_data:0 — pm clear wipes Play purchase/login (biometric prompt on next open).
 SPECTER_TOGGLE_DEFAULTS="
 toggle_prop_handler:1 toggle_boot_state_props:1 toggle_bootmode_spoof:1
+toggle_boot_hash:1
 toggle_adb_disabler:0
 toggle_adb_disabler_dev_options:1 toggle_adb_disabler_usb_debug:1
 toggle_adb_disabler_oem_unlock:1

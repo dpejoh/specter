@@ -79,4 +79,37 @@ _gen_prop=$(prop_value "ro.boot.vbmeta.digest")
 assert_eq "boot_hash: generated hash length is 64" "64" "${#_gen_prop}"
 assert_file_eq "boot_hash: generated hash cached" "$SPECTER_DIR/boot_hash" "$_gen_prop"
 
+# ---- Test 6: toggle_boot_hash=0 skips resolution ----
+_setup_boot_hash_env
+set_cfg "toggle_boot_hash" "0"
+set_prop "ro.boot.vbmeta.digest" "original_unspoofed_digest_value_12345678901234567890123456789012"
+run_feature "boot_hash.sh" >/dev/null
+assert_prop_eq "boot_hash: toggle=0 leaves digest unchanged" "ro.boot.vbmeta.digest" "original_unspoofed_digest_value_12345678901234567890123456789012"
+
+# ---- Test 7: custom_boot_hash override takes top priority ----
+_setup_boot_hash_env
+_custom_val="cafebabecafebabecafebabecafebabecafebabecafebabecafebabecafebabe"
+set_cfg "custom_boot_hash" "$_custom_val"
+_cached_val="1122334455667788990011223344556677889900112233445566778899001122"
+printf '%s' "$_cached_val" > "$SPECTER_DIR/boot_hash"
+run_feature "boot_hash.sh" >/dev/null
+assert_prop_eq "boot_hash: custom hash overrides cache" "ro.boot.vbmeta.digest" "$_custom_val"
+
+# ---- Test 8: --set and --get CLI interface ----
+_setup_boot_hash_env
+_cli_val="deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
+run_feature "boot_hash.sh" "--set" "$_cli_val" >/dev/null
+assert_prop_eq "boot_hash: --set sets prop" "ro.boot.vbmeta.digest" "$_cli_val"
+assert_file_eq "boot_hash: --set saves custom_boot_hash" "$CONFIG_DIR/val/custom_boot_hash.val" "$_cli_val"
+
+# ---- Test 9: --clear-cache and --get-cache ----
+_setup_boot_hash_env
+_cache_val="abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
+printf '%s' "$_cache_val" > "$SPECTER_DIR/boot_hash"
+_got_cache=$(run_feature "boot_hash.sh" "--get-cache")
+assert_eq "boot_hash: --get-cache returns cached hash" "$_cache_val" "$_got_cache"
+
+run_feature "boot_hash.sh" "--clear-cache" >/dev/null
+assert_file_not_exists "boot_hash: --clear-cache removes cache file" "$SPECTER_DIR/boot_hash"
+
 done_testing

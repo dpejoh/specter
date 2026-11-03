@@ -74,6 +74,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   import('./rom-fingerprint-ui.js').then(m => m.wireRomFingerprint()).catch(() => {});
   import('./adb-disabler-ui.js').then(m => m.wireAdbDisabler()).catch(() => {});
   import('./prop-handler-ui.js').then(m => m.wirePropHandler()).catch(() => {});
+  import('./boot-hash-ui.js').then(m => m.wireBootHash()).catch(() => {});
   import('./gms-ui.js').then(m => m.wireGms()).catch(() => {});
   import('./hma-ui.js').then(m => m.wireHma()).catch(() => {});
   import('./action-security-patch-ui.js').then(m => m.wireActionSecurityPatch()).catch(() => {});

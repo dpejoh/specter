@@ -22,8 +22,12 @@ if [ "$_do_bootprops" != "0" ]; then
   apply_boot_props
   log_i "PROPS" "Boot property overrides applied"
 
-  if [ -f "$MODDIR/boot_hash.sh" ]; then
-    sh "$MODDIR/boot_hash.sh" || log_w "PROPS" "Boot hash resolution failed"
+  if [ "$(cfg_get toggle_boot_hash 1)" != "0" ]; then
+    if [ -f "$MODDIR/boot_hash.sh" ]; then
+      sh "$MODDIR/boot_hash.sh" || log_w "PROPS" "Boot hash resolution failed"
+    fi
+  else
+    log_i "PROPS" "Boot hash resolution disabled by toggle, skipping"
   fi
 fi
 

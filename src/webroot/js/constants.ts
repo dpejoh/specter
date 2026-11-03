@@ -29,6 +29,7 @@ export interface ToggleDef {
 
 export const CONTROL_TOGGLES: ToggleDef[] = [
   { id: 'toggle-prop_handler', key: 'toggle_prop_handler', icon: 'lock', section: 'boot', configurable: true },
+  { id: 'toggle-boot_hash', key: 'toggle_boot_hash', default: '1', icon: 'tag', section: 'boot', configurable: true },
   { id: 'toggle-rom_fingerprint', key: 'toggle_rom_fingerprint', default: '1', icon: 'fingerprint', section: 'boot', configurable: true },
   { id: 'toggle-adb_disabler', key: 'toggle_adb_disabler', default: '0', icon: 'usb_off', section: 'boot', configurable: true },
   { id: 'toggle-action_gms', key: 'toggle_action_gms', icon: 'block', section: 'action', configurable: true },
@@ -46,6 +47,7 @@ export const CONTROL_TOGGLES: ToggleDef[] = [
 
 export const FEATURE_I18N_KEYS: Record<string, string> = {
   prop_handler: 'control_toggle_prop_handler',
+  boot_hash: 'control_toggle_boot_hash',
   security_patch: 'control_toggle_action_security_patch',
   target: 'control_toggle_action_target',
   teesim_mode: 'ta_teesim_mode_title',
