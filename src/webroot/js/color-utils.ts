@@ -1,4 +1,4 @@
-import { Hct } from '@material/material-color-utilities';
+import { hctHueChroma } from './hct.js';
 import presetData from './presets.json';
 
 const KEYS: string[] = presetData.keys;
@@ -26,9 +26,7 @@ const PRESET_HUES: [string, number][] = [
 /** Return the name of the preset palette closest to a hex colour seed (e.g. `'#1157CE'` → `'blue'`). */
 export function presetClosestTo(hexSeed: string): string {
   const argb = parseInt(hexSeed.startsWith('#') ? hexSeed.slice(1) : hexSeed, 16) | 0xFF000000;
-  const hct = Hct.fromInt(argb);
-  const hue = hct.hue;
-  const chroma = hct.chroma;
+  const { hue, chroma } = hctHueChroma(argb);
   if (chroma < 10) return 'blue';
   let closest = 'blue';
   let minDist = Infinity;
