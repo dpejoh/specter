@@ -1,5 +1,6 @@
 import { cfgGet, cfgSet, cfgInvalidate } from './cfg.js';
 import { CONTROL_TOGGLES } from './constants.js';
+import { applyTranslations } from './i18n.js';
 import { setDevMode } from './utils.js';
 
 function labelFromKey(key: string): string {
@@ -90,11 +91,13 @@ export function renderControlToggles() {
   }
 
   wireControlToggles();
+  applyTranslations();
 }
 
 export function wireRowDialog(rowId: string, open: () => void) {
   const row = document.getElementById(rowId);
-  if (!row) return;
+  if (!row || row.dataset.spWired) return;
+  row.dataset.spWired = '1';
   row.addEventListener('click', e => {
     if (e.composedPath().some(n => n instanceof Element && n.localName === 'md-switch')) return;
     open();
@@ -102,13 +105,21 @@ export function wireRowDialog(rowId: string, open: () => void) {
 }
 
 export function wireControlToggles() {
-  for (const { id, key, default: def } of CONTROL_TOGGLES) {
+  for (const { id, key, default: def, configurable } of CONTROL_TOGGLES) {
     const sw = document.getElementById(id) as MdSwitch | null;
     if (!sw) continue;
     cfgGet(key, def || '1').then(val => { sw.selected = val !== '0'; });
     sw.addEventListener('change', () => {
       cfgSet(key, sw.selected ? '1' : '0');
     });
+    const row = sw.closest('.list-item');
+    if (row && !configurable) {
+      row.addEventListener('click', e => {
+        if (e.composedPath().some(n => n instanceof Element && n.localName === 'md-switch')) return;
+        sw.selected = !sw.selected;
+        sw.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    }
   }
 }
 
@@ -125,6 +136,7 @@ export async function refreshControlToggles() {
 export function wireDevMode() {
   const sw = document.getElementById('dev-mode-switch') as MdSwitch | null;
   if (!sw) return;
+  cfgGet('dev_mode', 'false').then(val => { sw.selected = val === 'true'; });
   sw.addEventListener('change', () => {
     setDevMode(sw.selected);
     cfgSet('dev_mode', sw.selected ? 'true' : 'false');
