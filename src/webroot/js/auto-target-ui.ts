@@ -2,11 +2,123 @@ import { cfgGet, cfgSet } from './cfg.js';
 import { getTranslation } from './i18n.js';
 import { wireRowDialog } from './toggles.js';
 import { openSubPage } from './subpage.js';
+import { updateListContainerCorners } from './utils.js';
 
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
-export function openAutoTargetDialog() {
-  openSubPage({
+const DEFAULT_INTERVAL_MINUTES = 5;
+const MIN_INTERVAL_MINUTES = 1;
+const MAX_INTERVAL_MINUTES = 60;
+
+type DetectionMethod = 'instant' | 'polling';
+
+function detectionMethod(value: string | null | undefined): DetectionMethod {
+  return value === 'polling' ? 'polling' : 'instant';
+}
+
+function intervalMinutes(value: string | null | undefined): number {
+  const seconds = Number.parseInt(value || '', 10);
+  const minutes = Number.isFinite(seconds) ? Math.round(seconds / 60) : DEFAULT_INTERVAL_MINUTES;
+  return Math.min(MAX_INTERVAL_MINUTES, Math.max(MIN_INTERVAL_MINUTES, minutes));
+}
+
+export async function openAutoTargetDialog() {
+  const [methodValue, intervalValue] = await Promise.all([
+    cfgGet('auto_target_method', 'instant'),
+    cfgGet('auto_target_interval', String(DEFAULT_INTERVAL_MINUTES * 60)),
+  ]);
+
+  let method = detectionMethod(methodValue);
+  let minutes = intervalMinutes(intervalValue);
+
+  const storedSeconds = Number.parseInt(intervalValue || '', 10);
+  if (Number.isFinite(storedSeconds) && storedSeconds !== minutes * 60) {
+    cfgSet('auto_target_interval', String(minutes * 60));
+  }
+
+  let intervalRow: HTMLElement | null = null;
+  let intervalInput: HTMLInputElement | null = null;
+  let intervalHelp: HTMLElement | null = null;
+  let hideTimer: number | null = null;
+
+  const reducedMotion = () =>
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const clearHideTimer = () => {
+    if (hideTimer !== null) {
+      window.clearTimeout(hideTimer);
+      hideTimer = null;
+    }
+  };
+
+  const setIntervalError = (invalid: boolean) => {
+    if (!intervalInput || !intervalHelp) return;
+    intervalInput.classList.toggle('subpage-inline-input--invalid', invalid);
+    intervalInput.setAttribute('aria-invalid', invalid ? 'true' : 'false');
+    intervalHelp.classList.toggle('supporting-text--error', invalid);
+    intervalHelp.textContent = invalid
+      ? t('auto_target_interval_error', 'Enter a number from 1 to 60.')
+      : t('auto_target_interval_desc', 'Minimum 1 minute.');
+  };
+
+  const refreshCorners = () => {
+    const root = intervalRow?.closest('.subpage-overlay') || document;
+    updateListContainerCorners(root);
+  };
+
+  const updateMethodUI = (animate: boolean) => {
+    if (!intervalRow) return;
+    clearHideTimer();
+    const polling = method === 'polling';
+
+    if (polling) {
+      intervalRow.classList.remove('at-interval--leaving');
+      intervalRow.hidden = false;
+      intervalRow.classList.add('at-interval--visible');
+      refreshCorners();
+      return;
+    }
+
+    if (intervalInput) intervalInput.value = String(minutes);
+    setIntervalError(false);
+    intervalRow.classList.remove('at-interval--visible');
+
+    if (animate && !reducedMotion()) {
+      intervalRow.classList.add('at-interval--leaving');
+      hideTimer = window.setTimeout(() => {
+        if (intervalRow) {
+          intervalRow.hidden = true;
+          intervalRow.classList.remove('at-interval--leaving');
+        }
+        hideTimer = null;
+        refreshCorners();
+      }, 180);
+    } else {
+      intervalRow.classList.remove('at-interval--leaving');
+      intervalRow.hidden = true;
+      refreshCorners();
+    }
+  };
+
+  const selectMethod = (next: DetectionMethod) => {
+    method = next;
+    cfgSet('auto_target_method', next);
+    updateMethodUI(true);
+  };
+
+  const commitInterval = (value: string) => {
+    const next = Number(value);
+    if (!Number.isInteger(next) || next < MIN_INTERVAL_MINUTES || next > MAX_INTERVAL_MINUTES) {
+      setIntervalError(true);
+      return;
+    }
+    minutes = next;
+    cfgSet('auto_target_interval', String(next * 60));
+    setIntervalError(false);
+  };
+
+  const instance = await openSubPage({
     id: 'auto-target',
     title: t('auto_target_title', 'Auto Targeting'),
     description: t('auto_target_desc', 'Automatically watches for newly installed apps and adds them to Tricky Store target.txt.'),
@@ -18,90 +130,60 @@ export function openAutoTargetDialog() {
     },
     groups: [
       {
+        title: t('auto_target_method', 'Detection'),
         items: [
           {
-            type: 'custom',
-            id: 'at-custom-controls',
-            render: async (container) => {
-              const [method, interval] = await Promise.all([
-                cfgGet('auto_target_method', 'instant'),
-                cfgGet('auto_target_interval', '300'),
-              ]);
-              const isPolling = method === 'polling';
-
-              container.innerHTML = `
-                <div class="list-item" style="flex-direction: column; align-items: stretch; gap: 12px; cursor: default;">
-                  <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div class="toggle-text">${t('auto_target_method', 'Detection Method')}</div>
-                  </div>
-                  <md-outlined-segmented-button-set style="width: 100%;">
-                    <md-outlined-segmented-button value="instant" ${method === 'instant' ? 'selected' : ''}>
-                      <md-icon slot="icon">bolt</md-icon>
-                      ${t('auto_target_method_instant', 'Instant')}
-                    </md-outlined-segmented-button>
-                    <md-outlined-segmented-button value="polling" ${method === 'polling' ? 'selected' : ''}>
-                      <md-icon slot="icon">schedule</md-icon>
-                      ${t('auto_target_method_polling', 'Polling')}
-                    </md-outlined-segmented-button>
-                  </md-outlined-segmented-button-set>
-                  <div class="supporting-text" id="at-method-help">
-                    ${isPolling ? t('auto_target_method_polling_help', 'Checks periodically at a set interval') : t('auto_target_method_instant_help', 'Detects new installs immediately via inotifyd (recommended)')}
-                  </div>
-                </div>
-
-                <div class="list-item list-item--input" id="at-interval-row" style="${isPolling ? '' : 'display: none;'}">
-                  <div class="li-icon"><md-icon aria-hidden="true">timer</md-icon></div>
-                  <div class="list-item-content">
-                    <div class="toggle-text">${t('auto_target_interval', 'Interval (seconds)')}</div>
-                    <span class="supporting-text">${t('auto_target_interval_desc', 'How often to check for new apps. Minimum 3 seconds.')}</span>
-                  </div>
-                  <div class="spacer"></div>
-                  <div class="subpage-input-wrapper">
-                    <input type="number" id="at-interval-input" class="subpage-inline-input" min="3" value="${interval}" aria-label="${t('auto_target_interval_aria', 'Interval in seconds')}">
-                    <span class="subpage-input-unit">sec</span>
-                  </div>
-                </div>
-              `;
-
-              const helpEl = container.querySelector('#at-method-help') as HTMLElement;
-              const intervalRow = container.querySelector('#at-interval-row') as HTMLElement;
-              const intervalInput = container.querySelector('#at-interval-input') as HTMLInputElement;
-
-              container.querySelectorAll('md-outlined-segmented-button').forEach(btn => {
-                btn.addEventListener('click', () => {
-                  const val = btn.getAttribute('value') || 'instant';
-                  const polling = val === 'polling';
-                  cfgSet('auto_target_method', val);
-                  helpEl.textContent = polling
-                    ? t('auto_target_method_polling_help', 'Checks periodically at a set interval')
-                    : t('auto_target_method_instant_help', 'Detects new installs immediately via inotifyd (recommended)');
-                  intervalRow.style.display = polling ? '' : 'none';
-                });
-              });
-
-              intervalInput?.addEventListener('input', () => {
-                const num = parseInt(intervalInput.value || '15', 10);
-                cfgSet('auto_target_interval', String(Math.max(3, num)));
-              });
-            },
+            type: 'radio',
+            id: 'at-method-instant',
+            name: 'auto_target_method',
+            value: 'instant',
+            title: t('auto_target_method_instant', 'Instant detection'),
+            description: t('auto_target_method_instant_help', "New apps are added as soon as they're installed."),
+            badge: t('auto_target_recommended', 'Recommended'),
+            selected: method === 'instant',
+            onSelect: () => selectMethod('instant'),
           },
-        ],
-      },
-      {
-        title: t('auto_target_action_group', 'Action Behavior'),
-        items: [
           {
-            id: 'at-force-regen',
-            key: 'toggle_action_force_target',
-            defaultVal: '0',
-            icon: 'restart_alt',
-            title: t('auto_target_force_regen', 'Always Re-Generate Target List'),
-            description: t('auto_target_force_regen_desc', 'Force target generation on every action run, even when Auto-Targeting is enabled.'),
+            type: 'radio',
+            id: 'at-method-polling',
+            name: 'auto_target_method',
+            value: 'polling',
+            title: t('auto_target_method_polling', 'Scheduled check'),
+            description: t('auto_target_method_polling_help', 'Scans for new apps at a fixed interval.'),
+            selected: method === 'polling',
+            onSelect: () => selectMethod('polling'),
+          },
+          {
+            type: 'input',
+            id: 'at-interval',
+            icon: 'schedule',
+            title: t('auto_target_interval', 'Check every'),
+            description: t('auto_target_interval_desc', 'Minimum 1 minute.'),
+            inputType: 'number',
+            min: MIN_INTERVAL_MINUTES,
+            max: MAX_INTERVAL_MINUTES,
+            step: 1,
+            unit: t('auto_target_interval_unit', 'minutes'),
+            ariaLabel: t('auto_target_interval_aria', 'Interval in minutes'),
+            getValue: () => String(minutes),
+            onChange: commitInterval,
           },
         ],
       },
     ],
   });
+
+  intervalRow = instance.overlay.querySelector('#at-interval-row');
+  intervalInput = instance.overlay.querySelector('#at-interval');
+  intervalHelp = intervalRow?.querySelector('.supporting-text') || null;
+
+  if (intervalInput && intervalHelp) {
+    intervalHelp.id = 'at-interval-help';
+    intervalHelp.setAttribute('aria-live', 'polite');
+    intervalInput.setAttribute('aria-describedby', 'at-interval-help');
+  }
+
+  updateMethodUI(false);
 }
 
 export function wireAutoTarget() {

@@ -51,6 +51,7 @@ export interface SubPageRadioItem {
   title: string;
   description?: string;
   icon?: string;
+  badge?: string;
   selected?: boolean;
   onSelect?: (value: string) => void;
 }
@@ -200,9 +201,9 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
                   const isChecked = !!rItem.selected;
                   return `
                     <div class="list-item list-item--radio ${posClass}" id="${rItem.id}-row" data-radio-group="${rItem.name}" data-radio-value="${rItem.value}">
-                      <md-radio name="${rItem.name}" value="${rItem.value}" id="${rItem.id}" ${isChecked ? 'checked' : ''} aria-label="${rItem.title}"></md-radio>
+                      <md-radio name="${rItem.name}" value="${rItem.value}" id="${rItem.id}" ${isChecked ? 'checked' : ''} aria-label="${rItem.title}${rItem.badge ? `, ${rItem.badge}` : ''}"></md-radio>
                       <div class="list-item-content">
-                        <div class="toggle-text">${rItem.title}</div>
+                        <div class="toggle-text">${rItem.title}${rItem.badge ? ` <span class="subpage-radio-badge">${rItem.badge}</span>` : ''}</div>
                         ${rItem.description ? `<span class="supporting-text">${rItem.description}</span>` : ''}
                       </div>
                       <md-ripple></md-ripple>

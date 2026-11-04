@@ -2984,122 +2984,6 @@ md-filled-tonal-button {
   --md-dialog-container-color: var(--md-sys-color-surface-container) !important;
 }
 
-.at-method-section {
-  margin-bottom: 4px;
-}
-
-.at-method-label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--md-sys-color-on-surface-variant);
-  margin-bottom: 10px;
-}
-
-.at-method-help {
-  font-size: 0.75rem;
-  color: var(--md-sys-color-on-surface-variant);
-  margin-top: 8px;
-  line-height: 1.4;
-}
-
-#at-interval-row {
-  transition: opacity 0.2s ease;
-}
-
-#at-interval-row.at-hidden {
-  display: none;
-}
-
-.at-interval-input {
-  width: 60px;
-  text-align: center;
-  padding: 18px 8px;
-  border-radius: 12px;
-  border: 1px solid var(--md-sys-color-outline);
-  background: transparent;
-  color: var(--md-sys-color-on-surface);
-  font-family: var(--md-ref-typeface-plain);
-  font-size: 0.875rem;
-  outline: none;
-  transition: border-color 0.15s;
-  -moz-appearance: textfield;
-}
-
-.at-interval-input:focus {
-  border-color: var(--md-sys-color-primary);
-}
-
-.at-interval-input::-webkit-outer-spin-button,
-.at-interval-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-/* ===== Auto Targeting Dialog ===== */
-
-#auto-target-dialog [slot="headline"] {
-  padding: 0;
-}
-
-.at-dialog-headline {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 24px 0;
-  font-size: 1.25rem;
-  font-weight: 500;
-}
-
-.at-dialog-headline md-icon {
-  font-size: 24px;
-  color: var(--md-sys-color-primary);
-}
-
-.at-dialog-desc {
-  margin: 0 0 16px;
-  color: var(--md-sys-color-on-surface-variant);
-  font-size: 0.875rem;
-  line-height: 1.5;
-}
-
-.at-dialog-list {
-  margin: 0;
-  max-width: 100%;
-}
-
-.at-interval-field {
-  width: 200px;
-  --md-outlined-text-field-container-shape: 12px;
-  text-align: center;
-}
-
-/* Hide spinners on number input */
-.at-interval-field input::-webkit-outer-spin-button,
-.at-interval-field input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-.at-interval-field input[type="number"] {
-  -moz-appearance: textfield;
-  appearance: textfield;
-}
-
-#auto-target-dialog [slot="content"] {
-  padding: 8px 24px 16px;
-}
-
-#at-interval-row {
-  margin-top: 2px;
-}
-
-#at-interval-row .spacer {
-  min-width: 4px;
-}
-
-.at-interval-field {
-  max-width: 80px;
-}
-
 /* ===== App Targeting Icons ===== */
 
 .sp-icn-w {
@@ -3452,6 +3336,20 @@ md-filled-tonal-button {
   margin-left: -4px;
 }
 
+.subpage-radio-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-inline-start: 8px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  vertical-align: middle;
+}
+
 /* Master Hero Switch Item at page top */
 .subpage-master-container {
   width: 100%;
@@ -3580,6 +3478,58 @@ md-filled-tonal-button {
 .subpage-inline-input:focus {
   border-color: var(--md-sys-color-primary);
   background: var(--md-sys-color-surface-container-high);
+}
+
+.subpage-inline-input--invalid,
+.subpage-inline-input--invalid:focus {
+  border-color: var(--md-sys-color-error);
+}
+
+.supporting-text.supporting-text--error {
+  color: var(--md-sys-color-error);
+}
+
+#at-interval-row {
+  opacity: 1;
+  transform: none;
+}
+
+#at-interval-row.at-interval--visible {
+  animation: at-interval-in 180ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+#at-interval-row.at-interval--leaving {
+  animation: at-interval-out 180ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+@keyframes at-interval-in {
+  from {
+    opacity: 0.85;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes at-interval-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0.85;
+    transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #at-interval-row,
+  #at-interval-row.at-interval--visible,
+  #at-interval-row.at-interval--leaving {
+    animation: none;
+  }
 }
 
 .subpage-inline-input::-webkit-outer-spin-button,
