@@ -54,10 +54,26 @@ EOF
   unset _inotify_bin
 fi
 
-# Launch inotifyd for wallpaper changes — calls monet.sh (writes monet.json for WebUI)
+# Launch inotifyd for wallpaper changes — calls monet.sh (writes monet.json for WebUI).
+# Watch the user directory, not /data/system/users/0/wallpaper: Android 17 no longer
+# keeps that file, and wallpaper_info.xml is written via JournaledFile (rename).
+# Mask 136 = IN_CLOSE_WRITE (8) | IN_MOVED_TO (128).
 if [ -x "$MODDIR/deps/inotifyd" ] && [ -f "$MODDIR/features/monet.sh" ]; then
-  "$MODDIR/deps/inotifyd" -m 8 /data/system/users/0/wallpaper "$MODDIR/features/monet.sh" >/dev/null 2>&1 &
-  log_i "SCHED" "inotifyd launched for wallpaper → monet.sh"
+  _wp_watch="/data/system/users/0"
+  if [ -d "$_wp_watch" ]; then
+    "$MODDIR/deps/inotifyd" -m 136 "$_wp_watch" "$MODDIR/features/monet.sh" >/dev/null 2>&1 &
+    log_i "SCHED" "inotifyd launched for wallpaper → $_wp_watch/monet.sh"
+  else
+    log_w "SCHED" "wallpaper watch dir missing: $_wp_watch"
+  fi
+  unset _wp_watch
+fi
+
+# Refresh the monet record once per scheduler start. This populates the full
+# system role palette after a hot update without waiting for a wallpaper event.
+if [ -f "$MODDIR/features/monet.sh" ]; then
+  sh "$MODDIR/features/monet.sh" >/dev/null 2>&1 &
+  log_i "SCHED" "monet refresh launched"
 fi
 
 while true; do

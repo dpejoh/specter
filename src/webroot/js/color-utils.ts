@@ -20,14 +20,17 @@ export function getPresetColors(preset: string, isDark: boolean): Record<string,
 /** HCT hues for each preset's seed color (computed via @material/material-color-utilities Hct). */
 const PRESET_HUES: [string, number][] = [
   ['red', 25.8], ['orange', 49.1], ['yellow', 58.6], ['green', 153.8],
-  ['cyan', 218.9], ['blue', 270.4], ['purple', 295.0], ['pink', 356.0], ['grey', 209.5],
+  ['cyan', 218.9], ['blue', 270.4], ['purple', 303.4], ['pink', 356.0],
 ];
 
 /** Return the name of the preset palette closest to a hex colour seed (e.g. `'#1157CE'` → `'blue'`). */
 export function presetClosestTo(hexSeed: string): string {
   const argb = parseInt(hexSeed.startsWith('#') ? hexSeed.slice(1) : hexSeed, 16) | 0xFF000000;
   const { hue, chroma } = hctHueChroma(argb);
-  if (chroma < 10) return 'blue';
+  // Match Android's ColorScheme.MIN_CHROMA: low-chroma seeds fall back to
+  // Google Blue. Do not use the fixed "grey" palette here — TonalSpot on a
+  // neutral seed produces a chromatic (teal) palette, not a neutral one.
+  if (chroma < 5) return 'blue';
   let closest = 'blue';
   let minDist = Infinity;
   for (const [name, pHue] of PRESET_HUES) {

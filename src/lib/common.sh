@@ -73,4 +73,36 @@ write_webui_state() {
   unset _ws_root _ws_dir _ws_info _ws_keybox _ws_keystore _ws_monet _ws_cfg _ws_sep _ws_f _ws_k _ws_v _ws_tmp
 }
 
+# Pick the bundled inotifyd binary for this architecture and install it as
+# deps/inotifyd. Fresh installs run this from customize.sh; hot installs must
+# call it too because they never execute customize.sh.
+install_inotifyd() {
+  _ii_root="${1:-${MODULE_ROOT:-${MODDIR:-}}}"
+  case "$_ii_root" in
+    */features|*/lib|*/webroot/common) _ii_root="${_ii_root%/*}" ;;
+  esac
+  [ -n "$_ii_root" ] && [ -d "$_ii_root/deps" ] || return 0
+
+  _ii_arch=$(uname -m 2>/dev/null || echo "")
+  _ii_src=""
+  case "$_ii_arch" in
+    aarch64) _ii_src="inotifyd64" ;;
+    armv7l|armv8l) _ii_src="inotifyd32" ;;
+    x86_64) _ii_src="inotifyd_x86_64" ;;
+    i686|i386) _ii_src="inotifyd_x86" ;;
+  esac
+
+  if [ -n "$_ii_src" ] && [ -f "$_ii_root/deps/$_ii_src" ]; then
+    mv -f "$_ii_root/deps/$_ii_src" "$_ii_root/deps/inotifyd" 2>/dev/null || true
+  fi
+
+  if [ -f "$_ii_root/deps/inotifyd" ]; then
+    chmod 0755 "$_ii_root/deps/inotifyd" 2>/dev/null || true
+    for _ii_f in inotifyd64 inotifyd32 inotifyd_x86_64 inotifyd_x86; do
+      [ -f "$_ii_root/deps/$_ii_f" ] && rm -f "$_ii_root/deps/$_ii_f" 2>/dev/null || true
+    done
+  fi
+  unset _ii_root _ii_arch _ii_src _ii_f
+}
+
 unset _root

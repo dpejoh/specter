@@ -15,6 +15,16 @@ rm -f "$SPECTER_DIR/.hotinstall_failed"
 {
   log_i "HOT" "Hot-install live-apply starting"
 
+  # Normalize the bundled inotifyd binary; hot installs never run customize.sh.
+  install_inotifyd "$MODDIR"
+
+  # Kill the boot-time scheduler + its inotifyd children (pre-update code), and
+  # any inotifyd that was reparented to init during the move.
+  for _p in $(pgrep -f "$MODDIR/deps/inotifyd" 2>/dev/null || true); do
+    kill -9 "$_p" 2>/dev/null || true
+  done
+  unset _p
+
   # Kill the boot-time scheduler + its inotifyd children (pre-update code).
   if [ -f "$SPECTER_DIR/scheduler.pid" ]; then
     _old_pid="$(cat "$SPECTER_DIR/scheduler.pid" 2>/dev/null || true)"

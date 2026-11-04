@@ -17,6 +17,9 @@
 ### System & Backend
 
 - **Boot Hash Resolution**: Completely reworked the boot hash resolution. The old implementation was a bit of a mess, it's now much cleaner, self-contained, and properly cached.  
+- **Monet Reliability**: Normalized the Android 17 `cmd overlay lookup` output (`@id -> #AARRGGBB`), added seed fallbacks that tolerate `null`, and fixed the wallpaper watcher to watch `/data/system/users/0` instead of the removed `wallpaper` file. Hot installs now install the arch-specific `inotifyd` too.
+- **Exact Dynamic Colors**: On ROMs that expose the system Material role resources, Specter now applies the full `system_primary_*` / `system_surface_*` palette instead of snapping to one of nine presets. ROMs without those resources keep the seed-based preset fallback. Stale `monet_seed` cache entries are no longer trusted.
+- **Palette Fixes**: “Grey” now uses a neutral (non-teal) palette; the purple anchor uses its real HCT hue; low-chroma seeds use Google’s chroma threshold; saturated teal is no longer routed through the grey palette.
 - **Boot Props**: Force-set `ro.boot.flash.locked` even if it was completely missing from the device props.  
 - **UI Polish**: Reactive rounded corners on grouped lists, refined 24px card and 20px logs radii, cleaner hero card typography, improved ripples, and updated top contributors.  
 - **Theme Defaults**: Monet dynamic theming is now set as the default preset on supported Android versions.

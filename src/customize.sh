@@ -97,20 +97,7 @@ unset _pif_name
 mkdir -p "$SPECTER_DIR/backup"
 
 # Bundled inotifyd — install the right arch, clean up the rest
-_arch=$(uname -m)
-case "$_arch" in
-  aarch64) _src="inotifyd64" ;;
-  armv7l)  _src="inotifyd32" ;;
-  x86_64)  _src="inotifyd_x86_64" ;;
-  i686)    _src="inotifyd_x86" ;;
-esac
-if [ -n "$_src" ] && [ -f "$MODPATH/deps/$_src" ]; then
-  mv "$MODPATH/deps/$_src" "$MODPATH/deps/inotifyd"
-  set_perm "$MODPATH/deps/inotifyd" 0 0 0755
-fi
-for _f in inotifyd64 inotifyd32 inotifyd_x86_64 inotifyd_x86; do
-  [ -f "$MODPATH/deps/$_f" ] && rm -f "$MODPATH/deps/$_f"
-done
+install_inotifyd "$MODPATH"
 [ -f "$MODPATH/deps/classes.dex" ] && set_perm "$MODPATH/deps/classes.dex" 0 0 0644
 unset _arch _src _f
 

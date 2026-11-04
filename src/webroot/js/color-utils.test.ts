@@ -43,7 +43,33 @@ describe('presetClosestTo', () => {
     expect(presetClosestTo('#006C35')).toBe('green')
   })
 
-  it('returns blue for low-saturation seed (grey fallback)', () => {
+  it('returns blue for low-saturation seed (Google fallback)', () => {
     expect(presetClosestTo('#AAAAAA')).toBe('blue')
+  })
+
+  it('does not route saturated cyan/teal through the fixed grey palette', () => {
+    expect(presetClosestTo('#00BCD4')).toBe('cyan')
+    expect(presetClosestTo('#009688')).not.toBe('grey')
+  })
+
+  it('uses the HCT purple anchor, not the stale HSL value', () => {
+    expect(presetClosestTo('#9C27B0')).toBe('purple')
+  })
+
+  it('maps warm low-chroma seeds to their hue instead of blue', () => {
+    expect(presetClosestTo('#604D46')).toBe('orange')
+  })
+
+  it('keeps the Android 13 Realme accent on the cyan side', () => {
+    expect(presetClosestTo('#26818B')).toBe('cyan')
+  })
+})
+
+describe('fixed grey preset', () => {
+  it('is a neutral palette, not a TonalSpot teal palette', () => {
+    const light = getPresetColors('grey', false)!
+    const dark = getPresetColors('grey', true)!
+    expect(light['--md-sys-color-primary']).toBe('#516164')
+    expect(dark['--md-sys-color-primary']).toBe('#b8cacd')
   })
 })
