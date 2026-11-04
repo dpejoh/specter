@@ -10,13 +10,13 @@ export interface ModulePaths { MODDIR: string; SPECTER_DIR?: string; }
 
 export interface InfoJson { android?: string; kernel?: string; root?: string; root_sol?: string; version?: string; security_patch?: string; build_patch?: string; pif_model?: string; }
 
-export interface KeyboxInfoJson { installed: boolean; source?: string; source_version?: string; text?: string; up_to_date?: boolean; revoked?: boolean; softbanned?: boolean; serial?: string; is_private?: boolean; }
+export interface KeyboxInfoJson { installed: boolean; source?: string; source_version?: string; text?: string; up_to_date?: boolean; revoked?: boolean; softbanned?: boolean; serial?: string; is_private?: boolean; rkp?: boolean; expires_at?: string | null; expired?: boolean; }
 
 export interface KeystoreManagerJson { id: string; name?: string; format?: string; dir?: string; targets?: string; config?: string; perAppModes?: boolean; }
 
 export interface DevEntry { name: string; role: string; github: string; avatar: string; }
 
-export interface CatalogEntry { source: string; version: string; text: string; revoked: boolean; softbanned: boolean; serial: string; last_checked: string; timestamp: string; }
+export interface CatalogEntry { source: string; version: string; text: string; revoked: boolean; softbanned: boolean; serial: string; last_checked: string; timestamp: string; rkp?: boolean; expires_at?: string | null; }
 
 export interface CatalogJson { entries: CatalogEntry[]; latest: Record<string, string>; working: { source: string; version: string }; workingEntries: { source: string; version: string; text: string }[]; }
 

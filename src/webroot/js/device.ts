@@ -184,8 +184,15 @@ export function applyKeyboxStatus(data: KeyboxInfoJson) {
   const source = document.getElementById('keybox-source')!;
   const versionEl = document.getElementById('keybox-version')!;
   const statusEl = document.getElementById('keybox-status')!;
+  const typeEl = document.getElementById('keybox-type');
   const badgeEl = document.getElementById('kb-version-badge')!;
   if (!source || !versionEl || !statusEl || !badgeEl) return;
+
+  const setType = (text: string, known = false) => {
+    if (!typeEl) return;
+    typeEl.textContent = text;
+    typeEl.className = `kb-hero-status-text ${known ? 'kb-hero-type-text' : 'kb-hero-status-text--neutral'}`;
+  };
 
   const setName = (text: string, isNeutral = false) => {
     if (nameEl) {
@@ -220,6 +227,7 @@ export function applyKeyboxStatus(data: KeyboxInfoJson) {
     badgeEl.className = 'kb-version-badge';
     statusEl.textContent = '—';
     statusEl.className = 'kb-hero-status-text kb-hero-status-text--neutral';
+    setType('—');
     return;
   }
 
@@ -256,6 +264,12 @@ export function applyKeyboxStatus(data: KeyboxInfoJson) {
     versionEl.style.display = 'none';
   }
 
+  if (isRawbin) {
+    setType(data.rkp === true ? 'RKP' : 'Normal', true);
+  } else {
+    setType('—');
+  }
+
   if (isRawbin && data.up_to_date && data.source_version) {
     badgeEl.textContent = getTranslation('device_latest') || 'Latest';
     badgeEl.className = 'kb-version-badge kb-version-badge--latest';
@@ -269,6 +283,9 @@ export function applyKeyboxStatus(data: KeyboxInfoJson) {
 
   if (data.revoked) {
     statusEl.textContent = getTranslation('custom_kb_revoked') || 'Revoked';
+    statusEl.className = 'kb-hero-status-text kb-hero-status-text--revoked';
+  } else if (data.expired) {
+    statusEl.textContent = getTranslation('custom_kb_expired') || 'Expired';
     statusEl.className = 'kb-hero-status-text kb-hero-status-text--revoked';
   } else if (data.softbanned) {
     statusEl.textContent = getTranslation('custom_kb_softbanned') || 'Softbanned';

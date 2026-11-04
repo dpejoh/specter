@@ -2646,7 +2646,8 @@ md-filled-tonal-button {
 
 .kb-hero-footer {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: 12px;
 }
 
@@ -2678,6 +2679,10 @@ md-filled-tonal-button {
 
 .kb-hero-status-text--neutral {
   color: var(--md-sys-color-on-surface-variant);
+}
+
+.kb-hero-type-text {
+  color: var(--md-sys-color-on-surface);
 }
 
 .kb-hero-status-row {

@@ -11,6 +11,7 @@ describe('keybox display format', () => {
         <span class="kb-hero-provider-version kb-hero-provider-version--neutral" id="keybox-version" style="display: none;"></span>
         <span class="kb-version-badge" id="kb-version-badge"></span>
         <span class="kb-hero-status-text" id="keybox-status">—</span>
+        <span class="kb-hero-status-text kb-hero-status-text--neutral" id="keybox-type">—</span>
       </div>
     `
   })
@@ -90,6 +91,47 @@ describe('keybox display format', () => {
     expect(nameEl.textContent).toBe('Private Keybox')
     expect(byEl.style.display).toBe('none')
     expect(sourceEl.style.display).toBe('none')
+  })
+
+  it('shows the keybox type as RKP when rkp is true', () => {
+    applyKeyboxStatus({
+      installed: true,
+      source: 'TAKR',
+      source_version: '36',
+      text: '36',
+      rkp: true,
+      revoked: false,
+    })
+
+    const typeEl = document.getElementById('keybox-type')!
+    expect(typeEl.textContent).toBe('RKP')
+    expect(typeEl.className).toContain('kb-hero-type-text')
+  })
+
+  it('shows the keybox type as Normal when rkp is false', () => {
+    applyKeyboxStatus({
+      installed: true,
+      source: 'TAKR',
+      source_version: '28',
+      text: '28',
+      rkp: false,
+      revoked: false,
+    })
+
+    const typeEl = document.getElementById('keybox-type')!
+    expect(typeEl.textContent).toBe('Normal')
+    expect(typeEl.className).toContain('kb-hero-type-text')
+  })
+
+  it('shows no keybox type when no remote provider is known', () => {
+    applyKeyboxStatus({
+      installed: true,
+      source: '',
+      text: 'custom.xml',
+      revoked: false,
+    })
+
+    expect(document.getElementById('keybox-type')!.textContent).toBe('—')
   })
 
   it('displays generic text when no remote provider is known', () => {
