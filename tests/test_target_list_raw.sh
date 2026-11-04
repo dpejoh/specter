@@ -7,13 +7,13 @@ mk_module tricky_store "Tricky Store"
 detect_keystore_manager
 cat > "$KSM_TARGETS" << 'EOF'
 [a section]
-android
+com.google.android.gms
 com.existing.app!
 com.pinned.app?
 EOF
 
 _tc_out=$(run_feature target.sh --list-raw)
-assert_contains "txt list-raw: bare entry" "$_tc_out" "android"
+assert_contains "txt list-raw: bare entry" "$_tc_out" "com.google.android.gms"
 assert_contains "txt list-raw: force suffix kept" "$_tc_out" "com.existing.app!"
 assert_contains "txt list-raw: conditional suffix kept" "$_tc_out" "com.pinned.app?"
 assert_not_contains "txt list-raw: section dropped" "$_tc_out" "[a section]"
@@ -28,7 +28,7 @@ run_feature target.sh --set "$_tc_staging" >/dev/null
 _tc_txt=$(cat "$KSM_TARGETS")
 assert_contains "txt set: user entry" "$_tc_txt" "com.new.app"
 assert_not_contains "txt set: junk line dropped" "$_tc_txt" "not a package"
-assert_contains "txt set: FIXED android" "$_tc_txt" "android"
+assert_eq "txt set: android not re-added" "0" "$(grep -cx 'android' "$KSM_TARGETS" || true)"
 assert_contains "txt set: FIXED gms" "$_tc_txt" "com.google.android.gms"
 assert_contains "txt set: FIXED vending" "$_tc_txt" "com.android.vending"
 assert_file_not_exists "txt set: staging consumed" "$_tc_staging"
@@ -49,13 +49,13 @@ _tc_pin=$(cat "$KSM_TARGETS")
 assert_contains "txt set: gms? kept" "$_tc_pin" "com.google.android.gms?"
 _tc_bare_gms=$(grep -cx 'com.google.android.gms' "$KSM_TARGETS" || true)
 assert_eq "txt set: no bare gms dup" "0" "$_tc_bare_gms"
-assert_contains "txt set: android filled" "$_tc_pin" "android"
+assert_eq "txt set: android not re-added after pin" "0" "$(grep -cx 'android' "$KSM_TARGETS" || true)"
 
 _tc_staging="$TEST_ROOT/staging_nonewline.txt"
 printf '%s' 'io.example.app' > "$_tc_staging"
 run_feature target.sh --set "$_tc_staging" >/dev/null
 assert_eq "txt set: no-newline pkg own line" "1" "$(grep -cx 'io.example.app' "$KSM_TARGETS" || true)"
-assert_eq "txt set: android not glued" "0" "$(grep -cx 'io.example.appandroid' "$KSM_TARGETS" || true)"
+assert_eq "txt set: fixed target not glued" "0" "$(grep -cx 'io.example.appcom.android.vending' "$KSM_TARGETS" || true)"
 
 # ---------- OhMyKeymint: toml backend ----------
 bootstrap
@@ -67,7 +67,7 @@ cat > "$OMK_INJECTOR" << 'EOF'
 enable = true
 
 scoop = [
-  "android",
+  "com.omk.app",
   "com.google.android.gms",
 ]
 EOF
@@ -139,7 +139,7 @@ detect_keystore_manager
 # Overwrite mode
 _gen_out=$(run_feature target.sh)
 assert_contains "overwrite: mode announced" "$_gen_out" "Mode: overwrite"
-assert_contains "overwrite: fixed target" "$(cat "$KSM_TARGETS")" "android"
+assert_contains "overwrite: fixed target" "$(cat "$KSM_TARGETS")" "com.google.android.gms"
 assert_contains "overwrite: pm target" "$(cat "$KSM_TARGETS")" "com.dpejoh.specter"
 assert_not_contains "overwrite: temp file consumed cleanly" "$_gen_out" "No such file"
 assert_not_contains "overwrite: count not zero" "$_gen_out" "Wrote 0 entries"
@@ -148,18 +148,18 @@ assert_not_contains "overwrite: count not zero" "$_gen_out" "Wrote 0 entries"
 cfg_set target_default_mode "force"
 run_feature target.sh >/dev/null
 assert_contains "overwrite: force suffix applied" "$(cat "$KSM_TARGETS")" "com.dpejoh.specter!"
-assert_not_contains "overwrite: fixed target stays bare" "$(cat "$KSM_TARGETS")" "android!"
+assert_not_contains "overwrite: fixed target stays bare" "$(cat "$KSM_TARGETS")" "com.google.android.gms!"
 
 # Merge mode
 cfg_set target_default_mode "bare"
 cat > "$KSM_TARGETS" << 'EOF'
-android
+com.existing.app
 com.google.android.gms
 EOF
 _merge_out=$(run_feature target.sh --merge)
 assert_contains "merge: mode announced" "$_merge_out" "Mode: merge"
 assert_contains "merge: new app added" "$(cat "$KSM_TARGETS")" "com.dpejoh.specter"
-assert_contains "merge: existing kept" "$(cat "$KSM_TARGETS")" "android"
+assert_contains "merge: existing kept" "$(cat "$KSM_TARGETS")" "com.existing.app"
 
 # Merge-denylist seeds mandatory targets when the list is empty
 rm -f "$KSM_TARGETS"
@@ -172,8 +172,8 @@ chmod +x "$BIN_DIR/magisk"
 _deny_out=$(run_feature target.sh --merge-denylist)
 assert_contains "denylist: mode announced" "$_deny_out" "Mode: merge-denylist"
 assert_contains "denylist: entry added" "$(cat "$KSM_TARGETS")" "com.denied.app"
-assert_contains "denylist: fixed target seeded" "$(cat "$KSM_TARGETS")" "android"
-assert_not_contains "denylist: fixed target stays bare" "$(cat "$KSM_TARGETS")" "android!"
+assert_contains "denylist: fixed target seeded" "$(cat "$KSM_TARGETS")" "com.google.android.gms"
+assert_not_contains "denylist: fixed target stays bare" "$(cat "$KSM_TARGETS")" "com.google.android.gms!"
 rm -f "$BIN_DIR/magisk"
 
 # Blacklist filtering during overwrite
@@ -181,7 +181,7 @@ touch "$SPECTER_DIR/blacklist_enabled"
 echo "com.dpejoh.specter" > "$SPECTER_DIR/blacklist.txt"
 run_feature target.sh >/dev/null
 assert_not_contains "blacklist: blacklisted pkg dropped" "$(cat "$KSM_TARGETS")" "com.dpejoh.specter"
-assert_contains "blacklist: fixed target preserved" "$(cat "$KSM_TARGETS")" "android"
+assert_contains "blacklist: fixed target preserved" "$(cat "$KSM_TARGETS")" "com.google.android.gms"
 
 # ---------- argument handling ----------
 bootstrap
