@@ -14,7 +14,9 @@ INFO_PATH="${SPECTER_KEYBOX_INFO:-$MODDIR/../webroot/json/keybox_info.json}"
 # that is already installed instead of re-parsing the catalog and revocation.
 if [ "${1:-}" = "--if-needed" ] &&
    [ -f "$INFO_PATH" ] && [ -f "$KEYBOX_FILE" ] && [ "$INFO_PATH" -nt "$KEYBOX_FILE" ] &&
-   grep -q '"installed": true' "$INFO_PATH"; then
+   grep -q '"installed": true' "$INFO_PATH" &&
+   ! grep -q '"expired": true' "$INFO_PATH" &&
+   ! keybox_rkp_expired "$(tr -d '\n' < "$INFO_PATH" 2>/dev/null || true)"; then
   log_i "KEYBOX_INFO" "Keybox info is current, skipping refresh"
   write_webui_state
   exit 0
@@ -29,6 +31,9 @@ _text=""
 _up_to_date=false
 _revoked=false
 _softbanned=false
+_rkp=false
+_expires_at=""
+_expired=false
 _serial=""
 _is_private_val="false"
 
@@ -93,6 +98,13 @@ if [ -f "$KEYBOX_FILE" ]; then
           _softbanned=false
           echo "$_entry" | grep -q '"softbanned":true' 2>/dev/null && _softbanned=true || true
 
+          _rkp=false
+          echo "$_entry" | grep -Eq '"rkp"[[:space:]]*:[[:space:]]*true' 2>/dev/null && _rkp=true || true
+          _expires_at=$(echo "$_entry" | sed -n 's/.*"expires_at"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' || true)
+          if [ "$_rkp" = "true" ] && keybox_rkp_expired "$_entry"; then
+            _expired=true
+          fi
+
           _latest_for_source=$(echo "$_history_json" | grep -o '"'"$_source"'":"[^"]*"' | sed 's/.*":"//;s/"//' || true)
           if [ -n "$_source_version" ] && [ "$_source_version" = "$_latest_for_source" ]; then
             _up_to_date=true
@@ -107,6 +119,9 @@ if [ -f "$KEYBOX_FILE" ]; then
   fi
 fi
 
+_expires_json="null"
+[ -n "$_expires_at" ] && _expires_json="\"$(_escape_json "$_expires_at")\""
+
 if [ "$_installed" != "true" ] || [ -n "$_source" ] || [ ! -f "$INFO_PATH" ] ||
    { [ -n "$_serial" ] && ! grep -q '"serial": "'"$_serial"'"' "$INFO_PATH" 2>/dev/null; }; then
   cat <<EOF > "$INFO_PATH"
@@ -118,6 +133,9 @@ if [ "$_installed" != "true" ] || [ -n "$_source" ] || [ ! -f "$INFO_PATH" ] ||
   "up_to_date": $_up_to_date,
   "revoked": $_revoked,
   "softbanned": $_softbanned,
+  "rkp": $_rkp,
+  "expires_at": $_expires_json,
+  "expired": $_expired,
   "serial": "$(_escape_json "$_serial")",
   "is_private": $_is_private_val
 }
@@ -127,6 +145,8 @@ fi
 if [ "$_installed" = "true" ]; then
   if [ "$_revoked" = "true" ]; then
     log_w "KEYBOX_INFO" "Keybox is revoked by Google"
+  elif [ "$_expired" = "true" ]; then
+    log_w "KEYBOX_INFO" "Keybox is expired (${_expires_at:-no X.509 expiry date})"
   elif [ "$_up_to_date" = "true" ]; then
     log_i "KEYBOX_INFO" "Keybox from $_source is valid and up to date"
   elif [ -n "$_source" ]; then
@@ -135,7 +155,7 @@ if [ "$_installed" = "true" ]; then
     log_i "KEYBOX_INFO" "Keybox is installed"
   fi
 fi
-unset _installed _source _source_version _text _up_to_date _revoked _softbanned _serial _serial_dec _history_json _entry _provider _latest_for_source _is_private_val
+unset _installed _source _source_version _text _up_to_date _revoked _softbanned _rkp _expires_at _expires_json _expired _serial _serial_dec _history_json _entry _provider _latest_for_source _is_private_val
 log_i "KEYBOX_INFO" "Keybox info check complete"
 write_webui_state
 exit 0

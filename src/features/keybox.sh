@@ -64,14 +64,17 @@ fi
 
 if [ "$_if_needed" = "1" ]; then
   _ki_info="${SPECTER_KEYBOX_INFO:-$MODDIR/../webroot/json/keybox_info.json}"
+  _ki_json=$(tr -d '\n' < "$_ki_info" 2>/dev/null || true)
   if [ -f "$KSM_KEYBOX" ] && [ -f "$_ki_info" ] && [ "$_ki_info" -nt "$KSM_KEYBOX" ] &&
      grep -q '"installed": true' "$_ki_info" &&
      ! grep -q '"revoked": true' "$_ki_info" &&
-     ! grep -q '"softbanned": true' "$_ki_info"; then
+     ! grep -q '"softbanned": true' "$_ki_info" &&
+     ! grep -q '"expired": true' "$_ki_info" &&
+     ! keybox_rkp_expired "$_ki_json"; then
     log_i "KEYBOX" "Current keybox is healthy, skipping refresh"
     exit 0
   fi
-  unset _ki_info
+  unset _ki_info _ki_json
 fi
 
 _try_keybox_url() {
@@ -135,7 +138,7 @@ if [ -z "$_history" ]; then
     log_i "KEYBOX" "Fallback selected: $_pair"
     _try_keybox_url "${KEYBOX_URL}/${_pair}" || true
   done
-  die "No working keybox available (all revoked?)"
+  die "No working keybox available (all revoked/expired?)"
 fi
 
 if [ "$_provider" = "auto" ]; then
@@ -143,6 +146,7 @@ if [ "$_provider" = "auto" ]; then
 else
   _objs=$(printf '%s' "$_history" | grep -o '"entries":\[[^]]*\]' | grep -o '{[^}]*"source":"'"$_provider"'"[^}]*}' | grep -v '"revoked":true' || true)
 fi
+_objs=$(printf '%s\n' "$_objs" | keybox_filter_expired_rkp | keybox_dedupe_rkp_freshest)
 _pool=$(printf '%s\n' "$_objs" | keybox_prefer_active "$_history")
 if [ "$_provider" != "auto" ]; then
   _sorted=""
@@ -157,7 +161,7 @@ EOF
   _pool=$(printf '%s\n' "$_sorted" | sort -rn | sed 's/^[^ ]* //')
 fi
 _count=$(printf '%s\n' "$_pool" | grep -c '"source":' || true)
-[ "${_count:-0}" -gt 0 ] || die "No working keybox available (all revoked?)"
+[ "${_count:-0}" -gt 0 ] || die "No working keybox available (all revoked/expired?)"
 
 _start=0
 if [ "$_provider" = "auto" ] && [ "$_count" -gt 1 ]; then

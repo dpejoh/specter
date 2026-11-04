@@ -157,6 +157,69 @@ keybox_is_softbanned() {
   echo "$1" | grep -o '"entries":\[[^]]*\]' | grep -o '{[^}]*"source":"'"$2"'"[^}]*"version":"'"$3"'"[^}]*}' | head -1 | grep -q '"softbanned":true'
 }
 
+# True if an RKP catalog entry has reached its X.509 expiry.
+# $1 = one JSON entry, $2 = optional fixed now (UTC ISO) for tests.
+keybox_rkp_expired() {
+  _kre_entry="$1"
+  _kre_now="${2:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
+
+  printf '%s' "$_kre_entry" | grep -Eq '"rkp"[[:space:]]*:[[:space:]]*true' || {
+    unset _kre_entry _kre_now
+    return 1
+  }
+
+  _kre_exp=$(printf '%s' "$_kre_entry" | sed -n 's/.*"expires_at"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+  if [ -z "$_kre_exp" ]; then
+    unset _kre_entry _kre_now _kre_exp
+    return 0
+  fi
+
+  _kre_exp=$(printf '%s' "$_kre_exp" | sed 's/\.[0-9]*Z$/Z/')
+  case "$_kre_exp" in *Z) ;; *) _kre_exp="${_kre_exp}Z" ;; esac
+  _kre_now=$(printf '%s' "$_kre_now" | sed 's/\.[0-9]*Z$/Z/')
+  case "$_kre_now" in *Z) ;; *) _kre_now="${_kre_now}Z" ;; esac
+
+  awk -v expiry="$_kre_exp" -v now="$_kre_now" 'BEGIN { exit !(expiry <= now) }'
+  _kre_rc=$?
+  unset _kre_entry _kre_now _kre_exp
+  return $_kre_rc
+}
+
+# Drop expired RKP entries from a newline-separated candidate list.
+keybox_filter_expired_rkp() {
+  while IFS= read -r _kfe_line || [ -n "$_kfe_line" ]; do
+    [ -n "$_kfe_line" ] || continue
+    keybox_rkp_expired "$_kfe_line" && continue
+    printf '%s\n' "$_kfe_line"
+  done
+  unset _kfe_line
+}
+
+# Keep only the RKP entry with the latest expires_at; leave non-RKP entries.
+keybox_dedupe_rkp_freshest() {
+  awk '
+    function field(obj, key,   r) {
+      if (!match(obj, "\"" key "\":\"[^\"]*\"")) return ""
+      r = substr(obj, RSTART, RLENGTH)
+      sub("^\"" key "\":\"", "", r)
+      sub("\"$", "", r)
+      return r
+    }
+    {
+      if ($0 ~ /"rkp":true/) {
+        expiry = field($0, "expires_at")
+        if (best == "" || expiry > best) {
+          best = expiry
+          bestline = $0
+        }
+      } else {
+        print $0
+      }
+    }
+    END { if (bestline != "") print bestline }
+  '
+}
+
 # Prefer active (non-softbanned) candidates. stdin: one JSON object per line
 # with source/version. $1 = full catalog JSON. stdout: preferred pool.
 keybox_prefer_active() {
@@ -207,7 +270,7 @@ keybox_prefer_active() {
 keybox_latest_for_provider() {
   _klp_hist="$1"
   _klp_prov="$2"
-  _klp_entries=$(echo "$_klp_hist" | grep -o '"entries":\[[^]]*\]' | grep -o '{[^}]*"source":"'"$_klp_prov"'"[^}]*}' | grep -v '"revoked":true')
+  _klp_entries=$(echo "$_klp_hist" | grep -o '"entries":\[[^]]*\]' | grep -o '{[^}]*"source":"'"$_klp_prov"'"[^}]*}' | grep -v '"revoked":true' | keybox_filter_expired_rkp | keybox_dedupe_rkp_freshest)
   _klp_ver=$(printf '%s\n' "$_klp_entries" | grep -v '"softbanned":true' | sed 's/.*"version":"\([^"]*\)".*/\1/' | sort -rn | head -1)
   [ -z "$_klp_ver" ] && _klp_ver=$(printf '%s\n' "$_klp_entries" | grep '"softbanned":true' | sed 's/.*"version":"\([^"]*\)".*/\1/' | sort -rn | head -1)
   echo "$_klp_ver"

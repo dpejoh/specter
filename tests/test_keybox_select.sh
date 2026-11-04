@@ -42,6 +42,41 @@ assert_eq "latest_for_provider: softbanned when no active" "8" "$_ver_yuri"
 _ver_bad=$(keybox_latest_for_provider "$_CATALOG" "badprov")
 assert_eq "latest_for_provider: empty when all revoked" "" "$_ver_bad"
 
+# --- RKP expiry ---
+_RKP_PAST='{"source":"rkp","version":"1","text":"r1","rkp":true,"expires_at":"2000-01-01T00:00:00Z"}'
+_RKP_LIVE='{"source":"rkp","version":"2","text":"r2","rkp":true,"expires_at":"2999-01-01T00:00:00Z"}'
+_RKP_NO_DATE='{"source":"rkp","version":"3","text":"r3","rkp":true,"expires_at":null}'
+_NON_RKP='{"source":"classic","version":"1","text":"c1","rkp":false}'
+
+keybox_rkp_expired "$_RKP_PAST" "2026-01-01T00:00:00Z"
+assert_eq "rkp_expired: past date" "0" "$?"
+keybox_rkp_expired "$_RKP_LIVE" "2026-01-01T00:00:00Z"
+assert_eq "rkp_expired: future date" "1" "$?"
+keybox_rkp_expired "$_RKP_NO_DATE" "2026-01-01T00:00:00Z"
+assert_eq "rkp_expired: missing date fails closed" "0" "$?"
+keybox_rkp_expired "$_NON_RKP" "2026-01-01T00:00:00Z"
+assert_eq "rkp_expired: non-RKP never expires" "1" "$?"
+
+_RKP_POOL="$_RKP_PAST
+$_RKP_LIVE
+$_NON_RKP"
+_FILTERED=$(printf '%s\n' "$_RKP_POOL" | keybox_filter_expired_rkp)
+assert_contains "filter_expired: keeps live RKP" "$_FILTERED" '"version":"2"'
+assert_contains "filter_expired: keeps non-RKP" "$_FILTERED" '"source":"classic"'
+assert_not_contains "filter_expired: drops expired RKP" "$_FILTERED" '"expires_at":"2000-01-01T00:00:00Z"'
+
+_RKP_FRESH='{"source":"rkp","version":"4","text":"r4","rkp":true,"expires_at":"2999-06-01T00:00:00Z"}'
+_DEDUPED=$(printf '%s\n' "$_RKP_LIVE
+$_RKP_FRESH
+$_NON_RKP" | keybox_dedupe_rkp_freshest)
+assert_contains "dedupe_rkp: keeps freshest RKP" "$_DEDUPED" '"version":"4"'
+assert_not_contains "dedupe_rkp: drops older RKP" "$_DEDUPED" '"version":"2"'
+assert_contains "dedupe_rkp: keeps non-RKP" "$_DEDUPED" '"source":"classic"'
+
+_CAT_RKP='{"entries":[{"source":"rkp","version":"1","text":"r1","serial":"1","revoked":false,"softbanned":false,"rkp":true,"expires_at":"2999-01-01T00:00:00Z"},{"source":"rkp","version":"3","text":"r3","serial":"3","revoked":false,"softbanned":false,"rkp":true,"expires_at":"2998-01-01T00:00:00Z"},{"source":"rkp","version":"2","text":"r2","serial":"2","revoked":false,"softbanned":false,"rkp":true,"expires_at":"2000-01-01T00:00:00Z"}]}'
+_ver_rkp=$(keybox_latest_for_provider "$_CAT_RKP" "rkp")
+assert_eq "latest_for_provider: skips expired RKP and picks latest expiry" "1" "$_ver_rkp"
+
 assert_eq "hex_to_dec: issue serial" "3207438651777393527" "$(hex_to_dec 2c831c75c60ca377)"
 assert_eq "hex_to_dec: 128-bit serial" "313574063671127819551733845561321004702" "$(hex_to_dec ebe82afb8b019ca17bed42839ba51e9e)"
 
@@ -78,6 +113,30 @@ _out=$(run_feature keybox.sh --if-needed)
 assert_contains "if-needed: healthy keybox skipped" "$_out" "Current keybox is healthy, skipping refresh"
 _out_info=$(run_feature keybox_info.sh --if-needed)
 assert_contains "if-needed: current info skipped" "$_out_info" "Keybox info is current, skipping refresh"
+unset SPECTER_KEYBOX_INFO
+
+# --- expired RKP info must not be treated as healthy ---
+bootstrap
+source_libs
+mk_module tricky_store "Tricky Store"
+detect_keystore_manager
+printf '<keybox/>\n' > "$KSM_KEYBOX"
+_ki_expired="$TEST_ROOT/keybox_info_expired.json"
+printf '{\n  "installed": true,\n  "source": "TAKR",\n  "source_version": "36",\n  "rkp": true,\n  "expires_at": "2000-01-01T00:00:00Z",\n  "expired": true\n}\n' > "$_ki_expired"
+sleep 1
+touch "$_ki_expired"
+export SPECTER_KEYBOX_INFO="$_ki_expired"
+_out_expired=$(run_feature keybox_info.sh --if-needed)
+assert_not_contains "if-needed: expired RKP info is refreshed" "$_out_expired" "Keybox info is current, skipping refresh"
+unset SPECTER_KEYBOX_INFO
+
+_ki_live="$TEST_ROOT/keybox_info_live.json"
+printf '{\n  "installed": true,\n  "source": "TAKR",\n  "source_version": "36",\n  "rkp": true,\n  "expires_at": "2999-01-01T00:00:00Z",\n  "expired": false\n}\n' > "$_ki_live"
+sleep 1
+touch "$_ki_live"
+export SPECTER_KEYBOX_INFO="$_ki_live"
+_out_live=$(run_feature keybox_info.sh --if-needed)
+assert_contains "if-needed: live RKP info is current" "$_out_live" "Keybox info is current, skipping refresh"
 unset SPECTER_KEYBOX_INFO
 
 done_testing
