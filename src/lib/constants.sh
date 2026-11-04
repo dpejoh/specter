@@ -2,8 +2,10 @@
 
 # -- URL definitions --
 KEYBOX_URL="https://rawbin.dpejoh.com/key"
+KEYBOX_URL_FALLBACK="https://rawbin.dpejoh.workers.dev/key"
 ATTESTATION_URL="https://rawbin.dpejoh.com/clips/attestation"
 CATALOG_URL="https://rawbin.dpejoh.com/catalog"
+CATALOG_URL_FALLBACK="https://rawbin.dpejoh.workers.dev/catalog"
 GOOGLE_REVOCATION_URL="https://android.googleapis.com/attestation/status?encrypted=0"
 FALLBACK_KEYBOXES="Yuri/8"
 

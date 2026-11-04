@@ -95,15 +95,32 @@ keybox_catalog() {
       return 0
     fi
   fi
-  _kc_json=$(download "$CATALOG_URL" 2>/dev/null) || _kc_json=""
+  _kc_json=""
+  for _kc_url in "$CATALOG_URL" "$CATALOG_URL_FALLBACK"; do
+    [ -n "$_kc_url" ] || continue
+    _kc_try=$(download "$_kc_url" 2>/dev/null) || _kc_try=""
+    case "$_kc_try" in
+      *'"entries"'*) _kc_json="$_kc_try"; break ;;
+    esac
+  done
+
   if [ -n "$_kc_json" ]; then
     ensure_dir "$SPECTER_DIR/cache"
     printf '%s' "$_kc_json" > "$_kc_cache" 2>/dev/null || true
     printf '%s' "$_kc_json"
-    unset _kc_cache _kc_ttl _kc_age _kc_json
+    unset _kc_cache _kc_ttl _kc_age _kc_json _kc_url _kc_try
     return 0
   fi
-  unset _kc_cache _kc_ttl _kc_age _kc_json
+
+  # A valid stale catalog is better than an outage: never overwrite the cache
+  # with an error body, and keep serving the last known good copy.
+  if [ -s "$_kc_cache" ] && grep -q '"entries"' "$_kc_cache" 2>/dev/null; then
+    cat "$_kc_cache"
+    unset _kc_cache _kc_ttl _kc_age _kc_json _kc_url _kc_try
+    return 0
+  fi
+
+  unset _kc_cache _kc_ttl _kc_age _kc_json _kc_url _kc_try
   return 1
 }
 

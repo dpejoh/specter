@@ -79,9 +79,18 @@ fi
 
 _try_keybox_url() {
   _kt_url=$1
+  _kt_fallback=${2:-}
   rm -f "$TEMP_FILE" "$DECODE_FILE"
   log_i "KEYBOX" "Downloading keybox..."
-  download "$_kt_url" "$TEMP_FILE" || { log_e "KEYBOX" "Download failed"; return 1; }
+  if ! download "$_kt_url" "$TEMP_FILE"; then
+    if [ -n "$_kt_fallback" ] && [ "$_kt_fallback" != "$_kt_url" ]; then
+      log_w "KEYBOX" "Primary download failed, trying fallback..."
+      download "$_kt_fallback" "$TEMP_FILE" || { log_e "KEYBOX" "Download failed"; return 1; }
+    else
+      log_e "KEYBOX" "Download failed"
+      return 1
+    fi
+  fi
   log_d "KEYBOX" "Downloaded $(wc -c < "$TEMP_FILE" 2>/dev/null || echo "?") bytes"
   if ! decode_keybox_blob "$TEMP_FILE" "$DECODE_FILE" 2>/dev/null; then
     log_e "KEYBOX" "Base64 decode failed"
@@ -136,7 +145,7 @@ if [ -z "$_history" ]; then
   log_w "KEYBOX" "Catalog fetch failed, trying fallback keyboxes..."
   for _pair in $FALLBACK_KEYBOXES; do
     log_i "KEYBOX" "Fallback selected: $_pair"
-    _try_keybox_url "${KEYBOX_URL}/${_pair}" || true
+    _try_keybox_url "${KEYBOX_URL}/${_pair}" "${KEYBOX_URL_FALLBACK}/${_pair}" || true
   done
   die "No working keybox available (all revoked/expired?)"
 fi
@@ -183,7 +192,7 @@ while [ "$_n" -lt "$_count" ]; do
   else
     log_i "KEYBOX" "Trying next: $_src $_text (entry $_pos of $_count)"
   fi
-  _try_keybox_url "${KEYBOX_URL}/${_src}/${_ver}" || true
+  _try_keybox_url "${KEYBOX_URL}/${_src}/${_ver}" "${KEYBOX_URL_FALLBACK}/${_src}/${_ver}" || true
   _n=$((_n + 1))
 done
 

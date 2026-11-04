@@ -88,6 +88,15 @@ _cat2=$(keybox_catalog)
 assert_contains "catalog cache: content" "$_cat2" '"droidwin"'
 assert_eq "catalog cache: one download" "1" "$(grep -c x "$_dl_count")"
 
+# --- catalog: an error body must never poison the last-known-good cache ---
+ensure_dir "$SPECTER_DIR/cache"
+printf '%s' '{"entries":[{"source":"cached","version":"1","text":"v1"}]}' > "$SPECTER_DIR/cache/keybox_catalog.json"
+touch -d '1 hour ago' "$SPECTER_DIR/cache/keybox_catalog.json"
+download() { printf '%s' '{"error":"D1 limit exceeded"}'; }
+_cat_stale=$(keybox_catalog)
+assert_contains "catalog cache: error keeps last-known-good" "$_cat_stale" '"source":"cached"'
+assert_contains "catalog cache: cache not overwritten by error" "$(cat "$SPECTER_DIR/cache/keybox_catalog.json")" '"source":"cached"'
+
 : > "$_dl_count"
 download() { echo x >> "$_dl_count"; printf '%s' '{"entries":{"10":{"status":"REVOKED"},"3207438651777393527":{"status":"REVOKED"}}}'; }
 check_google_revocation 2c831c75c60ca377
