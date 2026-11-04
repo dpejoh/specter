@@ -35,7 +35,7 @@ async function confirmDestructive(friendlyName: string, msgKey?: string): Promis
   });
 }
 
-export async function runAction(scriptName: string) {
+export async function runAction(scriptName: string): Promise<number> {
   const i18nKey = getFriendlyName(scriptName);
   const friendlyName = getTranslation(i18nKey) || i18nKey;
   const lines: string[] = [];
@@ -47,7 +47,7 @@ export async function runAction(scriptName: string) {
   if (text) text.textContent = getTranslation('simple_dialog_wait') || 'This may take a moment';
   if (dialog) dialog.show();
 
-  return new Promise<void>(resolve => {
+  return new Promise<number>(resolve => {
     const child = spawnScript(scriptName, 'feature');
     child.stdout.on('data', (line: string) => {
       appendToOutput(line);
@@ -72,7 +72,7 @@ export async function runAction(scriptName: string) {
       } else {
         showToast(getTranslation('toast_success') || 'Done', { icon: 'check_circle', type: 'success', autoCloseDelay: 3000 });
       }
-      resolve();
+      resolve(code);
     });
     child.on('error', (err: Error) => {
       const msg = err.message || getTranslation('simple_toast_error') || 'Failed';
@@ -84,7 +84,7 @@ export async function runAction(scriptName: string) {
         action: getTranslation('simple_toast_view_details') || 'View Details', autoCloseDelay: 8000,
         onActionClick: () => showErrorDialog(getTranslation('error_dialog_title') || 'Error Details', escapeHtml(msg)),
       });
-      resolve();
+      resolve(1);
     });
   });
 }

@@ -1,97 +1,18 @@
 import { getModuleDir, exec } from './bridge.js';
 import { cfgGet, cfgSet } from './cfg.js';
 import { getTranslation } from './i18n.js';
-import { shellEscape, fetchJson } from './utils.js';
+import { shellEscape } from './utils.js';
 import { showToast } from './toast.js';
 import { refreshKeyboxStatus } from './device.js';
-import { API_URLS } from './constants.js';
-import { runAction } from './actions.js';
 import { openSubPage } from './subpage.js';
 import type { MdSwitch } from '@material/web/switch/switch.js';
 
-import type { CatalogJson } from './types.js';
-
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
-
-function renderProviderOptions(select: HTMLSelectElement, sources: string[]) {
-  while (select.options.length > 1) select.remove(1);
-  for (const s of sources) {
-    const opt = document.createElement('option');
-    opt.value = s;
-    opt.textContent = s;
-    select.appendChild(opt);
-  }
-}
-
-const providerSelects = new WeakSet<HTMLSelectElement>();
-
-async function fetchCatalog(): Promise<CatalogJson | null> {
-  const url = API_URLS.KEY_CATALOG!;
-  const data = await fetchJson<CatalogJson>(url, 300000).catch(() => null);
-  if (data?.entries) return data;
-  if (typeof exec !== 'function') return null;
-  try {
-    const res = await exec(`curl -sfL --connect-timeout 10 ${shellEscape(url)}`);
-    return JSON.parse(res.stdout) as CatalogJson;
-  } catch {
-    return null;
-  }
-}
-
-export async function populateProviders() {
-  const select = document.getElementById('kb-provider') as HTMLSelectElement | null;
-  if (!select) return;
-
-  if (!providerSelects.has(select)) {
-    providerSelects.add(select);
-    select.addEventListener('change', () => { cfgSet('keybox_provider', select.value); });
-  }
-
-  const data = await fetchCatalog();
-  if (data?.entries) {
-    const sources = [...new Set(data.entries.map(e => e.source))].sort();
-    const currentValue = select.value;
-    renderProviderOptions(select, sources);
-    select.value = currentValue;
-  }
-}
 
 export function wireCustomKeybox() {
   const btn = document.getElementById('custom-keybox-btn');
   if (!btn) return;
   btn.addEventListener('click', openCustomKeyboxDialog);
-}
-
-export function wireKeyboxInstallButton() {
-  const btn = document.getElementById('kb-install-btn') as MdFilledButton | null;
-  const card = document.querySelector('.keybox-install-card');
-  const spinner = card?.querySelector('.kic-spinner') as HTMLElement | null;
-  if (!btn) return;
-
-  btn.addEventListener('click', async (e: Event) => {
-    e.stopPropagation();
-    if (btn.disabled) return;
-
-    btn.disabled = true;
-    spinner?.classList.remove('hidden');
-
-    try {
-      cfgSet('keybox_custom_type', '');
-      cfgSet('keybox_custom_value', '');
-      await runAction('keybox.sh');
-      const moddir = getModuleDir();
-      if (moddir) {
-        await exec(`sh ${shellEscape(moddir + '/features/keybox_info.sh')}`).catch(() => {});
-        await exec(`sh ${shellEscape(moddir + '/refresh_desc.sh')}`).catch(() => {});
-      }
-      await refreshKeyboxStatus();
-    } catch (_e) {
-      console.warn('Install error:', _e);
-    } finally {
-      btn.disabled = false;
-      spinner?.classList.add('hidden');
-    }
-  });
 }
 
 export async function openCustomKeyboxDialog() {

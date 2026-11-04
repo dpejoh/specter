@@ -148,4 +148,17 @@ _out_live=$(run_feature keybox_info.sh --if-needed)
 assert_contains "if-needed: live RKP info is current" "$_out_live" "Keybox info is current, skipping refresh"
 unset SPECTER_KEYBOX_INFO
 
+# --- keybox_select_entry: only active entries are selectable ---
+_SEL_CAT='{"entries":[{"source":"droidwin","version":"1","text":"v1","revoked":false,"softbanned":false},{"source":"droidwin","version":"2","text":"v2","revoked":false,"softbanned":true},{"source":"droidwin","version":"3","text":"v3","revoked":true,"softbanned":false},{"source":"rkp","version":"4","text":"r4","revoked":false,"softbanned":false,"rkp":true,"expires_at":"2000-01-01T00:00:00Z"},{"source":"rkp","version":"5","text":"r5","revoked":false,"softbanned":false,"rkp":true,"expires_at":"2999-01-01T00:00:00Z"}]}'
+_sel_active=$(keybox_select_entry "$_SEL_CAT" droidwin 1)
+assert_contains "select_entry: active entry" "$_sel_active" '"version":"1"'
+_sel_revoked=$(keybox_select_entry "$_SEL_CAT" droidwin 3)
+assert_eq "select_entry: revoked entry rejected" "" "$_sel_revoked"
+_sel_soft=$(keybox_select_entry "$_SEL_CAT" droidwin 2)
+assert_eq "select_entry: softbanned entry rejected" "" "$_sel_soft"
+_sel_expired=$(keybox_select_entry "$_SEL_CAT" rkp 4)
+assert_eq "select_entry: expired RKP rejected" "" "$_sel_expired"
+_sel_rkp=$(keybox_select_entry "$_SEL_CAT" rkp 5)
+assert_contains "select_entry: live RKP accepted" "$_sel_rkp" '"version":"5"'
+
 done_testing

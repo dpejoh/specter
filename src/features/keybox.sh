@@ -21,11 +21,23 @@ trap 'rm -f "$DECODE_FILE" "$TEMP_FILE" 2>/dev/null' EXIT
 
 _custom_type=$(cat "$CONFIG_DIR/val/keybox_custom_type.val" 2>/dev/null || echo "")
 _custom_value=$(cat "$CONFIG_DIR/val/keybox_custom_value.val" 2>/dev/null || echo "")
+_select_source=$(cat "$CONFIG_DIR/val/keybox_select_source.val" 2>/dev/null || echo "")
+_select_version=$(cat "$CONFIG_DIR/val/keybox_select_version.val" 2>/dev/null || echo "")
 
 _clear_custom() {
   printf '%s' "" > "$CONFIG_DIR/val/keybox_custom_type.val" 2>/dev/null || true
   printf '%s' "" > "$CONFIG_DIR/val/keybox_custom_value.val" 2>/dev/null || true
 }
+
+_clear_selection() {
+  printf '%s' "" > "$CONFIG_DIR/val/keybox_select_source.val" 2>/dev/null || true
+  printf '%s' "" > "$CONFIG_DIR/val/keybox_select_version.val" 2>/dev/null || true
+}
+
+# An explicit selection always wins over the action button's healthy-keybox skip.
+if [ -n "$_select_source" ] && [ -n "$_select_version" ]; then
+  _if_needed=0
+fi
 
 if [ -n "$_custom_type" ] && [ -n "$_custom_value" ]; then
   log_i "KEYBOX" "Using custom keybox: $_custom_type ($_custom_value)"
@@ -142,12 +154,30 @@ log_i "KEYBOX" "Fetching available keyboxes..."
 _history=$(keybox_catalog || true)
 
 if [ -z "$_history" ]; then
+  if [ -n "$_select_source" ] && [ -n "$_select_version" ]; then
+    _clear_selection
+    die "Selected keybox catalog unavailable"
+  fi
   log_w "KEYBOX" "Catalog fetch failed, trying fallback keyboxes..."
   for _pair in $FALLBACK_KEYBOXES; do
     log_i "KEYBOX" "Fallback selected: $_pair"
     _try_keybox_url "${KEYBOX_URL}/${_pair}" "${KEYBOX_URL_FALLBACK}/${_pair}" || true
   done
   die "No working keybox available (all revoked/expired?)"
+fi
+
+if [ -n "$_select_source" ] && [ -n "$_select_version" ]; then
+  _sel_entry=$(keybox_select_entry "$_history" "$_select_source" "$_select_version")
+  if [ -z "$_sel_entry" ]; then
+    _clear_selection
+    die "Selected keybox is no longer active"
+  fi
+  _sel_text=$(printf '%s' "$_sel_entry" | sed -n 's/.*"text":"\([^"]*\)".*/\1/p')
+  [ -n "$_sel_text" ] || _sel_text=$_select_version
+  log_i "KEYBOX" "Installing selected keybox: $_select_source $_sel_text"
+  _clear_selection
+  _try_keybox_url "${KEYBOX_URL}/${_select_source}/${_select_version}" "${KEYBOX_URL_FALLBACK}/${_select_source}/${_select_version}" || die "Failed to install selected keybox"
+  exit 0
 fi
 
 if [ "$_provider" = "auto" ]; then

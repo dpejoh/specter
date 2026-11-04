@@ -174,6 +174,21 @@ keybox_is_softbanned() {
   echo "$1" | grep -o '"entries":\[[^]]*\]' | grep -o '{[^}]*"source":"'"$2"'"[^}]*"version":"'"$3"'"[^}]*}' | head -1 | grep -q '"softbanned":true'
 }
 
+# Print the active catalog entry for SOURCE/VERSION, if one exists.
+# Revoked, softbanned, and expired RKP entries are treated as inactive.
+keybox_select_entry() {
+  _kse_hist="$1" _kse_src="$2" _kse_ver="$3"
+  printf '%s' "$_kse_hist" \
+    | grep -o '"entries":\[[^]]*\]' \
+    | grep -o '{[^}]*}' \
+    | grep -v '"revoked":true' \
+    | grep -v '"softbanned":true' \
+    | keybox_filter_expired_rkp \
+    | awk -v src="$_kse_src" -v ver="$_kse_ver" \
+        'index($0, "\"source\":\"" src "\"") && index($0, "\"version\":\"" ver "\"") { print; exit }'
+  unset _kse_hist _kse_src _kse_ver
+}
+
 # True if an RKP catalog entry has reached its X.509 expiry.
 # $1 = one JSON entry, $2 = optional fixed now (UTC ISO) for tests.
 keybox_rkp_expired() {

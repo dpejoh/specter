@@ -130,7 +130,7 @@ async function loadToolsUI() {
   ]);
 
   keybox?.wireCustomKeybox();
-  keybox?.wireKeyboxInstallButton();
+  wireLazyClick('keybox-catalog-btn', () => import('./keybox-catalog-ui.js').then(m => m.openKeyboxCatalogPage()));
   autoTarget?.wireAutoTarget();
   autoHma?.wireAutoHma();
   autopif?.wireAutopif();
@@ -151,7 +151,6 @@ async function loadToolsUI() {
   wireLazyClick('boot-hash-btn', () => import('./boot-hash-ui.js').then(m => m.openBootHashSubpage()));
   import('./pif-choose-desc.js').then(m => m.refreshPifChooseDesc()).catch(() => {});
 
-  afterPaint(() => { keybox?.populateProviders().catch(() => {}); });
   ensureConflicts().catch(() => {});
   updateListContainerCorners();
 }
