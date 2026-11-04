@@ -87,6 +87,7 @@ toggle_action_security_patch:0 toggle_action_pif:1 toggle_action_keybox:1
 toggle_action_hma:1
 toggle_action_force_target:0
 toggle_action_force_hma:0
+toggle_action_force_keybox:0
 toggle_action_security_patch_device:1 toggle_action_security_patch_bulletin:1
 toggle_action_security_patch_synthetic:1
 toggle_action_gms_force_stop:1 toggle_action_gms_clear_data:0

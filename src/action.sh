@@ -30,6 +30,7 @@ _first_boot=0
 [ -f "$SPECTER_DIR/.first_boot_pending" ] && _first_boot=1
 _force_target=$(cfg_get toggle_action_force_target 0)
 _force_hma=$(cfg_get toggle_action_force_hma 0)
+_force_keybox=$(cfg_get toggle_action_force_keybox 0)
 
 # The action is intentionally non-interactive. Volume-key prompts blocked the
 # WebUI for 10/7 seconds; setup choices live in the WebUI settings instead.
@@ -65,7 +66,12 @@ _force_hma=$(cfg_get toggle_action_force_hma 0)
   _feature_should_run "keybox" && {
     log_u "ACTION" ""
     log_u "ACTION" "-> Keybox:"
-    sh "$MODDIR/features/keybox.sh" --if-needed || true
+    if [ "$_force_keybox" = "1" ]; then
+      log_i "ACTION" "Always install keybox enabled, bypassing healthy check"
+      sh "$MODDIR/features/keybox.sh" || true
+    else
+      sh "$MODDIR/features/keybox.sh" --if-needed || true
+    fi
   }
 
   if _feature_should_run "pif"; then
@@ -135,7 +141,7 @@ _force_hma=$(cfg_get toggle_action_force_hma 0)
     fi
     unset _hma_config _hma_config_ok
   fi
-  unset _force_target _force_hma
+  unset _force_target _force_hma _force_keybox
 
   run_device_info "$MODDIR"
   sh "$MODDIR/features/keybox_info.sh" --if-needed >/dev/null 2>&1 || true

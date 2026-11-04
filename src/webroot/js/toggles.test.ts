@@ -34,7 +34,7 @@ describe('renderControlToggles', () => {
     await Promise.resolve()
     await Promise.resolve()
 
-    const row = document.getElementById('toggle-action_target-row')!
+    const row = document.getElementById('toggle-action_pif-row')!
     const sw = row.querySelector('md-switch') as HTMLElement & { selected: boolean }
     const before = sw.selected
     row.click()
