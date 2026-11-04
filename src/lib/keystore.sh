@@ -1,5 +1,5 @@
 # shellcheck shell=sh
-# Enabled backends only: teesim → Tricky Store / TEESimulator-RS → OMK.
+# Enabled backends only: teesim → Tricky Store / Tricky Store OSS → OMK.
 #
 # Keystore manager contract (set by detect_keystore_manager):
 #   KSM              backend id: teesim | trickystore | omk | none

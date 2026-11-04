@@ -30,8 +30,8 @@ Specter is a complete rewrite of what I originally built as Yurikey.
 
 1. Install [Tricky Store](https://github.com/5ec1cff/TrickyStore/releases/latest) /
    [TEESimulator](https://github.com/JingMatrix/TEESimulator/releases/latest) /
-   [TEESimulator-RS](https://github.com/Enginex0/TEESimulator-RS/releases/latest)
-   (Specter auto-installs TEESimulator-RS if none found — skip if using OhMyKeymint)
+   [Tricky Store OSS](https://github.com/beakthoven/TrickyStoreOSS/releases/latest)
+   (Specter auto-installs Tricky Store OSS if none found — skip if using OhMyKeymint)
 2. Install [Play Integrity Inject](https://github.com/KOWX712/PlayIntegrityFix/releases/latest)
    or [Play Integrity Fork](https://github.com/osm0sis/PlayIntegrityFork/releases/latest)
 3. Install Specter via Magisk / KernelSU / APatch
@@ -60,9 +60,9 @@ Specter is a complete rewrite of what I originally built as Yurikey.
 - Root access (Magisk / KernelSU / APatch)
 - [Tricky Store](https://github.com/5ec1cff/TrickyStore/releases/latest) /
   [TEESimulator](https://github.com/JingMatrix/TEESimulator/releases/latest) /
-  [TEESimulator-RS](https://github.com/Enginex0/TEESimulator-RS/releases/latest) /
+  [Tricky Store OSS](https://github.com/beakthoven/TrickyStoreOSS/releases/latest) /
   or OhMyKeymint
-  (Specter auto-installs TEESimulator-RS if none detected)
+  (Specter auto-installs Tricky Store OSS if none detected)
 - [Play Integrity Inject](https://github.com/KOWX712/PlayIntegrityFix/releases/latest)
   or [Play Integrity Fork](https://github.com/osm0sis/PlayIntegrityFork/releases/latest)
 
@@ -127,7 +127,7 @@ Each `*.json` file is validated against `source/string.json` in CI (`npm test`).
 ## Thanks
 
 - [chiteroman](https://github.com/chiteroman/PlayIntegrityFix), [KOWX712](https://github.com/KOWX712/PlayIntegrityFix) and [osm0sis](https://github.com/osm0sis/PlayIntegrityFork). PIF and forks.
-- [5ec1cff](https://github.com/5ec1cff/TrickyStore), [JingMatrix](https://github.com/JingMatrix/TEESimulator), [Enginex0](https://github.com/Enginex0/TEESimulator-RS). Tricky Store and forks.
+- [5ec1cff](https://github.com/5ec1cff/TrickyStore), [JingMatrix](https://github.com/JingMatrix/TEESimulator), [beakthoven](https://github.com/beakthoven/TrickyStoreOSS). Tricky Store and forks.
 - [KOWX712](https://github.com/KOWX712/Tricky-Addon-Update-Target-List), [Enginex0](https://github.com/Enginex0/tricky-addon-enhanced). Tricky Store Addon.
 - [eltavine](https://github.com/eltavine/Duck-Detector-Refactoring). Duck Detector.
 - [Citra-Standalone](https://github.com/Citra-Standalone/TSupport-Advance). TSupport-Advance.

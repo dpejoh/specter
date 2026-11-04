@@ -27,7 +27,7 @@ else
   ui_print "- Zygisk: none"
 fi
 
-# Tricky Store / TEESimulator-RS (id=tricky_store)
+# Tricky Store / Tricky Store OSS (id=tricky_store)
 _ts_name=$(_ts_prop)
 if [ -n "$_ts_name" ]; then
   ui_print "- $_ts_name"
@@ -70,14 +70,14 @@ done
 if ! module_enabled teesim >/dev/null \
   && ! module_enabled tricky_store >/dev/null \
   && ! module_enabled "${OMK_MODULE##*/}" >/dev/null; then
-  ui_print "- Installing TEESimulator-RS.."
-  if install_module_from_github "Enginex0/TEESimulator-RS" "TEESimulator-RS"; then
-    ui_print "- TEESimulator-RS installed"
+  ui_print "- Installing Tricky Store OSS.."
+  if install_module_from_github "beakthoven/TrickyStoreOSS" "Tricky Store OSS"; then
+    ui_print "- Tricky Store OSS installed"
   else
-    ui_print "- TEESimulator-RS not available"
+    ui_print "- Tricky Store OSS not available"
   fi
 else
-  ui_print "- Keystore backend present, skipping TEESimulator-RS"
+  ui_print "- Keystore backend present, skipping Tricky Store OSS"
 fi
 unset _ts_name _teesim_name _omk_name
 
