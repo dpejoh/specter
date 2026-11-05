@@ -10,7 +10,8 @@ import { AppIconManager, ksuGlobal } from './target-apps-icons.js';
 import { openTeesimModeDialog, openModeDialog, openRegenerateDialog } from './target-apps-dialogs.js';
 import type { TargetDialogsContext } from './target-apps-dialogs.js';
 import { setupOverlayA11y } from './overlay-a11y.js';
-import { wireMenuTrigger } from './menu-utils.js';
+import { closeMenu, wireMenuTrigger } from './menu-utils.js';
+import { overlayHeader } from './ui-overlay.js';
 
 export type TargetState = 'unchecked' | 'bare' | 'conditional' | 'force';
 type BlacklistState = 'unchecked' | 'blacklisted';
@@ -158,41 +159,43 @@ function buildOverlayHTML(): string {
           <md-icon id="ptr-arrow" class="ptr-arrow">refresh</md-icon>
         </div>
       </div>
-      <div class="ta-header">
-        <button id="ta-back" class="ta-back-btn" aria-label="${escapeHtml(t('common_back', 'Back'))}">
-          <md-icon aria-hidden="true">arrow_back</md-icon>
-        </button>
-        <h2 class="ta-title" id="ta-title">${escapeHtml(t('ta_title', 'App Targeting'))}</h2>
-        <button id="ta-menu-btn" class="ta-menu-btn" aria-label="More options" data-i18n-aria="ta_menu_more">
-          <md-icon>more_vert</md-icon>
+      ${overlayHeader({
+        className: 'ta-header',
+        back: { id: 'ta-back', className: 'ta-back-btn', label: t('common_back', 'Back') },
+        title: t('ta_title', 'App Targeting'),
+        titleTag: 'h2',
+        titleClass: 'ta-title',
+        titleId: 'ta-title',
+        actions: `<button id="ta-menu-btn" class="ta-menu-btn" aria-label="${escapeHtml(t('ta_menu_more', 'More options'))}">
+          <md-icon aria-hidden="true">more_vert</md-icon>
         </button>
         <md-menu id="ta-menu" class="ta-menu" anchor="ta-menu-btn" positioning="fixed">
           <md-menu-item id="ta-refresh" class="first">
-            <div slot="headline">${t('ta_refresh', 'Refresh')}</div>
+            <div slot="headline">${escapeHtml(t('ta_refresh', 'Refresh'))}</div>
           </md-menu-item>
           <md-menu-item id="ta-select-all">
-            <div slot="headline">${t('ta_select_all', 'Select All')}</div>
+            <div slot="headline">${escapeHtml(t('ta_select_all', 'Select All'))}</div>
           </md-menu-item>
           <md-menu-item id="ta-deselect-all">
-            <div slot="headline">${t('ta_deselect_all', 'Deselect All')}</div>
+            <div slot="headline">${escapeHtml(t('ta_deselect_all', 'Deselect All'))}</div>
           </md-menu-item>
           <md-menu-item id="ta-mode">
-            <div slot="headline">${t('ta_mode_menu', 'Default Mode')}</div>
+            <div slot="headline">${escapeHtml(t('ta_mode_menu', 'Default Mode'))}</div>
           </md-menu-item>
           <md-menu-item id="ta-regenerate">
-            <div slot="headline">${t('ta_regenerate', 'Regenerate')}</div>
+            <div slot="headline">${escapeHtml(t('ta_regenerate', 'Regenerate'))}</div>
           </md-menu-item>
           <md-menu-item id="ta-toggle-system">
-            <div slot="headline">${t('ta_show_system', 'Show system apps')}</div>
+            <div slot="headline">${escapeHtml(t('ta_show_system', 'Show system apps'))}</div>
           </md-menu-item>
           <md-menu-item id="ta-toggle-mode">
-            <div slot="headline">${t('ta_edit_blacklist', 'Edit blacklist')}</div>
+            <div slot="headline">${escapeHtml(t('ta_edit_blacklist', 'Edit blacklist'))}</div>
           </md-menu-item>
           <md-menu-item id="ta-import-denylist" class="last">
-            <div slot="headline">${t('ta_import_denylist', 'Import from DenyList')}</div>
+            <div slot="headline">${escapeHtml(t('ta_import_denylist', 'Import from DenyList'))}</div>
           </md-menu-item>
-        </md-menu>
-      </div>
+        </md-menu>`,
+      })}
 
       <div class="ta-search-container">
         <md-outlined-text-field id="ta-search" class="ta-search" placeholder="${t('ta_search_placeholder', 'Search apps')}" aria-label="${escapeHtml(t('ta_search_placeholder', 'Search apps'))}">
@@ -293,7 +296,7 @@ export async function openTargetAppsManager() {
 
   function closeTapMenu() {
     const menu = overlay.querySelector('#ta-menu') as MdMenu | null;
-    if (menu?.open) menu.open = false;
+    closeMenu(menu);
   }
 
   function setMode(newMode: Mode) {

@@ -21,7 +21,7 @@ import { escapeHtml, shellEscape, updateListContainerCorners } from './utils.js'
 import { t } from './i18n.js';
 import { refreshPifChooseDesc as refreshChooseDesc } from './pif-choose-desc.js';
 import { openSubPage } from './subpage.js';
-import { wireMenuTrigger } from './menu-utils.js';
+import { closeMenu, wireMenuTrigger } from './menu-utils.js';
 import { rowContent, rowShell } from './ui-row.js';
 
 const tf = (key: string, fallback: string, value: string): string =>
@@ -580,7 +580,7 @@ export async function openPifDeviceSubpage() {
       wireMenuTrigger(menuBtn, menu);
 
       container.querySelector('#pif-menu-import')?.addEventListener('click', () => {
-        if (menu) menu.open = false;
+        closeMenu(menu);
         openFileBrowser(
           path => {
             void importFile(path);
@@ -617,14 +617,14 @@ export async function openPifDeviceSubpage() {
       };
 
       container.querySelector('#pif-menu-mode')?.addEventListener('click', () => {
-        if (menu) menu.open = false;
+        closeMenu(menu);
         mode = mode === 'target' ? 'blacklist' : 'target';
         updateHeaderFn?.();
         renderLists();
       });
 
       container.querySelector('#pif-menu-reset')?.addEventListener('click', () => {
-        if (menu) menu.open = false;
+        closeMenu(menu);
         if (mode === 'target') {
           selectProduct('');
           renderLists();

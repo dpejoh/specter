@@ -7,6 +7,7 @@ import { t } from './i18n.js';
 import { escapeHtml } from './utils.js';
 import { setupOverlayA11y } from './overlay-a11y.js';
 import { rowContent, rowIcon, rowShell, rowSpacer } from './ui-row.js';
+import { overlayHeader } from './ui-overlay.js';
 
 
 export interface SubPageSwitchItem {
@@ -173,14 +174,14 @@ async function openSubPageInternal(config: SubPageConfig): Promise<SubPageInstan
   // Build inner HTML structure reusing Specter's native .list-container and .list-item styling
   overlay.innerHTML = `
     <div class="subpage-inner">
-      <header class="subpage-header">
-        <button class="subpage-back-btn" id="subpage-back" aria-label="${escapeHtml(t('common_back', 'Back'))}">
-          <md-icon aria-hidden="true">arrow_back</md-icon>
-          <md-ripple></md-ripple>
-        </button>
-        <h1 class="subpage-title" id="subpage-title-${config.id}">${escapeHtml(config.title)}</h1>
-        <div class="subpage-header-actions" id="subpage-header-actions"></div>
-      </header>
+      ${overlayHeader({
+        className: 'subpage-header',
+        back: { id: 'subpage-back', className: 'subpage-back-btn', label: t('common_back', 'Back') },
+        title: config.title,
+        titleClass: 'subpage-title',
+        titleId: `subpage-title-${config.id}`,
+        actions: '<div class="subpage-header-actions" id="subpage-header-actions"></div>',
+      })}
 
       <div class="subpage-content" id="subpage-scroll-area">
         ${config.description ? `

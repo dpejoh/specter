@@ -999,12 +999,6 @@ md-dialog {
   font-size: 24px;
 }
 
-.subpage-header-title-wrap {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-}
 
 /* Google Files-style Breadcrumb Navigation Bar */
 .fb-breadcrumbs-wrap {
@@ -2711,6 +2705,7 @@ md-filled-tonal-button {
 
 .subpage-title {
   margin: 0;
+  min-width: 0;
   font-size: 1.375rem;
   font-weight: 500;
   letter-spacing: -0.01em;

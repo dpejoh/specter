@@ -5,7 +5,8 @@ import '@material/web/menu/menu.js';
 import '@material/web/menu/menu-item.js';
 import type { MdMenu } from '@material/web/menu/menu.js';
 import { setupOverlayA11y } from './overlay-a11y.js';
-import { wireMenuTrigger } from './menu-utils.js';
+import { closeMenu, wireMenuTrigger } from './menu-utils.js';
+import { overlayHeader } from './ui-overlay.js';
 
 interface FsEntry {
   name: string;
@@ -282,31 +283,30 @@ export async function openFileBrowser(
 
     overlay.innerHTML = `
       <div class="subpage-inner">
-        <header class="subpage-header">
-          <button type="button" class="subpage-back-btn" id="fb-back" aria-label="${escapeHtml(t('common_back', 'Back'))}">
-            <md-icon aria-hidden="true">arrow_back</md-icon>
-            <md-ripple></md-ripple>
-          </button>
-          <div class="subpage-header-title-wrap">
-            <h1 class="subpage-title" id="fb-title">${escapeHtml(pageTitle)}</h1>
-          </div>
-          <div class="fb-menu-wrap">
-            <button type="button" class="subpage-action-btn" id="fb-menu-btn" aria-label="${t('ta_menu_more', 'More options')}">
+        ${overlayHeader({
+          className: 'subpage-header',
+          back: { id: 'fb-back', className: 'subpage-back-btn', label: t('common_back', 'Back') },
+          title: pageTitle,
+          titleTag: 'h1',
+          titleClass: 'subpage-title',
+          titleId: 'fb-title',
+          actions: `<div class="fb-menu-wrap">
+            <button type="button" class="subpage-action-btn" id="fb-menu-btn" aria-label="${escapeHtml(t('ta_menu_more', 'More options'))}">
               <md-icon aria-hidden="true">more_vert</md-icon>
               <md-ripple></md-ripple>
             </button>
             <md-menu id="fb-menu" class="fb-menu" anchor="fb-menu-btn" positioning="fixed">
               <md-menu-item id="fb-menu-filter-primary" class="first">
                 <md-icon slot="start" aria-hidden="true" class="fb-menu-check ${!allFiles ? 'fb-menu-check--visible' : ''}">check</md-icon>
-                <div slot="headline">${filterLabel}</div>
+                <div slot="headline">${escapeHtml(filterLabel)}</div>
               </md-menu-item>
               <md-menu-item id="fb-menu-filter-all" class="last">
                 <md-icon slot="start" aria-hidden="true" class="fb-menu-check ${allFiles ? 'fb-menu-check--visible' : ''}">check</md-icon>
-                <div slot="headline">${t('fb_all_files', 'All Files')}</div>
+                <div slot="headline">${escapeHtml(t('fb_all_files', 'All Files'))}</div>
               </md-menu-item>
             </md-menu>
-          </div>
-        </header>
+          </div>`,
+        })}
 
         <div class="fb-breadcrumbs-wrap">
           <nav class="fb-breadcrumbs" id="fb-breadcrumbs" aria-label="Breadcrumb">
@@ -388,7 +388,7 @@ export async function openFileBrowser(
     wireMenuTrigger(menuBtn, menu);
 
     overlay.querySelector('#fb-menu-filter-primary')?.addEventListener('click', () => {
-      if (menu) menu.open = false;
+      closeMenu(menu);
       if (allFiles) {
         allFiles = false;
         savedAllFilesFilter = false;
@@ -397,7 +397,7 @@ export async function openFileBrowser(
     });
 
     overlay.querySelector('#fb-menu-filter-all')?.addEventListener('click', () => {
-      if (menu) menu.open = false;
+      closeMenu(menu);
       if (!allFiles) {
         allFiles = true;
         savedAllFilesFilter = true;
@@ -488,15 +488,14 @@ export async function openFileBrowser(
 
     overlay.innerHTML = `
       <div class="subpage-inner">
-        <header class="subpage-header">
-          <button type="button" class="subpage-back-btn" id="fb-back" aria-label="${escapeHtml(t('common_back', 'Back'))}">
-            <md-icon aria-hidden="true">arrow_back</md-icon>
-            <md-ripple></md-ripple>
-          </button>
-          <div class="subpage-header-title-wrap">
-            <h1 class="subpage-title" id="fb-title">${escapeHtml(pageTitle)}</h1>
-          </div>
-        </header>
+        ${overlayHeader({
+          className: 'subpage-header',
+          back: { id: 'fb-back', className: 'subpage-back-btn', label: t('common_back', 'Back') },
+          title: pageTitle,
+          titleTag: 'h1',
+          titleClass: 'subpage-title',
+          titleId: 'fb-title',
+        })}
         <div class="fb-breadcrumbs-wrap">
           <nav class="fb-breadcrumbs" id="fb-breadcrumbs" aria-label="Breadcrumb">
             ${renderBreadcrumbsHtml(path, t('fb_internal_storage', 'Internal storage'))}
