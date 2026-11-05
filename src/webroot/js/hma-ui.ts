@@ -23,11 +23,7 @@ export async function openHmaDialog() {
     },
     groups: [
       {
-        title: t('hma_group_app_launch', 'App Launch Policy (Action Button)'),
-        description: t(
-          'hma_group_app_launch_desc',
-          'Choose how Specter handles opening HMA-OSS to reload its configuration after generating rules.'
-        ),
+        title: t('hma_group_app_launch', 'App Launch Policy'),
         items: [
           {
             type: 'radio',
@@ -62,7 +58,7 @@ export async function openHmaDialog() {
         ],
       },
       {
-        title: t('hma_group_scope', 'Profile & Scope Options'),
+        title: t('hma_group_scope', 'Configuration Options'),
         items: [
           {
             id: 'hma-target-user-apps',
@@ -88,10 +84,6 @@ export async function openHmaDialog() {
             title: t('hma_hide_xposed', 'Hide Detected Xposed Modules'),
             description: t('hma_hide_xposed_desc', 'Reads xposedmodule metadata from installed apps and adds matches to the hide list.'),
           },
-        ],
-      },
-      {
-        items: [
           {
             id: 'hma-force-regen',
             key: 'toggle_action_force_hma',
