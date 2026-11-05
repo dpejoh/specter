@@ -11,6 +11,11 @@ export function initNetwork() {
   window.addEventListener('offline', updateNetworkStatus);
 }
 
+export function refreshNetworkStatus() {
+  lastStatus = null;
+  void updateNetworkStatus();
+}
+
 async function updateNetworkStatus() {
   const online = await checkOnline();
   if (online === lastStatus) return;

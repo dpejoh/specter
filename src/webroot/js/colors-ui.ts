@@ -1,9 +1,9 @@
-import { getTranslation } from './i18n.js';
+import { t } from './i18n.js';
 import { cfgGet, cfgSet } from './cfg.js';
 import { applyPreset, getCurrentPreset, PRESETS } from './theme.js';
 import { openSubPage } from './subpage.js';
+import { makeRowInteractive } from './utils.js';
 
-const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
 const BASIC_COLORS: { id: string; nameKey: string; defaultName: string; hex: string }[] = [
   { id: 'blue',   nameKey: 'theme_preset_blue',   defaultName: 'Blue',   hex: '#1157CE' },
@@ -66,7 +66,7 @@ export async function openColorsDialog() {
             type: 'custom',
             render: (host: HTMLElement) => {
               host.innerHTML = `
-                <div class="colors-preview-showcase" id="colors-live-preview" aria-hidden="true">
+                <div class="colors-preview-showcase" id="colors-live-preview" aria-hidden="true" inert>
                   <div class="phone-frame-wrapper">
                     <!-- Hardware side buttons (Pixel style: power on top, volume below) -->
                     <div class="phone-hw-btn phone-hw-btn--pwr" aria-hidden="true"></div>
@@ -162,16 +162,6 @@ export async function openColorsDialog() {
                   </div>
                 </div>
               `;
-
-              // Interactive phone preview items (toggle switches on click)
-              host.querySelectorAll('.phone-mockup .list-item').forEach(item => {
-                item.addEventListener('click', (e) => {
-                  const sw = item.querySelector('md-switch') as MdSwitch | null;
-                  if (sw && e.target !== sw && !sw.contains(e.target as Node)) {
-                    sw.selected = !sw.selected;
-                  }
-                });
-              });
             }
           }
         ]
@@ -285,8 +275,13 @@ export async function openColorsDialog() {
 export function wireColorsUI() {
   const row = document.getElementById('color-theme-row');
   if (row) {
-    row.addEventListener('click', () => {
-      openColorsDialog().catch(console.error);
+    makeRowInteractive(row);
+    const activate = () => openColorsDialog().catch(console.error);
+    row.addEventListener('click', activate);
+    row.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      activate();
     });
   }
 

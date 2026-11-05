@@ -2,9 +2,9 @@ import { initBridge, getDataDir, getModuleDir, exec } from './bridge.js';
 import { shellEscape, setDevMode, updateListContainerCorners, initCornerObserver, afterPaint, wireLazyClick } from './utils.js';
 import { setDataDir, migrateLocalStorage, cfgInit, cfgGet } from './cfg.js';
 import { initDevice, refreshDevice, refreshKeyboxStatus, refreshConflictStatus, reapplyKeyboxStatus } from './device.js';
-import { initNetwork } from './network.js';
+import { initNetwork, refreshNetworkStatus } from './network.js';
 import { initTheme } from './theme.js';
-import { initI18n, getTranslation } from './i18n.js';
+import { initI18n, t } from './i18n.js';
 import { loadContributors } from './contributors.js';
 import { initRedirect } from './redirect.js';
 import { showToast } from './toast.js';
@@ -18,7 +18,6 @@ import { wireControlRows } from './control-ui.js';
 import { updatePlayIntegritySectionVisibility } from './pif-section.js';
 import { updateModuleConfigSectionVisibility } from './module-config-section.js';
 
-const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
 let _homeInitialized = false;
 
@@ -55,6 +54,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.addEventListener('languageChanged', () => {
     loadContributors().catch(() => {});
+    renderActivityPreview();
+    refreshNetworkStatus();
+    refreshKeyboxStatus().catch(() => {});
+    void import('./pif-choose-desc.js').then(m => m.refreshPifChooseDesc()).catch(() => {});
     import('./dark-theme-ui.js').then(m => m.updateDarkThemeSummary()).catch(() => {});
     import('./language-ui.js').then(m => m.updateLanguageSummary()).catch(() => {});
     import('./colors-ui.js').then(m => m.updateColorsSummary()).catch(() => {});

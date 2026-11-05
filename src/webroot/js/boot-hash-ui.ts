@@ -1,12 +1,11 @@
 import { cfgGet, cfgSet } from './cfg.js';
-import { getTranslation } from './i18n.js';
+import { t } from './i18n.js';
 import { wireRowDialog } from './toggles.js';
 import { openSubPage } from './subpage.js';
 import { showToast } from './toast.js';
 import { exec, getModuleDir } from './bridge.js';
-import { shellEscape } from './utils.js';
+import { escapeHtml, shellEscape } from './utils.js';
 
-const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
 export async function openBootHashSubpage() {
   const moddir = getModuleDir();
@@ -79,8 +78,8 @@ export async function openBootHashSubpage() {
             id: 'bh-custom-input-card',
             render: (container, _isEnabled, posClass) => {
               container.innerHTML = `
-                <div class="list-item ${posClass || 'list-item--only'}" style="flex-direction: column; align-items: stretch; gap: 8px; cursor: default; padding: 14px 16px;">
-                  <div style="display: flex; align-items: center; gap: 14px;">
+                <div class="list-item bh-card ${posClass || 'list-item--only'}">
+                  <div class="bh-row">
                     <div class="li-icon"><md-icon aria-hidden="true">tag</md-icon></div>
                     <div class="list-item-content">
                       <div class="toggle-text">${t('boot_hash_custom_title', 'Custom Hash')}</div>
@@ -92,13 +91,13 @@ export async function openBootHashSubpage() {
                       type="text"
                       id="bh-input"
                       class="subpage-full-input"
-                      style="font-family: monospace; font-size: 0.8125rem; font-variant-ligatures: none;"
+                      class="bh-mono"
                       maxlength="64"
                       autocapitalize="none"
                       autocomplete="off"
                       spellcheck="false"
                       placeholder="${t('boot_hash_placeholder', 'Empty for auto')}"
-                      value="${savedCustom}"
+                      value="${escapeHtml(savedCustom)}"
                       aria-label="${t('boot_hash_custom_title', 'Custom Hash')}"
                     />
                     <md-icon-button id="bh-paste-btn" aria-label="${t('kb_paste_aria', 'Paste from clipboard')}">
@@ -141,13 +140,13 @@ export async function openBootHashSubpage() {
             id: 'bh-active-status-card',
             render: (container, _isEnabled, posClass) => {
               container.innerHTML = `
-                <div class="list-item ${posClass || 'list-item--first'}" style="flex-direction: column; align-items: stretch; gap: 4px; cursor: default; padding: 14px 16px;">
-                  <div style="display: flex; align-items: center; gap: 14px;">
+                <div class="list-item bh-card bh-card--compact ${posClass || 'list-item--first'}">
+                  <div class="bh-row">
                     <div class="li-icon"><md-icon aria-hidden="true">verified_user</md-icon></div>
                     <div class="list-item-content">
                       <div class="toggle-text">${t('boot_hash_active_label', 'Active (ro.boot.vbmeta.digest)')}</div>
-                      <span class="supporting-text" id="bh-active-val" style="font-family: monospace; font-size: 0.8125rem; font-variant-ligatures: none; word-break: break-all; margin-top: 4px; display: block; color: var(--md-sys-color-primary);">
-                        ${activeHash || t('boot_hash_active_empty', 'None')}
+                      <span class="supporting-text" id="bh-active-val" class="bh-mono bh-mono--block bh-mono--primary">
+                        ${escapeHtml(activeHash || t('boot_hash_active_empty', 'None'))}
                       </span>
                     </div>
                   </div>
@@ -161,22 +160,22 @@ export async function openBootHashSubpage() {
             id: 'bh-cache-status-card',
             render: (container, _isEnabled, posClass) => {
               container.innerHTML = `
-                <div class="list-item ${posClass || 'list-item--last'}" style="flex-direction: column; align-items: stretch; gap: 8px; cursor: default; padding: 14px 16px;">
-                  <div style="display: flex; align-items: center; gap: 14px;">
+                <div class="list-item bh-card ${posClass || 'list-item--last'}">
+                  <div class="bh-row">
                     <div class="li-icon"><md-icon aria-hidden="true">storage</md-icon></div>
-                    <div class="list-item-content" style="flex: 1; min-width: 0;">
+                    <div class="list-item-content bh-content-flex">
                       <div class="toggle-text">${t('boot_hash_cache_title', 'Cached Hash')}</div>
-                      <span class="supporting-text" id="bh-cache-val" style="font-family: monospace; font-size: 0.8125rem; font-variant-ligatures: none; word-break: break-all; margin-top: 4px; display: block;">
-                        ${cachedHash || t('boot_hash_cache_empty', 'None')}
+                      <span class="supporting-text" id="bh-cache-val" class="bh-mono bh-mono--block">
+                        ${escapeHtml(cachedHash || t('boot_hash_cache_empty', 'None'))}
                       </span>
                     </div>
                   </div>
-                  <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 4px;">
-                    <md-text-button id="bh-refresh-cache-btn" style="--md-text-button-container-shape: 9999px;">
+                  <div class="bh-actions-row">
+                    <md-text-button id="bh-refresh-cache-btn" class="bh-pill-button">
                       <md-icon slot="icon" aria-hidden="true">refresh</md-icon>
                       ${t('boot_hash_refresh_btn', 'Refresh')}
                     </md-text-button>
-                    <md-filled-tonal-button id="bh-clear-cache-btn" style="--md-filled-tonal-button-container-shape: 9999px; border-radius: 9999px;" ${!cachedHash ? 'disabled' : ''}>
+                    <md-filled-tonal-button id="bh-clear-cache-btn" class="bh-pill-button" ${!cachedHash ? 'disabled' : ''}>
                       <md-icon slot="icon" aria-hidden="true">delete_sweep</md-icon>
                       ${t('boot_hash_clear_cache', 'Clear Cache')}
                     </md-filled-tonal-button>

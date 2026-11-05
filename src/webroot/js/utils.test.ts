@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { escapeHtml, shellEscape, fetchJson, setText } from './utils.js'
+import { escapeHtml, shellEscape, fetchJson } from './utils.js'
 
 function mockFetch(data: unknown, status = 200) {
   globalThis.fetch = vi.fn(() => Promise.resolve(new Response(JSON.stringify(data), { status }))) as unknown as typeof globalThis.fetch
@@ -41,20 +41,7 @@ describe('shellEscape', () => {
   })
 })
 
-describe('setText', () => {
-  beforeEach(() => {
-    document.body.innerHTML = '<div id="target"></div>'
-  })
 
-  it('sets textContent of existing element', () => {
-    setText('target', 'new text')
-    expect(document.getElementById('target')!.textContent).toBe('new text')
-  })
-
-  it('does nothing for missing element', () => {
-    expect(() => setText('nonexistent', 'text')).not.toThrow()
-  })
-})
 
 describe('fetchJson', () => {
   it('returns null on network error', async () => {

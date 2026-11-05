@@ -8,7 +8,6 @@ const fontverter = require('fontverter');
 const ROOT = path.resolve(__dirname, '..');
 const FULL_FONT = path.join(ROOT, 'scripts/assets/material-icons-full.woff2');
 const OUTPUTS = [
-  path.join(ROOT, 'src/webroot/assets/material-icons.woff2'),
   path.join(ROOT, 'src/webroot/assets/material-icons-outlined.woff2'),
 ];
 

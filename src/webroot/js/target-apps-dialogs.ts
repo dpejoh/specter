@@ -5,11 +5,10 @@ import { exec, getModuleDir } from './bridge.js';
 import { cfgSet } from './cfg.js';
 import { shellEscape } from './utils.js';
 import { showToast } from './toast.js';
-import { getTranslation } from './i18n.js';
+import { t } from './i18n.js';
 import { appendToOutput } from './terminal.js';
 import type { TargetApp, AppState } from './target-apps.js';
 
-const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
 export interface TargetDialogsContext {
   apps: TargetApp[];
@@ -41,7 +40,7 @@ export function openTeesimModeDialog() {
       </div>
     `;
     document.body.appendChild(d);
-    d.addEventListener('close', () => document.body.removeChild(d));
+    d.addEventListener('closed', () => d.remove());
 
     let _touched = false;
     exec(`sh ${scriptPath} --get 2>/dev/null || echo patch`).then(({ stdout }) => {
@@ -86,38 +85,24 @@ export function openTeesimModeDialog() {
 
 function paintSeg(root: HTMLElement): void {
     const rootStyle = document.documentElement.style;
-    const hex: Record<string, [string, string]> = {
+    const colors: Record<string, [string, string]> = {
       bare: [rootStyle.getPropertyValue('--md-sys-color-primary').trim(), rootStyle.getPropertyValue('--md-sys-color-on-primary').trim()],
       conditional: [rootStyle.getPropertyValue('--md-sys-color-tertiary').trim(), rootStyle.getPropertyValue('--md-sys-color-on-tertiary').trim()],
       force: [rootStyle.getPropertyValue('--md-sys-color-error').trim(), rootStyle.getPropertyValue('--md-sys-color-on-error').trim()],
       patch: [rootStyle.getPropertyValue('--md-sys-color-primary').trim(), rootStyle.getPropertyValue('--md-sys-color-on-primary').trim()],
       generation: [rootStyle.getPropertyValue('--md-sys-color-error').trim(), rootStyle.getPropertyValue('--md-sys-color-on-error').trim()],
     };
-    const inject = (btn: Element) => {
-      const sr = btn.shadowRoot;
-      if (!sr) { requestAnimationFrame(() => inject(btn)); return; }
+    root.querySelectorAll<HTMLElement>('md-outlined-segmented-button').forEach(btn => {
       const val = btn.getAttribute('value');
       if (!val) return;
-      const h = hex[val];
-      if (!h || !h[0] || !h[1]) return;
-      const [bg, fg] = h;
-      const sheet = new CSSStyleSheet();
-      sheet.replaceSync(`.md3-segmented-button--selected{background-color:${bg}}.md3-segmented-button.md3-segmented-button--selected:enabled .md3-segmented-button__label-text{color:${fg}}.md3-segmented-button.md3-segmented-button--selected:enabled:hover .md3-segmented-button__label-text{color:${fg}}.md3-segmented-button.md3-segmented-button--selected:enabled:focus .md3-segmented-button__label-text{color:${fg}}.md3-segmented-button.md3-segmented-button--selected:enabled:active .md3-segmented-button__label-text{color:${fg}}.md3-segmented-button--selected .md3-segmented-button__icon{color:${fg}}.md3-segmented-button--selected .md3-segmented-button__checkmark-path{stroke:${fg}}.md3-segmented-button--selected:hover .md3-segmented-button__checkmark-path{stroke:${fg}}.md3-segmented-button--selected:focus .md3-segmented-button__checkmark-path{stroke:${fg}}.md3-segmented-button--selected:active .md3-segmented-button__checkmark-path{stroke:${fg}}`);
-      sr.adoptedStyleSheets = [...sr.adoptedStyleSheets, sheet];
-    };
-    root.querySelectorAll('md-outlined-segmented-button').forEach(inject);
-
-    const set = root.querySelector('md-outlined-segmented-button-set');
-    if (set) {
-      const injectFlex = () => {
-        const sr = set.shadowRoot;
-        if (!sr) { requestAnimationFrame(injectFlex); return; }
-        const s = new CSSStyleSheet();
-        s.replaceSync('::slotted(md-outlined-segmented-button){flex:1;min-width:0}');
-        sr.adoptedStyleSheets = [...sr.adoptedStyleSheets, s];
-      };
-      injectFlex();
-    }
+      const pair = colors[val];
+      if (!pair || !pair[0] || !pair[1]) return;
+      const [bg, fg] = pair;
+      btn.classList.add('segmented-flex');
+      btn.style.setProperty('--md-outlined-segmented-button-selected-container-color', bg);
+      btn.style.setProperty('--md-outlined-segmented-button-selected-label-text-color', fg);
+      btn.style.setProperty('--md-outlined-segmented-button-selected-icon-color', fg);
+    });
   }
 
 export function openModeDialog(ctx: TargetDialogsContext) {
@@ -147,7 +132,7 @@ export function openModeDialog(ctx: TargetDialogsContext) {
       </div>
     `;
     document.body.appendChild(d);
-    d.addEventListener('close', () => document.body.removeChild(d));
+    d.addEventListener('closed', () => d.remove());
 
     let _mode = ctx.getDefaultMode();
     d.querySelectorAll('md-outlined-segmented-button').forEach(b => {
@@ -192,7 +177,7 @@ export function openRegenerateDialog(ctx: TargetDialogsContext) {
       </div>
     `;
     document.body.appendChild(d);
-    d.addEventListener('close', () => document.body.removeChild(d));
+    d.addEventListener('closed', () => d.remove());
 
     d.querySelector('#ta-regenerate-confirm')!.addEventListener('click', async () => {
       d.close();

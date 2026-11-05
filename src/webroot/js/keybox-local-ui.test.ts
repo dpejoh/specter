@@ -1,18 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { cfgGet, cfgSet, exec, getModuleDir, refreshKeyboxStatus, showToast } = vi.hoisted(() => ({
-  cfgGet: vi.fn(async () => ''),
+const { cfgGet, cfgSet, exec, getModuleDir, refreshKeyboxStatus, showToast, runAction } = vi.hoisted(() => ({
+  cfgGet: vi.fn(async (_key?: string) => ''),
   cfgSet: vi.fn(),
   exec: vi.fn(async () => ({ stdout: '', stderr: '', code: 0 })),
   getModuleDir: vi.fn(() => '/data/adb/modules/specter'),
   refreshKeyboxStatus: vi.fn(async () => {}),
   showToast: vi.fn(),
+  runAction: vi.fn(async () => 0),
 }))
 
 vi.mock('./cfg.js', () => ({ cfgGet, cfgSet }))
 vi.mock('./bridge.js', () => ({ exec, getModuleDir }))
 vi.mock('./device.js', () => ({ refreshKeyboxStatus }))
 vi.mock('./toast.js', () => ({ showToast }))
+vi.mock('./actions.js', () => ({ runAction }))
 
 import { mountLocalKeyboxForm } from './keybox-local-ui.js'
 
@@ -26,6 +28,8 @@ beforeEach(() => {
   getModuleDir.mockReturnValue('/data/adb/modules/specter')
   refreshKeyboxStatus.mockClear()
   showToast.mockClear()
+  runAction.mockClear()
+  runAction.mockResolvedValue(0)
 })
 
 describe('local keybox form', () => {
@@ -53,7 +57,7 @@ describe('local keybox form', () => {
     await expect(form.apply()).resolves.toBe(true)
     expect(cfgSet).toHaveBeenCalledWith('keybox_custom_type', 'path')
     expect(cfgSet).toHaveBeenCalledWith('keybox_custom_value', '/sdcard/keybox.xml')
-    expect(exec).toHaveBeenCalledWith("sh '/data/adb/modules/specter/features/keybox.sh'")
+    expect(runAction).toHaveBeenCalledWith('keybox.sh')
     expect(onInstalled).toHaveBeenCalled()
   })
 
@@ -65,6 +69,20 @@ describe('local keybox form', () => {
     await expect(form.apply()).resolves.toBe(false)
     expect(exec).not.toHaveBeenCalled()
     expect(showToast).toHaveBeenCalled()
+  })
+
+  it('treats a persisted keybox path as text, never as HTML', async () => {
+    const payload = '"><img src=x onerror=alert(1)>'
+    cfgGet.mockImplementation(async (key?: string) => key === 'keybox_custom_value' ? payload : '')
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    await mountLocalKeyboxForm(container)
+
+    const input = container.querySelector('#kb-url-input') as HTMLInputElement
+    expect(input.value).toBe(payload)
+    expect(container.querySelector('img')).toBeNull()
+    expect(container.innerHTML).not.toContain('<img')
   })
 
 })

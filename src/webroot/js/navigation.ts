@@ -73,8 +73,6 @@ export function wireNavigation() {
     else if (pageId === 'control-page') await import('./material-control.js');
     else if (pageId === 'settings-page') {
       await import('./material-settings.js');
-      const { initThemeUI } = await import('./theme.js');
-      await initThemeUI().catch(() => {});
     }
   }
 
@@ -119,6 +117,8 @@ export function wireNavigation() {
 
     document.querySelector('.nav-tab--active')?.classList.remove('nav-tab--active');
     tab.classList.add('nav-tab--active');
+    navTabs.forEach(t => t.removeAttribute('aria-current'));
+    tab.setAttribute('aria-current', 'page');
 
     // Unsuppress all pages during movement
     updatePageSuppression(nextIndex, true);
@@ -176,7 +176,7 @@ export function wireNavigation() {
     if (window.isOverlayOpen) return;
     if (document.querySelector('md-dialog[open]')) return;
     const target = e.target;
-    if (target instanceof Element && target.closest('input, select, textarea, md-slider, pre, code, .dialog-blur-backdrop')) {
+    if (target instanceof Element && target.closest('input, select, textarea, md-slider, pre, code')) {
       return;
     }
 
@@ -185,6 +185,7 @@ export function wireNavigation() {
     startY = firstTouch.clientY;
     startTime = Date.now();
     touchIntent = 'pending';
+    track.classList.add('is-swiping');
 
     // Unsuppress adjacent pages so they are rendered and visible during drag
     updatePageSuppression(currentActiveIndex, true);
@@ -241,6 +242,7 @@ export function wireNavigation() {
   }, { passive: false });
 
   function onTouchEndOrCancel(e: TouchEvent) {
+    track.classList.remove('is-swiping');
     if (touchIntent !== 'drag') {
       if (touchIntent === 'pending') {
         updatePageSuppression(currentActiveIndex, false);
@@ -277,9 +279,15 @@ export function wireNavigation() {
   document.addEventListener('touchend', onTouchEndOrCancel, { passive: true });
   document.addEventListener('touchcancel', onTouchEndOrCancel, { passive: true });
 
-  window.addEventListener('popstate', () => {
+  window.addEventListener('popstate', (event) => {
     const dialog = document.querySelector('md-dialog[open]');
-    if (dialog) { (dialog as any).close(); return; }
+    if (dialog) {
+      // Back closes the topmost dialog only. Without this, every overlay's
+      // popstate listener would also close the page underneath.
+      event.stopImmediatePropagation();
+      (dialog as any).close();
+      return;
+    }
     if (window.isOverlayOpen) return;
     exitStatePushed = false;
     if (getCurrentPage() === 'home-page') { window.close(); }

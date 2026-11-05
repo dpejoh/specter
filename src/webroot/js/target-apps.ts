@@ -1,6 +1,6 @@
 import { exec, getModuleDir, getDataDir } from './bridge.js';
 import { cfgGet } from './cfg.js';
-import { shellEscape, fetchJson } from './utils.js';
+import { shellEscape, fetchJson, escapeHtml } from './utils.js';
 import { showToast } from './toast.js';
 import { getTranslation } from './i18n.js';
 import { appendToOutput } from './terminal.js';
@@ -9,6 +9,8 @@ import type { KeystoreManagerJson } from './types.js';
 import { AppIconManager, ksuGlobal } from './target-apps-icons.js';
 import { openTeesimModeDialog, openModeDialog, openRegenerateDialog } from './target-apps-dialogs.js';
 import type { TargetDialogsContext } from './target-apps-dialogs.js';
+import { setupOverlayA11y } from './overlay-a11y.js';
+import { wireMenuTrigger } from './menu-utils.js';
 
 export type TargetState = 'unchecked' | 'bare' | 'conditional' | 'force';
 type BlacklistState = 'unchecked' | 'blacklisted';
@@ -157,15 +159,18 @@ function buildOverlayHTML(): string {
         </div>
       </div>
       <div class="ta-header">
-        <button id="ta-back" class="ta-back-btn">
-          <md-icon>arrow_back</md-icon>
+        <button id="ta-back" class="ta-back-btn" aria-label="${escapeHtml(t('common_back', 'Back'))}">
+          <md-icon aria-hidden="true">arrow_back</md-icon>
         </button>
-        <h2 class="ta-title">${t('ta_title', 'App Targeting')}</h2>
+        <h2 class="ta-title" id="ta-title">${escapeHtml(t('ta_title', 'App Targeting'))}</h2>
         <button id="ta-menu-btn" class="ta-menu-btn" aria-label="More options" data-i18n-aria="ta_menu_more">
           <md-icon>more_vert</md-icon>
         </button>
         <md-menu id="ta-menu" class="ta-menu" anchor="ta-menu-btn" positioning="fixed">
-          <md-menu-item id="ta-select-all" class="first">
+          <md-menu-item id="ta-refresh" class="first">
+            <div slot="headline">${t('ta_refresh', 'Refresh')}</div>
+          </md-menu-item>
+          <md-menu-item id="ta-select-all">
             <div slot="headline">${t('ta_select_all', 'Select All')}</div>
           </md-menu-item>
           <md-menu-item id="ta-deselect-all">
@@ -190,8 +195,8 @@ function buildOverlayHTML(): string {
       </div>
 
       <div class="ta-search-container">
-        <md-outlined-text-field id="ta-search" class="ta-search" placeholder="${t('ta_search_placeholder', 'Search apps')}">
-          <md-icon slot="leading-icon">search</md-icon>
+        <md-outlined-text-field id="ta-search" class="ta-search" placeholder="${t('ta_search_placeholder', 'Search apps')}" aria-label="${escapeHtml(t('ta_search_placeholder', 'Search apps'))}">
+          <md-icon slot="leading-icon" aria-hidden="true">search</md-icon>
         </md-outlined-text-field>
       </div>
 
@@ -223,6 +228,7 @@ function buildOverlayHTML(): string {
 
 
 export async function openTargetAppsManager() {
+  if (document.querySelector('.ta-overlay')) return;
   await import('./material-subpages.js');
   const overlay = document.createElement('div');
   overlay.className = 'ta-overlay';
@@ -256,7 +262,12 @@ export async function openTargetAppsManager() {
   const targetMap = new Map<string, AppState>();
   let blPkgs = new Set<string>();
 
+  let cleanupA11y = () => {};
+  let closed = false;
   function closeOverlay() {
+    if (closed) return;
+    closed = true;
+    cleanupA11y();
     iconMgr.destroy();
     window.isOverlayOpen = false;
     window.removeEventListener('popstate', closeOverlay);
@@ -267,12 +278,18 @@ export async function openTargetAppsManager() {
     }, 300);
   }
 
+  cleanupA11y = setupOverlayA11y(overlay, {
+    titleId: 'ta-title',
+    onClose: closeOverlay,
+    initialFocus: overlay.querySelector('#ta-back'),
+  });
+
   overlay.querySelector('#ta-back')!.addEventListener('click', () => history.back());
 
-  overlay.querySelector('#ta-menu-btn')!.addEventListener('click', () => {
-    const menu = overlay.querySelector('#ta-menu') as MdMenu;
-    menu.open = !menu.open;
-  });
+  wireMenuTrigger(
+    overlay.querySelector('#ta-menu-btn'),
+    overlay.querySelector('#ta-menu') as MdMenu | null,
+  );
 
   function closeTapMenu() {
     const menu = overlay.querySelector('#ta-menu') as MdMenu | null;
@@ -308,6 +325,11 @@ export async function openTargetAppsManager() {
     (overlay.querySelector('#ta-filter-all') as MdFilterChip).selected = true;
     applyFilters();
   }
+
+  overlay.querySelector('#ta-refresh')!.addEventListener('click', () => {
+    closeTapMenu();
+    void refreshApps();
+  });
 
   overlay.querySelector('#ta-select-all')!.addEventListener('click', () => {
     const on = mode === 'blacklist' ? 'blacklisted' : (supportsPerAppMode ? (defaultMode as AppState) : 'bare');
@@ -670,6 +692,8 @@ export async function openTargetAppsManager() {
       item.className = 'ta-item';
       item.dataset.package = app.packageName;
       item.dataset.state = app.state;
+      item.setAttribute('role', 'button');
+      item.tabIndex = 0;
 
       const { wrap: iconContainer } = iconMgr.createElements(app.packageName);
 
@@ -690,10 +714,11 @@ export async function openTargetAppsManager() {
       const circle = document.createElement('div');
       circle.className = 'ta-state-circle';
       circle.setAttribute('data-state', app.state);
-      circle.setAttribute('aria-label', t(stateLabelKey(app.state, mode), app.state));
+      circle.setAttribute('aria-hidden', 'true');
 
       const stateIcon = stateIcons(app.state, mode);
       const stateTextVal = stateText(app.state, mode);
+      item.setAttribute('aria-label', `${app.appName}, ${t(stateLabelKey(app.state, mode), stateTextVal || app.state)}`);
       circle.innerHTML = stateIcon
         ? `<md-icon class="ta-state-icon">${stateIcon}</md-icon>`
         : stateTextVal
@@ -703,7 +728,7 @@ export async function openTargetAppsManager() {
       function applyAppState(newState: AppState) {
         app.state = newState;
         circle.setAttribute('data-state', newState);
-        circle.setAttribute('aria-label', t(stateLabelKey(newState, mode), newState));
+        item.setAttribute('aria-label', `${app.appName}, ${t(stateLabelKey(newState, mode), stateText(newState, mode) || newState)}`);
         const iconEl = circle.querySelector('.ta-state-icon');
         const ni = stateIcons(newState, mode);
         const nt = stateText(newState, mode);
@@ -748,6 +773,11 @@ export async function openTargetAppsManager() {
           const on = supportsPerAppMode ? (defaultMode as AppState) : 'bare';
           applyAppState(app.state === 'unchecked' ? on : 'unchecked');
         }
+      });
+      item.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        item.click();
       });
 
       const ripple = document.createElement('md-ripple');
@@ -868,7 +898,11 @@ export async function openTargetAppsManager() {
   });
 
   overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) closeOverlay();
+    if (e.target !== overlay) return;
+    // Close through history so the pushed state is consumed; calling
+    // closeOverlay() directly leaves a stale entry for the next Back press.
+    if (history.state && history.state.overlay === 'target-apps') history.back();
+    else closeOverlay();
   });
 
   window.addEventListener('popstate', closeOverlay);

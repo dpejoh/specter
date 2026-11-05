@@ -1,15 +1,13 @@
-import { exec, getModuleDir } from './bridge.js';
+import { exec } from './bridge.js';
 import { cfgGet, cfgSet } from './cfg.js';
-import { getTranslation } from './i18n.js';
+import { t } from './i18n.js';
 import { API_URLS } from './constants.js';
 import { escapeHtml, fetchJson, shellEscape, updateListContainerCorners } from './utils.js';
-import { runAction } from './actions.js';
-import { refreshKeyboxStatus } from './device.js';
 import { createFilterDropdown, type FilterDropdownHandle, type FilterOption } from './filter-dropdown.js';
 import { openSubPage } from './subpage.js';
+import { installKeybox } from './keybox-install.js';
 import type { CatalogEntry, CatalogJson } from './types.js';
 
-const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
 export interface KeyboxCatalogOptions {
   refreshButton?: HTMLElement | null;
@@ -333,16 +331,7 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
         cfgSet('keybox_provider', providerFilter === 'all' ? 'auto' : providerFilter);
       }
 
-      const code = await runAction('keybox.sh');
-      if (code === 0) {
-        const moddir = getModuleDir();
-        if (moddir) {
-          await exec(`sh ${shellEscape(moddir + '/features/keybox_info.sh')}`).catch(() => {});
-          await exec(`sh ${shellEscape(moddir + '/refresh_desc.sh')}`).catch(() => {});
-        }
-        await refreshKeyboxStatus();
-        onInstalled?.();
-      }
+      await installKeybox({ onInstalled });
     } finally {
       cfgSet('keybox_select_source', '');
       cfgSet('keybox_select_version', '');

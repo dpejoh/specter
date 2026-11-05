@@ -1,12 +1,11 @@
 import { exec, getModuleDir } from './bridge.js';
-import { getTranslation } from './i18n.js';
+import { t } from './i18n.js';
 import { showToast, closeToast } from './toast.js';
 import { API_URLS, defaultSecurityPatch } from './constants.js';
-import { fetchJson, shellEscape } from './utils.js';
+import { fetchJson, makeRowInteractive, shellEscape } from './utils.js';
 import { openSubPage } from './subpage.js';
 import type { KeystoreManagerJson } from './types.js';
 
-const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
 function isOmkPatchValue(val: string): boolean {
   return val === 'auto' || val === 'latest' || /^\d{4}-\d{2}-\d{2}$/.test(val);
@@ -333,7 +332,12 @@ export async function openSecurityPatchPage() {
 export function wireSecurityPatch() {
   const btn = document.getElementById('security-patch-btn');
   if (!btn) return;
-  btn.addEventListener('click', () => {
-    void openSecurityPatchPage();
+  makeRowInteractive(btn);
+  const activate = () => { void openSecurityPatchPage(); };
+  btn.addEventListener('click', activate);
+  btn.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    activate();
   });
 }

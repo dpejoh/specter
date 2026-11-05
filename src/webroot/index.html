@@ -8,7 +8,7 @@
   <link rel="icon" href="data:," />
   <title data-i18n="app_title">Specter</title>
 
-  <style>@font-face{font-family:'Material Icons';font-style:normal;font-weight:400;font-display:swap;src:url(./assets/material-icons.woff2)format('woff2')}@font-face{font-family:'Material Icons Outlined';font-style:normal;font-weight:400;font-display:swap;src:url(./assets/material-icons-outlined.woff2)format('woff2')}@font-face{font-family:'Google Sans Variable';font-style:normal;font-weight:1 1000;font-stretch:1 100;font-display:swap;src:url(./fonts/GoogleSans-var.woff2)format('woff2-variations')}</style>
+  <style>@font-face{font-family:'Material Icons Outlined';font-style:normal;font-weight:400;font-display:swap;src:url(./assets/material-icons-outlined.woff2)format('woff2')}@font-face{font-family:'Google Sans Variable';font-style:normal;font-weight:1 1000;font-stretch:100%;font-display:swap;src:url(./fonts/GoogleSans-var.woff2)format('woff2-variations')}</style>
   <link rel="stylesheet" href="css/app.css" />
 
   <script>
@@ -29,6 +29,7 @@
       var lang = cfg['lang'] || 'auto';
       if (lang === 'auto') {
         var nav = (navigator.language || '').slice(0, 2);
+        if (nav === 'vi') nav = 'vn';
         var available = ['en', 'zh', 'ru', 'fr', 'es', 'ar', 'pl', 'tr', 'id', 'hu', 'vn'];
         lang = available.indexOf(nav) !== -1 ? nav : 'en';
       }
@@ -142,7 +143,7 @@
         <div class="spacer"></div>
         <span id="network-chip" class="network-chip">
           <md-icon aria-hidden="true">wifi</md-icon>
-          <span id="network-label" data-i18n="home_status_online">Online</span>
+          <span id="network-label">Online</span>
         </span>
         <span id="network-announce" aria-live="polite" class="sr-only"></span>
       </div>
@@ -211,8 +212,8 @@
           <md-filled-card id="recent-activity-card" class="recent-activity-card">
             <div class="recent-activity-header">
               <span class="recent-activity-title" data-i18n="history_title">Recent activity</span>
-              <div style="display:flex;align-items:center;gap:2px">
-                <span class="recent-activity-count" id="activity-count" data-i18n="home_events_initial">0 events</span>
+              <div class="recent-activity-actions">
+                <span class="recent-activity-count" id="activity-count">0 events</span>
                 <md-icon-button id="clear-history-btn" aria-label="Clear history" data-i18n-aria="clear_history_btn">
                   <md-icon aria-hidden="true">delete</md-icon>
                 </md-icon-button>
@@ -305,7 +306,7 @@
               <div class="li-icon"><md-icon aria-hidden="true">smartphone</md-icon></div>
               <div class="list-item-content">
                 <div class="toggle-text" data-i18n="menu_pif_choose">Choose PIF Device</div>
-                <span class="supporting-text" id="pif-choose-device-desc" data-i18n="menu_pif_choose_desc">Pick which Pixel Canary models Specter may fetch</span>
+                <span class="supporting-text" id="pif-choose-device-desc">Pick which Pixel Canary models Specter may fetch</span>
               </div>
               <div class="spacer"></div>
               <md-ripple></md-ripple>
@@ -447,7 +448,7 @@
           <!-- 1. Language -->
           <h2 class="list-title" data-i18n="settings_language">Language</h2>
           <div class="list-container list-container--language">
-            <div class="list-item" id="language-row" style="cursor:pointer">
+            <div class="list-item" id="language-row">
               <div class="li-icon"><md-icon aria-hidden="true">language</md-icon></div>
               <div class="list-item-content">
                 <div class="toggle-text" data-i18n="settings_language">Language</div>
@@ -463,7 +464,7 @@
           <!-- 2. Appearance: Theme Mode & Color Accent -->
           <h2 class="list-title" data-i18n="settings_appearance">Appearance</h2>
           <div class="list-container list-container--appearance">
-            <div class="list-item" id="dark-theme-row" style="cursor:pointer">
+            <div class="list-item" id="dark-theme-row">
               <div class="li-icon"><md-icon aria-hidden="true">dark_mode</md-icon></div>
               <div class="list-item-content">
                 <div class="toggle-text" data-i18n="settings_theme_mode">Dark theme</div>
@@ -477,7 +478,7 @@
               <md-ripple></md-ripple>
             </div>
 
-            <div class="list-item" id="color-theme-row" style="cursor:pointer">
+            <div class="list-item" id="color-theme-row">
               <div class="li-icon"><md-icon aria-hidden="true">palette</md-icon></div>
               <div class="list-item-content">
                 <div class="toggle-text" data-i18n="settings_colors_title">Colors</div>
@@ -559,7 +560,7 @@
           <!-- 6. About & Support -->
           <h2 class="list-title" data-i18n="update_title">Update & Support</h2>
           <div class="list-container list-container--support">
-            <div class="list-item" data-url="https://github.com/dpejoh/specter" style="cursor:pointer">
+            <div class="list-item" data-url="https://github.com/dpejoh/specter">
               <div class="li-icon">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5c.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03c.89 1.5 2.34 1.07 2.91.83c.09-.65.35-1.09.63-1.34c-2.22-.25-4.55-1.11-4.55-4.94c0-1.09.39-1.98 1.03-2.68c-.1-.25-.45-1.27.1-2.64c0 0 .84-.27 2.75 1.02c.8-.22 1.65-.33 2.5-.33s1.7.11 2.5.33c1.91-1.29 2.75-1.02 2.75-1.02c.55 1.37.2 2.39.1 2.64c.64.7 1.03 1.59 1.03 2.68c0 3.84-2.34 4.68-4.57 4.93c.36.31.68.92.68 1.85v2.75c0 .27.16.59.67.5A10 10 0 0 0 22 12c0-5.52-4.48-10-10-10"/></svg>
               </div>
@@ -568,11 +569,11 @@
                 <span class="supporting-text" data-i18n="update_desc">Stay up to date with the latest Specter releases and bug fixes</span>
               </div>
               <div class="spacer"></div>
-              <md-icon aria-hidden="true" style="color:var(--md-sys-color-on-surface-variant);font-size:20px">open_in_new</md-icon>
+              <md-icon class="external-link-icon" aria-hidden="true">open_in_new</md-icon>
               <md-ripple></md-ripple>
             </div>
 
-            <div class="list-item" data-url="https://t.me/dpejoh" style="cursor:pointer">
+            <div class="list-item" data-url="https://t.me/dpejoh">
               <div class="li-icon">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.2.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/></svg>
               </div>
@@ -581,7 +582,7 @@
                 <span class="supporting-text" data-i18n="update_note">Join Telegram or check GitHub for contributions and technical discussions.</span>
               </div>
               <div class="spacer"></div>
-              <md-icon aria-hidden="true" style="color:var(--md-sys-color-on-surface-variant);font-size:20px">open_in_new</md-icon>
+              <md-icon class="external-link-icon" aria-hidden="true">open_in_new</md-icon>
               <md-ripple></md-ripple>
             </div>
           </div>
@@ -622,8 +623,7 @@
 
   </div>
 
-  <div id="dialog-blur-backdrop" class="dialog-blur-backdrop"></div>
-  <md-dialog id="progress-dialog" scrim-click-action="" escape-action="">
+  <md-dialog id="progress-dialog" aria-labelledby="progress-label">
     <div slot="content" class="simple-progress">
       <md-circular-progress indeterminate></md-circular-progress>
       <p class="md-typescale-body-medium" id="progress-label"></p>

@@ -1,9 +1,8 @@
-import { getTranslation } from './i18n.js';
+import { t } from './i18n.js';
 import { cfgGet, cfgSet } from './cfg.js';
 import { applyMode } from './theme.js';
 import { openSubPage } from './subpage.js';
 
-const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
 function isDarkActive(): boolean {
   const mode = document.documentElement.getAttribute('data-theme') || 'dark';

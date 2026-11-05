@@ -1,0 +1,37 @@
+import { cfgSet } from './cfg.js';
+import { exec, getModuleDir } from './bridge.js';
+import { shellEscape } from './utils.js';
+import { refreshKeyboxStatus } from './device.js';
+import { runAction } from './actions.js';
+
+export interface InstallKeyboxOptions {
+  /** Custom keybox URL/path. Omit when installing a catalog entry. */
+  text?: string;
+  privateKeybox?: boolean;
+  onInstalled?: () => void;
+}
+
+/**
+ * Single keybox install pipeline: write custom-source config, run keybox.sh,
+ * refresh keybox info/description, then refresh the hero card. Callers only
+ * own their selection/config bookkeeping and user-facing copy.
+ */
+export async function installKeybox(options: InstallKeyboxOptions = {}): Promise<boolean> {
+  if (options.text !== undefined) {
+    cfgSet('keybox_private', options.privateKeybox ? 'true' : '');
+    cfgSet('keybox_custom_type', /^https?:\/\//i.test(options.text) ? 'url' : 'path');
+    cfgSet('keybox_custom_value', options.text);
+  }
+
+  const moddir = getModuleDir();
+  if (!moddir) return false;
+
+  const code = await runAction('keybox.sh');
+  if (code !== 0) return false;
+
+  await exec(`sh ${shellEscape(moddir + '/features/keybox_info.sh')}`).catch(() => {});
+  await exec(`sh ${shellEscape(moddir + '/features/refresh_desc.sh')}`).catch(() => {});
+  await refreshKeyboxStatus();
+  options.onInstalled?.();
+  return true;
+}

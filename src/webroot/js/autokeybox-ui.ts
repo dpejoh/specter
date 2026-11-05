@@ -1,9 +1,8 @@
 import { cfgGet, cfgSet } from './cfg.js';
-import { getTranslation } from './i18n.js';
+import { t } from './i18n.js';
 import { wireRowDialog } from './toggles.js';
 import { openSubPage } from './subpage.js';
 
-const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
 const HOURS_TO_SECONDS = 3600;
 const DEFAULT_HOURS = 24;

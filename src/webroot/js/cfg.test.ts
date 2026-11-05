@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest'
 import { cfgGet, cfgSet, cfgInit, cfgInvalidate, setDataDir, migrateLocalStorage } from './cfg.js'
+import { exec } from './bridge.js'
 
 vi.mock('./bridge.js', () => ({
   exec: vi.fn(() => Promise.resolve({ stdout: '', stderr: '', code: 0 })),
@@ -90,6 +91,21 @@ describe('cfg (caching layer)', () => {
     await cfgInit()
 
     expect(await cfgGet('ts')).toBeUndefined()
+  })
+
+
+  it('serializes rapid writes to the same key', async () => {
+    const calls: string[] = []
+    vi.mocked(exec).mockImplementation(((cmd: string) => {
+      calls.push(cmd)
+      return new Promise(resolve => setTimeout(() => resolve({ stdout: '', stderr: '', code: 0 }), 0))
+    }) as typeof exec)
+
+    await Promise.all([cfgSet('serial', 'first'), cfgSet('serial', 'second')])
+
+    expect(calls).toHaveLength(2)
+    expect(calls[0]).toContain("'first'")
+    expect(calls[1]).toContain("'second'")
   })
 
   it('migrateLocalStorage migrates keys', async () => {

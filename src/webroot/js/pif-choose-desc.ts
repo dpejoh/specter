@@ -1,5 +1,5 @@
 import { cfgGet } from './cfg.js';
-import { getTranslation } from './i18n.js';
+import { t } from './i18n.js';
 
 interface PreferredDevice {
   model: string;
@@ -36,7 +36,6 @@ async function loadBlacklist(): Promise<Set<string>> {
   return set;
 }
 
-const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
 /** Update the "Choose PIF Device" row summary without loading the full picker. */
 export async function refreshPifChooseDesc(): Promise<void> {

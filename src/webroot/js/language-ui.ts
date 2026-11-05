@@ -1,7 +1,7 @@
-import { getTranslation, applyLanguage, getCurrentLanguageCode, SUPPORTED_LANGUAGES } from './i18n.js';
+import { t, applyLanguage, getCurrentLanguageCode, SUPPORTED_LANGUAGES } from './i18n.js';
 import { openSubPage } from './subpage.js';
+import { makeRowInteractive } from './utils.js';
 
-const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
 export function updateLanguageSummary() {
   const summaryEl = document.getElementById('language-summary');
@@ -60,8 +60,13 @@ export async function openLanguageDialog() {
 export function wireLanguageUI() {
   const row = document.getElementById('language-row');
   if (row) {
-    row.addEventListener('click', () => {
-      openLanguageDialog().catch(console.error);
+    makeRowInteractive(row);
+    const activate = () => openLanguageDialog().catch(console.error);
+    row.addEventListener('click', activate);
+    row.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      activate();
     });
   }
 

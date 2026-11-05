@@ -38,9 +38,16 @@ describe('toast accessibility', () => {
     expect(icon!.tagName).toBe('MD-ICON')
   })
 
-  it('toast role is not specified (default div) — interactive content inside handles their own roles', () => {
+  it('announces success messages politely as a status', () => {
     const toast = showToast('Message')
-    expect(toast.getAttribute('role')).toBeNull()
+    expect(toast.getAttribute('role')).toBe('status')
+    expect(toast.getAttribute('aria-live')).toBe('polite')
+  })
+
+  it('announces errors assertively as an alert', () => {
+    const toast = showToast('Failed', { type: 'error' })
+    expect(toast.getAttribute('role')).toBe('alert')
+    expect(toast.getAttribute('aria-live')).toBe('assertive')
   })
 
   it('multiple toasts can coexist without id conflicts', () => {

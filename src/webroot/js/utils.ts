@@ -48,18 +48,36 @@ export async function fetchJson<T>(url: string, ttlMs = 0): Promise<T | null> {
     const cached = fetchCache.get(url);
     if (cached && cached.expiry > Date.now()) return cached.data as T;
   }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
   try {
-    const res = await fetch(url, { cache: 'no-cache' });
+    const res = await fetch(url, { cache: 'no-cache', signal: controller.signal });
     if (!res.ok) return null;
     const data = await res.json();
     if (ttlMs > 0) fetchCache.set(url, { data, expiry: Date.now() + ttlMs });
     return data as T;
-  } catch { return null; }
+  } catch { return null; } finally { clearTimeout(timer); }
 }
 
-export function setText(id: string, value: string) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = value;
+const INTERACTIVE_SELECTOR = 'button, a, input, select, textarea, md-switch, md-radio, md-checkbox, md-icon-button, md-fab';
+
+/**
+ * Make a click-only row behave like a button for keyboard/AT users.
+ * Rows that contain their own interactive control are left alone: nesting a
+ * button role around a switch/radio is invalid and creates double activation.
+ */
+export function makeRowInteractive(el: HTMLElement): boolean {
+  if (!el || el.matches('button, a, input, select, textarea')) return false;
+  const role = el.getAttribute('role');
+  if (role && role !== 'button') return false;
+  if (role === 'button') {
+    if (!el.hasAttribute('tabindex')) el.tabIndex = 0;
+    return true;
+  }
+  if (el.querySelector(INTERACTIVE_SELECTOR)) return false;
+  el.setAttribute('role', 'button');
+  if (!el.hasAttribute('tabindex')) el.tabIndex = 0;
+  return true;
 }
 
 /** Wire a row/button that loads its module on first activation. Idempotent. */
@@ -67,6 +85,7 @@ export function wireLazyClick(id: string, load: () => Promise<unknown>): void {
   const el = document.getElementById(id);
   if (!el || el.dataset.spWired) return;
   el.dataset.spWired = '1';
+  makeRowInteractive(el);
   const isSwitchEvent = (e: Event) =>
     e.composedPath().some(n => n instanceof Element && n.localName === 'md-switch');
   el.addEventListener('click', (e) => {
@@ -99,7 +118,7 @@ let _cornerObserver: MutationObserver | null = null;
 export function updateListContainerCorners(root: ParentNode = document) {
   _isUpdatingCorners = true;
   try {
-    root.querySelectorAll('.list-container:not(.list-container--keybox)').forEach(container => {
+    root.querySelectorAll('.list-container').forEach(container => {
       const items = Array.from(container.querySelectorAll<HTMLElement>(':scope > .list-item'));
       const visible = items.filter(el => !el.hidden && !el.classList.contains('hidden') && el.style.display !== 'none');
 

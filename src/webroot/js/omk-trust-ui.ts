@@ -1,10 +1,12 @@
+import '@material/web/textfield/outlined-text-field.js';
+import '@material/web/button/filled-tonal-button.js';
+import '@material/web/button/text-button.js';
 import { exec, getModuleDir } from './bridge.js';
-import { getTranslation } from './i18n.js';
+import { t } from './i18n.js';
 import { showToast } from './toast.js';
-import { shellEscape } from './utils.js';
+import { makeRowInteractive, shellEscape } from './utils.js';
 import { runAction } from './actions.js';
 import { openSubPage } from './subpage.js';
-const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
 function renderOmkRestartRow(
   container: HTMLElement,
@@ -58,7 +60,13 @@ function renderOmkRestartRow(
 export function wireOmkRestart() {
   const btn = document.getElementById('omk-restart-btn');
   if (!btn) return;
+  makeRowInteractive(btn);
   btn.addEventListener('click', openOmkRestartPage);
+  btn.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    openOmkRestartPage();
+  });
 }
 
 export function openOmkRestartPage() {
@@ -110,7 +118,8 @@ export function openOmkRestartPage() {
 export function wireOmkTrust() {
   const btn = document.getElementById('omk-trust-btn');
   if (!btn) return;
-  btn.addEventListener('click', async () => {
+  makeRowInteractive(btn);
+  const openDialog = async () => {
     const moddir = getModuleDir();
     if (!moddir) {
       showToast(t('simple_toast_error', 'Failed'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
@@ -121,19 +130,19 @@ export function wireOmkTrust() {
     const dialog = document.createElement('md-dialog');
     dialog.innerHTML = `
       <div slot="headline">${t('omk_title', 'OMK OS & Boot Key')}</div>
-      <div slot="content" class="omk-trust-content" style="min-height:0;display:flex;flex-direction:column;gap:16px">
+      <div slot="content" class="omk-trust-content">
         <md-outlined-text-field id="ot-os-version" type="text"
           label="${t('omk_os_version', 'OS Version')}"
           placeholder="auto"
           helper-text="${t('omk_os_version_helper', 'auto or number (e.g. 15)')}"
-          style="width:100%;--md-outlined-text-field-container-shape:14px">
+          class="omk-field">
         </md-outlined-text-field>
         <md-outlined-text-field id="ot-vb-key" type="text"
           label="${t('omk_vb_key', 'VB Key')}"
           placeholder="auto"
           helper-text="${t('omk_vb_key_helper', 'auto, random, or 64 hex chars')}"
           maxlength="64"
-          style="width:100%;--md-outlined-text-field-container-shape:14px">
+          class="omk-field">
         </md-outlined-text-field>
       </div>
       <div slot="actions">
@@ -196,7 +205,14 @@ export function wireOmkTrust() {
       }
     });
 
-    dialog.addEventListener('close', () => document.body.removeChild(dialog));
+    dialog.addEventListener('closed', () => dialog.remove());
     dialog.show();
+  };
+
+  btn.addEventListener('click', () => { void openDialog(); });
+  btn.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    void openDialog();
   });
 }

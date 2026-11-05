@@ -12,18 +12,17 @@ import type { MdMenu } from '@material/web/menu/menu.js';
 import '@material/web/textfield/outlined-text-field.js';
 import type { MdOutlinedTextField } from '@material/web/textfield/outlined-text-field.js';
 import '@material/web/fab/fab.js';
-import '@material/web/progress/circular-progress.js';
 import { exec, getDataDir } from './bridge.js';
 import { cfgGet, cfgSet } from './cfg.js';
 import { openFileBrowser } from './file-browser.js';
 import { showConfirm } from './dialog.js';
 import { showToast } from './toast.js';
 import { escapeHtml, shellEscape, updateListContainerCorners } from './utils.js';
-import { getTranslation } from './i18n.js';
+import { t } from './i18n.js';
 import { refreshPifChooseDesc as refreshChooseDesc } from './pif-choose-desc.js';
 import { openSubPage } from './subpage.js';
+import { wireMenuTrigger } from './menu-utils.js';
 
-const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 const tf = (key: string, fallback: string, value: string): string =>
   t(key, fallback).replaceAll('{0}', value);
 
@@ -379,8 +378,9 @@ export async function openPifDeviceSubpage() {
           const id = btn.dataset.id;
           if (!id) return;
           const ok = await showConfirm(
-            t('dialog_confirm', 'Confirm'),
-            t('menu_pif_choose_delete', 'Remove imported device') + '?'
+            t('menu_pif_choose_delete', 'Remove imported device'),
+            t('menu_pif_choose_delete', 'Remove imported device') + '?',
+            { variant: 'danger' }
           );
           if (!ok) return;
 
@@ -548,7 +548,7 @@ export async function openPifDeviceSubpage() {
     description: t('menu_pif_choose_desc', 'Pick which Pixel Canary models Specter may fetch'),
     headerAction: (container, instance) => {
       container.innerHTML = `
-        <div style="position: relative; display: flex; align-items: center;">
+        <div class="pif-menu-wrap">
           <button type="button" class="subpage-action-btn" id="pif-menu-btn" aria-label="${t('ta_menu_more', 'More options')}">
             <md-icon aria-hidden="true">more_vert</md-icon>
             <md-ripple></md-ripple>
@@ -573,10 +573,7 @@ export async function openPifDeviceSubpage() {
       const menuBtn = container.querySelector('#pif-menu-btn') as HTMLElement;
       const menu = container.querySelector('#pif-menu') as MdMenu;
 
-      menuBtn?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (menu) menu.open = !menu.open;
-      });
+      wireMenuTrigger(menuBtn, menu);
 
       container.querySelector('#pif-menu-import')?.addEventListener('click', () => {
         if (menu) menu.open = false;
@@ -708,7 +705,7 @@ export async function openPifDeviceSubpage() {
                     aria-label="${t('menu_pif_search', 'Search devices...')}"
                   >
                     <md-icon slot="leading-icon" aria-hidden="true">search</md-icon>
-                    <md-icon-button slot="trailing-icon" id="pif-search-clear" style="display:none;" aria-label="${escapeHtml(t('menu_pif_search_clear', 'Clear search'))}">
+                    <md-icon-button slot="trailing-icon" id="pif-search-clear" hidden aria-label="${escapeHtml(t('menu_pif_search_clear', 'Clear search'))}">
                       <md-icon aria-hidden="true">close</md-icon>
                     </md-icon-button>
                   </md-outlined-text-field>
@@ -723,7 +720,7 @@ export async function openPifDeviceSubpage() {
               searchFieldRef?.addEventListener('input', () => {
                 searchQuery = searchFieldRef?.value || '';
                 if (clearBtnRef) {
-                  clearBtnRef.style.display = searchQuery ? 'inline-flex' : 'none';
+                  clearBtnRef.toggleAttribute('hidden', !searchQuery);
                 }
                 renderLists();
               });

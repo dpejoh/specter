@@ -1,12 +1,10 @@
-import { exec, getModuleDir } from './bridge.js';
 import { cfgGet, cfgSet } from './cfg.js';
-import { getTranslation } from './i18n.js';
-import { shellEscape } from './utils.js';
+import { t } from './i18n.js';
+import { escapeHtml } from './utils.js';
 import { showToast } from './toast.js';
-import { refreshKeyboxStatus } from './device.js';
 import type { MdSwitch } from '@material/web/switch/switch.js';
+import { installKeybox } from './keybox-install.js';
 
-const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
 export interface KeyboxLocalOptions {
   onInstalled?: () => void;
@@ -35,12 +33,10 @@ export async function mountLocalKeyboxForm(
     if (fileSubtitleEl) {
       if (val) {
         fileSubtitleEl.textContent = val.split('/').pop() || val;
-        fileSubtitleEl.style.color = 'var(--md-sys-color-primary)';
-        fileSubtitleEl.style.fontWeight = '500';
+        fileSubtitleEl.classList.add('kb-file-subtitle--active');
       } else {
         fileSubtitleEl.textContent = t('custom_kb_file_desc', 'Select a keybox XML file from your device');
-        fileSubtitleEl.style.color = '';
-        fileSubtitleEl.style.fontWeight = '';
+        fileSubtitleEl.classList.remove('kb-file-subtitle--active');
       }
     }
     if (fileIconEl) {
@@ -49,28 +45,28 @@ export async function mountLocalKeyboxForm(
   };
 
   container.innerHTML = `
-    <div class="list-item list-item--first" id="kb-file-row" style="cursor: pointer; padding: 14px 16px;">
+    <div class="list-item list-item--first kb-file-row" id="kb-file-row">
       <div class="li-icon"><md-icon id="kb-file-icon" aria-hidden="true">${selectedFilePath ? 'vpn_key' : 'upload_file'}</md-icon></div>
       <div class="list-item-content">
-        <div class="toggle-text">${t('custom_kb_file', 'Import File')}</div>
-        <span class="supporting-text" id="kb-file-subtitle" style="${selectedFilePath ? 'color: var(--md-sys-color-primary); font-weight: 500;' : ''}">
-          ${selectedFilePath ? selectedFilePath.split('/').pop() : t('custom_kb_file_desc', 'Select a keybox XML file from your device')}
+        <div class="toggle-text">${escapeHtml(t('custom_kb_file', 'Import File'))}</div>
+        <span class="supporting-text kb-file-subtitle${selectedFilePath ? ' kb-file-subtitle--active' : ''}" id="kb-file-subtitle">
+          ${selectedFilePath ? escapeHtml(selectedFilePath.split('/').pop() || '') : escapeHtml(t('custom_kb_file_desc', 'Select a keybox XML file from your device'))}
         </span>
       </div>
       <div class="spacer"></div>
-      <md-filled-tonal-button id="kb-browse-btn" style="flex-shrink: 0; --md-filled-tonal-button-container-shape: 9999px; border-radius: 9999px;">
+      <md-filled-tonal-button id="kb-browse-btn" class="kb-browse-btn">
         <md-icon slot="icon" aria-hidden="true">folder_open</md-icon>
-        ${t('custom_kb_browse', 'Browse Files')}
+        ${escapeHtml(t('custom_kb_browse', 'Browse Files'))}
       </md-filled-tonal-button>
       <md-ripple></md-ripple>
     </div>
 
-    <div class="list-item list-item--middle" style="flex-direction: column; align-items: stretch; gap: 8px; cursor: default; padding: 14px 16px;">
-      <div style="display: flex; align-items: center; gap: 14px;">
+    <div class="list-item list-item--middle kb-url-card">
+      <div class="kb-url-row">
         <div class="li-icon"><md-icon aria-hidden="true">link</md-icon></div>
         <div class="list-item-content">
-          <div class="toggle-text">${t('custom_kb_url', 'URL or Path')}</div>
-          <span class="supporting-text">${t('custom_kb_desc', 'Paste a download URL or enter a device path')}</span>
+          <div class="toggle-text">${escapeHtml(t('custom_kb_url', 'URL or Path'))}</div>
+          <span class="supporting-text">${escapeHtml(t('custom_kb_desc', 'Paste a download URL or enter a device path'))}</span>
         </div>
       </div>
       <div class="subpage-text-input-wrap">
@@ -78,11 +74,11 @@ export async function mountLocalKeyboxForm(
           type="text"
           id="kb-url-input"
           class="subpage-full-input"
-          placeholder="${t('kb_url_placeholder', 'https://example.com/keybox.xml or /sdcard/keybox.xml')}"
-          value="${selectedFilePath}"
-          aria-label="${t('custom_kb_url', 'URL or Path')}"
+          placeholder="${escapeHtml(t('kb_url_placeholder', 'https://example.com/keybox.xml or /sdcard/keybox.xml'))}"
+          value=""
+          aria-label="${escapeHtml(t('custom_kb_url', 'URL or Path'))}"
         />
-        <md-icon-button id="kb-paste-btn" aria-label="${t('kb_paste_aria', 'Paste from clipboard')}">
+        <md-icon-button id="kb-paste-btn" aria-label="${escapeHtml(t('kb_paste_aria', 'Paste from clipboard'))}">
           <md-icon aria-hidden="true">content_paste</md-icon>
         </md-icon-button>
       </div>
@@ -91,10 +87,10 @@ export async function mountLocalKeyboxForm(
     <div class="list-item list-item--toggle list-item--last" id="kb-private-row">
       <div class="li-icon"><md-icon aria-hidden="true">lock</md-icon></div>
       <div class="list-item-content">
-        <div class="toggle-text">${t('custom_kb_private_toggle', 'Private Keybox')}</div>
-        <span class="supporting-text">${t('custom_kb_private_desc', 'Hide certificate subject and serial in keybox information')}</span>
+        <div class="toggle-text">${escapeHtml(t('custom_kb_private_toggle', 'Private Keybox'))}</div>
+        <span class="supporting-text">${escapeHtml(t('custom_kb_private_desc', 'Hide certificate subject and serial in keybox information'))}</span>
       </div>
-      <md-switch icons id="kb-private-switch" ${privateVal === 'true' ? 'selected' : ''} aria-label="${t('custom_kb_private_toggle', 'Private Keybox')}"></md-switch>
+      <md-switch icons id="kb-private-switch" ${privateVal === 'true' ? 'selected' : ''} aria-label="${escapeHtml(t('custom_kb_private_toggle', 'Private Keybox'))}"></md-switch>
       <md-ripple></md-ripple>
     </div>
   `;
@@ -102,6 +98,8 @@ export async function mountLocalKeyboxForm(
   fileSubtitleEl = container.querySelector('#kb-file-subtitle');
   fileIconEl = container.querySelector('#kb-file-icon');
   urlInputEl = container.querySelector('#kb-url-input');
+  // Set the value as a property, never as an interpolated attribute.
+  if (urlInputEl) urlInputEl.value = selectedFilePath;
 
   const browseBtn = container.querySelector('#kb-browse-btn');
   const fileRow = container.querySelector('#kb-file-row');
@@ -169,29 +167,11 @@ export async function mountLocalKeyboxForm(
         return false;
       }
 
-      cfgSet('keybox_private', privateSwitch?.selected ? 'true' : '');
-      cfgSet('keybox_custom_type', text.startsWith('http://') || text.startsWith('https://') ? 'url' : 'path');
-      cfgSet('keybox_custom_value', text);
-
-      const moddir = getModuleDir();
-      if (!moddir) {
-        showToast(t('simple_toast_error', 'Failed'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
-        return false;
-      }
-      const result = await exec(`sh ${shellEscape(moddir + '/features/keybox.sh')}`);
-      if (result.code !== 0) {
-        showToast(t('custom_kb_install_failed', 'Install failed'), { icon: 'error', type: 'error', autoCloseDelay: 5000 });
-        return false;
-      }
-
-      showToast(t('custom_kb_installed', 'Custom keybox installed'), { icon: 'check_circle', type: 'success', autoCloseDelay: 3000 });
-      if (moddir) {
-        await exec(`sh ${shellEscape(moddir + '/features/keybox_info.sh')}`).catch(() => {});
-        await exec(`sh ${shellEscape(moddir + '/refresh_desc.sh')}`).catch(() => {});
-      }
-      await refreshKeyboxStatus();
-      options.onInstalled?.();
-      return true;
+      return installKeybox({
+        text,
+        privateKeybox: !!privateSwitch?.selected,
+        onInstalled: options.onInstalled,
+      });
     },
   };
 }

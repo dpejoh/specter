@@ -81,7 +81,7 @@ Output: `Specter-v{version}.zip`
 
 ```bash
 bash tests/run.sh          # Shell tests. 12 files, 321 assertions.
-npm test                   # TS tests. 10 files, 94 tests (vitest + happy-dom).
+npm test                   # TS tests. 31 files, 183 tests (vitest + happy-dom).
 npx tsc --noEmit           # TypeScript strict check
 ```
 

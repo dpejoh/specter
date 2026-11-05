@@ -1,7 +1,7 @@
 import { cfgGet, cfgSet, cfgInvalidate } from './cfg.js';
 import { CONTROL_TOGGLES } from './constants.js';
-import { applyTranslations } from './i18n.js';
-import { setDevMode } from './utils.js';
+import { applyTranslations, t } from './i18n.js';
+import { makeRowInteractive, setDevMode } from './utils.js';
 
 function labelFromKey(key: string): string {
   const s = key.replace(/^(toggle_|action_)/, '').replace(/_/g, ' ');
@@ -61,18 +61,11 @@ export function renderControlToggles() {
     actionArea.className = 'li-toggle-action';
 
     if (toggle.configurable) {
-      const cue = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      cue.setAttribute('class', 'li-config-chevron');
-      cue.setAttribute('viewBox', '0 0 8 14');
-      cue.setAttribute('width', '8');
-      cue.setAttribute('height', '14');
-      cue.setAttribute('fill', 'none');
-      cue.setAttribute('stroke', 'currentColor');
-      cue.setAttribute('stroke-width', '2');
-      cue.setAttribute('stroke-linecap', 'round');
-      cue.setAttribute('stroke-linejoin', 'round');
-      cue.setAttribute('aria-hidden', 'true');
-      cue.innerHTML = '<path d="M1.5 2L6.5 7L1.5 12"/>';
+      const cue = document.createElement('button');
+      cue.type = 'button';
+      cue.className = 'li-config-btn';
+      cue.setAttribute('aria-label', `${t('control_configure', 'Configure')} ${labelFromKey(toggle.key)}`);
+      cue.innerHTML = `<svg class="li-config-chevron" viewBox="0 0 8 14" width="8" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 2L6.5 7L1.5 12"/></svg>`;
       actionArea.appendChild(cue);
 
       const div = document.createElement('div');
@@ -98,9 +91,16 @@ export function wireRowDialog(rowId: string, open: () => void) {
   const row = document.getElementById(rowId);
   if (!row || row.dataset.spWired) return;
   row.dataset.spWired = '1';
-  row.addEventListener('click', e => {
+  makeRowInteractive(row);
+  const activate = (e: Event) => {
     if (e.composedPath().some(n => n instanceof Element && n.localName === 'md-switch')) return;
     open();
+  };
+  row.addEventListener('click', activate);
+  row.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    activate(e);
   });
 }
 

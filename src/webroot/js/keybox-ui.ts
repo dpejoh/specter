@@ -1,8 +1,7 @@
-import { getTranslation } from './i18n.js';
+import { t } from './i18n.js';
 import { openSubPage } from './subpage.js';
 import { mountLocalKeyboxForm, type KeyboxLocalHandle } from './keybox-local-ui.js';
 
-const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
 export function wireKeybox() {
   const btn = document.getElementById('keybox-btn');

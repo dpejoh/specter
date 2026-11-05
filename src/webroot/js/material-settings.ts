@@ -1,15 +1,3 @@
 import '@material/web/icon/icon.js';
-import '@material/web/labs/card/outlined-card.js';
-import '@material/web/labs/segmentedbuttonset/outlined-segmented-button-set.js';
-import '@material/web/labs/segmentedbutton/outlined-segmented-button.js';
-import '@material/web/chips/filter-chip.js';
-import '@material/web/button/filled-tonal-button.js';
-import '@material/web/button/text-button.js';
-import '@material/web/divider/divider.js';
-import '@material/web/menu/menu.js';
-import '@material/web/menu/menu-item.js';
 import '@material/web/switch/switch.js';
-import '@material/web/iconbutton/icon-button.js';
-import '@material/web/dialog/dialog.js';
 import '@material/web/progress/circular-progress.js';
-import '@material/web/radio/radio.js';

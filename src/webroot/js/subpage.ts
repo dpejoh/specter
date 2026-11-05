@@ -3,9 +3,10 @@ import '@material/web/icon/icon.js';
 import '@material/web/ripple/ripple.js';
 import type { MdSwitch } from '@material/web/switch/switch.js';
 import { cfgGet, cfgSet } from './cfg.js';
-import { getTranslation } from './i18n.js';
+import { t } from './i18n.js';
+import { escapeHtml } from './utils.js';
+import { setupOverlayA11y } from './overlay-a11y.js';
 
-const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
 export interface SubPageSwitchItem {
   type?: 'switch';
@@ -101,7 +102,19 @@ export interface SubPageInstance {
   isMasterEnabled: () => boolean;
 }
 
-export async function openSubPage(config: SubPageConfig): Promise<SubPageInstance> {
+const pendingSubpages = new Map<string, Promise<SubPageInstance>>();
+
+export function openSubPage(config: SubPageConfig): Promise<SubPageInstance> {
+  const existing = document.getElementById(`subpage-${config.id}`) as (HTMLElement & { __spInstance?: SubPageInstance }) | null;
+  if (existing?.__spInstance) return Promise.resolve(existing.__spInstance);
+  const pending = pendingSubpages.get(config.id);
+  if (pending) return pending;
+  const promise = openSubPageInternal(config).finally(() => pendingSubpages.delete(config.id));
+  pendingSubpages.set(config.id, promise);
+  return promise;
+}
+
+async function openSubPageInternal(config: SubPageConfig): Promise<SubPageInstance> {
   // Subpage-only Material components are loaded on first use.
   await import('./material-subpages.js');
 
@@ -160,26 +173,26 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
   overlay.innerHTML = `
     <div class="subpage-inner">
       <header class="subpage-header">
-        <button class="subpage-back-btn" id="subpage-back" aria-label="${t('dialog_cancel', 'Back')}">
+        <button class="subpage-back-btn" id="subpage-back" aria-label="${escapeHtml(t('common_back', 'Back'))}">
           <md-icon aria-hidden="true">arrow_back</md-icon>
           <md-ripple></md-ripple>
         </button>
-        <h1 class="subpage-title">${config.title}</h1>
+        <h1 class="subpage-title" id="subpage-title-${config.id}">${escapeHtml(config.title)}</h1>
         <div class="subpage-header-actions" id="subpage-header-actions"></div>
       </header>
 
       <div class="subpage-content" id="subpage-scroll-area">
         ${config.description ? `
-          <p class="subpage-top-desc">${config.description}</p>
+          <p class="subpage-top-desc">${escapeHtml(config.description)}</p>
         ` : ''}
         ${config.masterToggle ? `
           <div class="subpage-master-container">
             <div class="list-item list-item--toggle subpage-master-item ${masterEnabled ? 'subpage-master-item--active' : ''}" id="subpage-master-card">
               <div class="list-item-content">
-                <div class="toggle-text subpage-master-text">${config.masterToggle.title}</div>
-                ${config.masterToggle.description ? `<span class="supporting-text">${config.masterToggle.description}</span>` : ''}
+                <div class="toggle-text subpage-master-text">${escapeHtml(config.masterToggle.title)}</div>
+                ${config.masterToggle.description ? `<span class="supporting-text">${escapeHtml(config.masterToggle.description)}</span>` : ''}
               </div>
-              <md-switch icons id="subpage-master-switch" ${masterEnabled ? 'selected' : ''} aria-label="${config.masterToggle.title}"></md-switch>
+              <md-switch icons id="subpage-master-switch" ${masterEnabled ? 'selected' : ''} aria-label="${escapeHtml(config.masterToggle.title)}"></md-switch>
               <md-ripple></md-ripple>
             </div>
           </div>
@@ -187,8 +200,8 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
 
         <div class="subpage-options-wrapper ${!masterEnabled && config.masterToggle ? 'subpage-options--disabled' : ''}" id="subpage-options-wrapper">
           ${config.groups.map((group, gIdx) => `
-            ${group.title ? `<h2 class="list-title">${group.title}</h2>` : ''}
-            ${group.description ? `<p class="supporting-text" style="padding:0 20px 8px;max-width:800px;margin:0 auto;box-sizing:border-box;">${group.description}</p>` : ''}
+            ${group.title ? `<h2 class="list-title">${escapeHtml(group.title)}</h2>` : ''}
+            ${group.description ? `<p class="supporting-text subpage-group-desc">${escapeHtml(group.description)}</p>` : ''}
             <div class="list-container" id="subpage-group-${gIdx}">
               ${group.items.map((item, iIdx) => {
                 const total = group.items.length;
@@ -201,10 +214,10 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
                   const isChecked = !!rItem.selected;
                   return `
                     <div class="list-item list-item--radio ${posClass}" id="${rItem.id}-row" data-radio-group="${rItem.name}" data-radio-value="${rItem.value}">
-                      <md-radio name="${rItem.name}" value="${rItem.value}" id="${rItem.id}" ${isChecked ? 'checked' : ''} aria-label="${rItem.title}${rItem.badge ? `, ${rItem.badge}` : ''}"></md-radio>
+                      <md-radio name="${rItem.name}" value="${rItem.value}" id="${rItem.id}" ${isChecked ? 'checked' : ''} aria-label="${escapeHtml(rItem.title)}${rItem.badge ? `, ${escapeHtml(rItem.badge)}` : ''}"></md-radio>
                       <div class="list-item-content">
-                        <div class="toggle-text">${rItem.title}${rItem.badge ? ` <span class="subpage-radio-badge">${rItem.badge}</span>` : ''}</div>
-                        ${rItem.description ? `<span class="supporting-text">${rItem.description}</span>` : ''}
+                        <div class="toggle-text">${escapeHtml(rItem.title)}${rItem.badge ? ` <span class="subpage-radio-badge">${escapeHtml(rItem.badge)}</span>` : ''}</div>
+                        ${rItem.description ? `<span class="supporting-text">${escapeHtml(rItem.description)}</span>` : ''}
                       </div>
                       <md-ripple></md-ripple>
                     </div>
@@ -217,8 +230,8 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
                     <div class="list-item list-item--input ${posClass}" id="${inpItem.id}-row">
                       ${inpItem.icon ? `<div class="li-icon"><md-icon aria-hidden="true">${inpItem.icon}</md-icon></div>` : ''}
                       <div class="list-item-content">
-                        <div class="toggle-text">${inpItem.title}</div>
-                        ${inpItem.description ? `<span class="supporting-text">${inpItem.description}</span>` : ''}
+                        <div class="toggle-text">${escapeHtml(inpItem.title)}</div>
+                        ${inpItem.description ? `<span class="supporting-text">${escapeHtml(inpItem.description)}</span>` : ''}
                       </div>
                       <div class="spacer"></div>
                       <div class="subpage-input-wrapper">
@@ -226,11 +239,11 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
                           type="${inpItem.inputType || 'number'}"
                           id="${inpItem.id}"
                           class="subpage-inline-input"
-                          value="${currentVal}"
+                          value="${escapeHtml(currentVal)}"
                           ${inpItem.min !== undefined ? `min="${inpItem.min}"` : ''}
                           ${inpItem.max !== undefined ? `max="${inpItem.max}"` : ''}
                           ${inpItem.step !== undefined ? `step="${inpItem.step}"` : ''}
-                          aria-label="${inpItem.ariaLabel || inpItem.title}"
+                          aria-label="${escapeHtml(inpItem.ariaLabel || inpItem.title)}"
                         />
                         ${inpItem.unit ? `<span class="subpage-input-unit">${inpItem.unit}</span>` : ''}
                       </div>
@@ -243,10 +256,10 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
                   <div class="list-item list-item--toggle ${posClass}" id="${swItem.id}-row">
                     ${swItem.icon ? `<div class="li-icon"><md-icon aria-hidden="true">${swItem.icon}</md-icon></div>` : ''}
                     <div class="list-item-content">
-                      <div class="toggle-text">${swItem.title}</div>
-                      <span class="supporting-text">${swItem.description}</span>
+                      <div class="toggle-text">${escapeHtml(swItem.title)}</div>
+                      <span class="supporting-text">${escapeHtml(swItem.description)}</span>
                     </div>
-                    <md-switch icons id="${swItem.id}" ${isChecked ? 'selected' : ''} aria-label="${swItem.title}"></md-switch>
+                    <md-switch icons id="${swItem.id}" ${isChecked ? 'selected' : ''} aria-label="${escapeHtml(swItem.title)}"></md-switch>
                     <md-ripple></md-ripple>
                   </div>
                 `;
@@ -255,13 +268,13 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
           `).join('')}
         </div>
 
-        <div class="subpage-footer" id="subpage-footer" ${config.footer ? '' : 'style="display:none;"'}></div>
+        <div class="subpage-footer" id="subpage-footer" ${config.footer ? '' : 'hidden'}></div>
 
         ${config.infoCard ? `
           <div class="subpage-info-note">
             <md-icon aria-hidden="true">${config.infoCard.icon || 'info'}</md-icon>
             <div>
-              ${config.infoCard.title ? `<strong style="display:block;margin-bottom:2px;color:var(--md-sys-color-on-surface);">${config.infoCard.title}</strong>` : ''}
+              ${config.infoCard.title ? `<strong class="subpage-info-title">${config.infoCard.title}</strong>` : ''}
               <p>${config.infoCard.text}</p>
             </div>
           </div>
@@ -287,9 +300,11 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
 
   // History and Back navigation setup
   let closed = false;
+  let cleanupA11y = () => {};
   function closeOverlay() {
     if (closed) return;
     closed = true;
+    cleanupA11y();
     window.removeEventListener('popstate', onPopState);
     overlay.classList.remove('subpage-overlay--open');
     const hasRemaining = document.querySelectorAll('.subpage-overlay--open').length > 0;
@@ -309,6 +324,12 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
     }
     closeOverlay();
   }
+
+  cleanupA11y = setupOverlayA11y(overlay, {
+    titleId: `subpage-title-${config.id}`,
+    onClose: closeOverlay,
+    initialFocus: overlay.querySelector('.subpage-back-btn'),
+  });
 
   requestAnimationFrame(() => overlay.classList.add('subpage-overlay--open'));
   document.documentElement.style.overflow = 'hidden';
@@ -426,7 +447,11 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
 
   const instance: SubPageInstance = {
     overlay,
-    close: () => history.back(),
+    close: () => {
+      if (closed) return;
+      if (history.state && history.state.subpage === config.id) history.back();
+      else closeOverlay();
+    },
     isMasterEnabled: () => masterEnabled,
   };
 
@@ -445,5 +470,6 @@ export async function openSubPage(config: SubPageConfig): Promise<SubPageInstanc
     if (footerEl) config.footer(footerEl, instance);
   }
 
+  (overlay as HTMLElement & { __spInstance?: SubPageInstance }).__spInstance = instance;
   return instance;
 }

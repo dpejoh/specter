@@ -17,7 +17,7 @@ export async function loadContributors() {
   }
 
   grid.innerHTML = devs.map(dev => `
-    <div class="contributor-card"
+    <div class="contributor-card" role="button" tabindex="0"
          data-url="${encodeURIComponent(dev.github || '')}">
       <img class="contributor-avatar"
            src="${escapeHtml(dev.avatar || '')}"
@@ -40,8 +40,15 @@ export async function loadContributors() {
   });
 
   grid.querySelectorAll('[data-url]').forEach(card => {
-    card.addEventListener('click', () => {
+    const activate = () => {
       openUrl(decodeURIComponent((card as HTMLElement).dataset.url || ''));
+    };
+    card.addEventListener('click', activate);
+    card.addEventListener('keydown', (e) => {
+      const key = (e as KeyboardEvent).key;
+      if (key !== 'Enter' && key !== ' ') return;
+      e.preventDefault();
+      activate();
     });
   });
 }
