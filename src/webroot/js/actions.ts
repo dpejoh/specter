@@ -35,8 +35,8 @@ async function confirmDestructive(friendlyName: string, msgKey?: string): Promis
   });
 }
 
-export async function runAction(scriptName: string): Promise<number> {
-  const i18nKey = getFriendlyName(scriptName);
+export async function runAction(scriptName: string, friendlyNameKey?: string): Promise<number> {
+  const i18nKey = friendlyNameKey || getFriendlyName(scriptName);
   const friendlyName = getTranslation(i18nKey) || i18nKey;
   const lines: string[] = [];
   appendToOutput(`> ${friendlyName}`);

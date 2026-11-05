@@ -9,10 +9,82 @@ import type { MdSwitch } from '@material/web/switch/switch.js';
 
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
-export function wireCustomKeybox() {
-  const btn = document.getElementById('custom-keybox-btn');
+export function wireKeybox() {
+  const btn = document.getElementById('keybox-btn');
   if (!btn) return;
-  btn.addEventListener('click', openCustomKeyboxDialog);
+  btn.addEventListener('click', openKeyboxPage);
+}
+
+export function openKeyboxPage() {
+  openSubPage({
+    id: 'keybox',
+    title: t('menu_keybox', 'Keybox'),
+    description: t('menu_keybox_desc', 'Install a catalog keybox or set a custom one.'),
+    groups: [
+      {
+        items: [
+          {
+            type: 'custom',
+            id: 'keybox-install-item',
+            render: (container, _isEnabled, posClass) => {
+              container.innerHTML = `
+                <div class="list-item ${posClass || 'list-item--first'}" id="keybox-install-row" role="button" tabindex="0">
+                  <div class="li-icon"><md-icon aria-hidden="true">key</md-icon></div>
+                  <div class="list-item-content">
+                    <div class="toggle-text">${t('menu_import_keybox', 'Install Keybox')}</div>
+                    <span class="supporting-text">${t('menu_import_keybox_desc', 'Choose an active keybox from the catalog')}</span>
+                  </div>
+                  <div class="spacer"></div>
+                  <md-icon class="subpage-nav-cue" aria-hidden="true">chevron_right</md-icon>
+                  <md-ripple></md-ripple>
+                </div>
+              `;
+              const row = container.querySelector('#keybox-install-row') as HTMLElement | null;
+              const open = () => {
+                void import('./keybox-catalog-ui.js').then(m => m.openKeyboxCatalogPage());
+              };
+              row?.addEventListener('click', open);
+              row?.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  open();
+                }
+              });
+            },
+          },
+          {
+            type: 'custom',
+            id: 'keybox-custom-item',
+            render: (container, _isEnabled, posClass) => {
+              container.innerHTML = `
+                <div class="list-item ${posClass || 'list-item--last'}" id="keybox-custom-row" role="button" tabindex="0">
+                  <div class="li-icon"><md-icon aria-hidden="true">settings</md-icon></div>
+                  <div class="list-item-content">
+                    <div class="toggle-text">${t('menu_custom_keybox', 'Set Custom Keybox')}</div>
+                    <span class="supporting-text">${t('menu_custom_keybox_desc', 'Use your own keybox file, URL, or device path')}</span>
+                  </div>
+                  <div class="spacer"></div>
+                  <md-icon class="subpage-nav-cue" aria-hidden="true">chevron_right</md-icon>
+                  <md-ripple></md-ripple>
+                </div>
+              `;
+              const row = container.querySelector('#keybox-custom-row') as HTMLElement | null;
+              const open = () => {
+                void openCustomKeyboxDialog();
+              };
+              row?.addEventListener('click', open);
+              row?.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  open();
+                }
+              });
+            },
+          },
+        ],
+      },
+    ],
+  });
 }
 
 export async function openCustomKeyboxDialog() {

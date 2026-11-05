@@ -135,8 +135,7 @@ async function loadToolsUI() {
     import('./omk-trust-ui.js').catch(() => null),
   ]);
 
-  keybox?.wireCustomKeybox();
-  wireLazyClick('keybox-catalog-btn', () => import('./keybox-catalog-ui.js').then(m => m.openKeyboxCatalogPage()));
+  keybox?.wireKeybox();
   autoTarget?.wireAutoTarget();
   autoHma?.wireAutoHma();
   autopif?.wireAutopif();
@@ -149,6 +148,7 @@ async function loadToolsUI() {
   actionSecurityPatch?.wireActionSecurityPatch();
   securityPatch?.wireSecurityPatch();
   omk?.wireOmkTrust();
+  omk?.wireOmkRestart();
 
   wireLazyClick('target-apps-btn', () => import('./target-apps.js').then(m => m.openTargetAppsManager()));
   const pifRow = document.getElementById('pif-choose-device');

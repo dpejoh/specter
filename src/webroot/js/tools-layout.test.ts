@@ -28,15 +28,23 @@ describe('Tools layout', () => {
     ])
   })
 
-  it('keeps the keybox actions first inside Keystore Management', () => {
+  it('keeps the keybox entry first inside Keystore Management', () => {
     const heading = [...doc.querySelectorAll('#tools-page > h2')]
       .find(h => h.textContent?.trim() === 'Keystore Management')
     const container = heading?.nextElementSibling
     expect(container).toBeTruthy()
     const ids = [...container!.querySelectorAll(':scope > .list-item')]
       .map(el => el.id)
-    expect(ids.slice(0, 2)).toEqual(['keybox-catalog-btn', 'custom-keybox-btn'])
+    expect(ids[0]).toBe('keybox-btn')
     expect(ids).toContain('target-apps-btn')
+    expect(ids).not.toContain('keybox-catalog-btn')
+    expect(ids).not.toContain('custom-keybox-btn')
+  })
+
+  it('uses one OMK restart entry instead of two action rows', () => {
+    expect(doc.getElementById('omk-restart-btn')).not.toBeNull()
+    expect(doc.getElementById('omk-restart-keymint')).toBeNull()
+    expect(doc.getElementById('omk-restart-injector')).toBeNull()
   })
 
   it('does not keep a separate Keybox section', () => {
