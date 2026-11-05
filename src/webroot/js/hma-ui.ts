@@ -1,13 +1,10 @@
 import { getTranslation } from './i18n.js';
 import { wireRowDialog } from './toggles.js';
 import { openSubPage } from './subpage.js';
-import { cfgGet, cfgSet } from './cfg.js';
 
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
 export async function openHmaDialog() {
-  const currentMode = (await cfgGet('hma_launch_mode', 'prompt')) || 'prompt';
-
   openSubPage({
     id: 'hma-config',
     title: t('hma_dialog_title', 'HMA-OSS Configs'),
@@ -23,41 +20,6 @@ export async function openHmaDialog() {
     },
     groups: [
       {
-        title: t('hma_group_app_launch', 'App Launch Policy'),
-        items: [
-          {
-            type: 'radio',
-            id: 'hma-launch-prompt',
-            name: 'hma_launch_mode_radio',
-            value: 'prompt',
-            title: t('hma_launch_prompt', 'Manual (Default)'),
-            description: t('hma_launch_prompt_desc', 'Do not open HMA-OSS automatically. Apply the config by long-pressing the status card or rebooting.'),
-            selected: currentMode === 'prompt',
-            onSelect: (val) => cfgSet('hma_launch_mode', val),
-          },
-          {
-            type: 'radio',
-            id: 'hma-launch-always',
-            name: 'hma_launch_mode_radio',
-            value: 'always',
-            title: t('hma_launch_always', 'Always Open'),
-            description: t('hma_launch_always_desc', 'Open HMA-OSS after writing the config and attempt the live reload gesture.'),
-            selected: currentMode === 'always',
-            onSelect: (val) => cfgSet('hma_launch_mode', val),
-          },
-          {
-            type: 'radio',
-            id: 'hma-launch-never',
-            name: 'hma_launch_mode_radio',
-            value: 'never',
-            title: t('hma_launch_never', 'Never Open'),
-            description: t('hma_launch_never_desc', 'Never open HMA-OSS automatically. Apply the config manually later or after a reboot.'),
-            selected: currentMode === 'never',
-            onSelect: (val) => cfgSet('hma_launch_mode', val),
-          },
-        ],
-      },
-      {
         title: t('hma_group_scope', 'Configuration Options'),
         items: [
           {
@@ -67,14 +29,6 @@ export async function openHmaDialog() {
             icon: 'apps',
             title: t('hma_target_user_apps', 'Target All User Apps'),
             description: t('hma_target_user_apps_desc', 'Automatically add all installed 3rd-party user apps to the hiding scope'),
-          },
-          {
-            id: 'hma-live-reload',
-            key: 'toggle_hma_live_reload',
-            defaultVal: '1',
-            icon: 'touch_app',
-            title: t('hma_live_reload', 'Automated Reload Gesture'),
-            description: t('hma_live_reload_desc', 'Simulate status card long-press when HMA-OSS opens to trigger live reload'),
           },
           {
             id: 'hma-hide-xposed',

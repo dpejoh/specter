@@ -143,19 +143,5 @@ _hma_hidden_n=${_hma_hidden_n##* }
 _hma_added_n=$(wc -l < "$_hma_scope" 2>/dev/null)
 _hma_added_n=${_hma_added_n##* }
 log_i "HMA" "Hidden apps: $_hma_hidden_n | scope targets: $_hma_added_n"
-
-_hma_policy=$(_hma_launch_policy)
-if [ "$SPECTER_FIRST_BOOT" = "1" ] || [ "${SPECTER_HMA_NO_UI_RELOAD:-}" = "1" ]; then
-  log_i "HMA" "Config written; reboot or long-press HMA-OSS Home to apply"
-elif [ "$_hma_policy" = "skip" ]; then
-  log_i "HMA" "Config written; HMA-OSS launch skipped (auto-refuse)"
-elif [ "$_hma_policy" = "ask" ]; then
-  log_i "HMA" "Config written; no terminal to ask, reboot or open HMA-OSS to apply"
-elif [ "$(cfg_get toggle_hma_live_reload 1)" = "1" ] && [ "$(_hma_budget 20)" -ge 15 ] && _hma_request_reload "$_HMA_TMP"; then
-  log_i "HMA" "Live reload requested in HMA-OSS"
-elif [ "$(_hma_budget 20)" -ge 15 ] && _hma_open_ui; then
-  log_i "HMA" "HMA-OSS opened; long-press the status card to apply"
-else
-  log_w "HMA" "Config written; reboot or long-press HMA-OSS Home to apply"
-fi
+log_i "HMA" "Config written successfully"
 exit 0

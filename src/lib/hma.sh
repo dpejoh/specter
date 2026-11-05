@@ -2,8 +2,8 @@
 # HMA-OSS (frknkrc44) config integration.
 #
 # HMA-OSS keeps its config in /data/misc/hide_my_applist*/config.json, owned by
-# the system_server-side HMAService (uid 1000). External edits are only picked
-# up on reboot or via the Home status-card long-press (reloadConfigFromFile).
+# the system_server-side HMAService (uid 1000). Changes are automatically
+# detected by HMA-OSS.
 #
 # Specter merges a generated hiding profile into the existing file and leaves
 # everything it does not manage byte-for-byte intact:
@@ -560,88 +560,4 @@ _hma_tmp_base() {
     printf '%s\n' /data/local/tmp
   fi
   return 0
-}
-
-HMAOSS_ACTIVITY="org.frknkrc44.hma_oss.ui.activity.MainActivity"
-
-# Returns open, skip, or ask so both launch paths read the setting the same way.
-_hma_launch_policy() {
-  case "$(cfg_get "hma_launch_mode" "prompt")" in
-    always) printf 'open\n' ;;
-    never) printf 'skip\n' ;;
-    *) printf 'ask\n' ;;
-  esac
-}
-
-_hma_open_ui() {
-  _hma_timeout 10 am start -n "$HMAOSS_PKG/$HMAOSS_ACTIVITY" >/dev/null 2>&1 && return 0
-  _hma_timeout 10 monkey -p "$HMAOSS_PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
-}
-
-# HMA-OSS only reloads its file through the Home status-card long-press, so
-# drive that gesture once. Best effort: non-zero means the UI was not reached.
-# Set SPECTER_HMA_NO_UI_RELOAD=1 to skip. $1 = scratch dir for the UI dump.
-_hma_request_reload() {
-  _hml_dir="${1:-/data/local/tmp}"
-  [ "${SPECTER_HMA_NO_UI_RELOAD:-}" = "1" ] && return 1
-  _hml_end=$(( $(date +%s) + 12 ))
-  command -v am >/dev/null 2>&1 || return 1
-  command -v input >/dev/null 2>&1 || return 1
-  command -v uiautomator >/dev/null 2>&1 || return 1
-
-  _hml_prev=$(_hma_timeout 10 dumpsys activity activities 2>/dev/null | grep 'mResumedActivity' | head -1 | \
-    sed -n 's/.* u[0-9][0-9]* \([^ ]*\) t[0-9].*/\1/p')
-  [ "$_hml_prev" = "$HMAOSS_PKG/$HMAOSS_ACTIVITY" ] && _hml_prev=""
-
-  if ! _hma_timeout 15 am start -n "$HMAOSS_PKG/$HMAOSS_ACTIVITY" >/dev/null 2>&1; then
-    unset _hml_prev _hml_dir
-    return 1
-  fi
-
-  _hml_focus=0
-  _hml_i=0
-  while [ "$_hml_i" -lt 20 ]; do
-    [ "$(date +%s)" -ge "$_hml_end" ] && break
-    if _hma_timeout 10 dumpsys window 2>/dev/null | grep -q "mCurrentFocus=.*$HMAOSS_PKG"; then
-      _hml_focus=1
-      break
-    fi
-    sleep 0.25 2>/dev/null || sleep 1
-    _hml_i=$((_hml_i + 1))
-  done
-
-  _hml_rc=1
-  _hml_dump="$_hml_dir/.specter_hma_ui.$$"
-  if [ "$_hml_focus" = "1" ]; then
-    _hml_bounds=""
-    _hml_i=0
-    while [ "$_hml_i" -lt 6 ]; do
-      [ "$(date +%s)" -ge "$_hml_end" ] && break
-      sleep 0.5 2>/dev/null || sleep 1
-      if _hma_timeout 15 uiautomator dump "$_hml_dump" >/dev/null 2>&1; then
-        # The whole hierarchy is one line, so split tags before matching.
-        _hml_bounds=$(tr '>' '\n' < "$_hml_dump" 2>/dev/null | grep 'status_card' | \
-          grep -o 'bounds="\[[0-9-]*,[0-9-]*\]\[[0-9-]*,[0-9-]*\]"' | head -1)
-      fi
-      [ -n "$_hml_bounds" ] && break
-      _hml_i=$((_hml_i + 1))
-    done
-    if [ -n "$_hml_bounds" ]; then
-      _hml_cx=$(printf '%s' "$_hml_bounds" | awk -F'[^0-9]+' '{print int(($2 + $4) / 2)}')
-      _hml_cy=$(printf '%s' "$_hml_bounds" | awk -F'[^0-9]+' '{print int(($3 + $5) / 2)}')
-      if [ -n "$_hml_cx" ] && [ -n "$_hml_cy" ]; then
-        sleep 0.5 2>/dev/null || true
-        _hma_timeout 10 input swipe "$_hml_cx" "$_hml_cy" "$_hml_cx" "$_hml_cy" 900 2>/dev/null && _hml_rc=0
-        sleep 1 2>/dev/null || true
-      fi
-    fi
-  fi
-  rm -f "$_hml_dump" 2>/dev/null || true
-
-  if [ -n "$_hml_prev" ]; then
-    _hma_timeout 15 am start -n "$_hml_prev" >/dev/null 2>&1 || true
-  fi
-
-  unset _hml_dir _hml_prev _hml_focus _hml_i _hml_dump _hml_bounds _hml_cx _hml_cy _hml_end
-  return "$_hml_rc"
 }

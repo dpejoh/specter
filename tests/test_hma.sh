@@ -178,7 +178,6 @@ assert_file_not_exists "merge: malformed base writes nothing" "$TEST_ROOT/merged
 # ---------- feature: end to end against a fake HMA dir ----------
 bootstrap
 export HMAOSS_BASE="$TEST_ROOT/misc"
-export SPECTER_HMA_NO_UI_RELOAD=1
 source_libs
 mkdir -p "$HMAOSS_BASE/hide_my_applist_test"
 _hm_cfg="$HMAOSS_BASE/hide_my_applist_test/config.json"
@@ -201,7 +200,7 @@ printf '# test\nme.weishu.kernelsu\ncom.topjohnwu.magisk\ncom.not.installed\n' >
 
 _hm_feat_out=$(run_feature hma.sh)
 assert_contains "feature: installed-only count" "$_hm_feat_out" "Hidden apps: 1"
-assert_contains "feature: apply hint" "$_hm_feat_out" "reboot or long-press HMA-OSS Home"
+assert_contains "feature: config written" "$_hm_feat_out" "Config written successfully"
 assert_file_exists "feature: backup written" "${_hm_cfg}.specter.bak"
 assert_eq "feature: preexisting kept" "{'useWhitelist': True, 'extraAppList': ['z']}" "$(_hma_pyval "$_hm_cfg" "str(d['scope']['com.preexisting'])")"
 assert_eq "feature: new app targeted" "True" "$(_hma_pyval "$_hm_cfg" "'com.newapp' in d['scope']")"
@@ -242,7 +241,6 @@ assert_eq "feature: allowed app added" "True" "$(_hma_pyval "$_hm_cfg2" "'com.al
 # ---------- feature: a failed Xposed scan is reported, not silent ----------
 bootstrap
 export HMAOSS_BASE="$TEST_ROOT/misc"
-export SPECTER_HMA_NO_UI_RELOAD=1
 export SPECTER_DEX="$TEST_ROOT/fake.dex"
 source_libs
 mkdir -p "$HMAOSS_BASE/hide_my_applist_test"
@@ -270,7 +268,6 @@ unset SPECTER_DEX
 # ---------- feature: a kept template still excludes its own hidden apps ----------
 bootstrap
 export HMAOSS_BASE="$TEST_ROOT/misc"
-export SPECTER_HMA_NO_UI_RELOAD=1
 source_libs
 mkdir -p "$HMAOSS_BASE/hide_my_applist_test"
 _hm_cfg5="$HMAOSS_BASE/hide_my_applist_test/config.json"
@@ -292,84 +289,6 @@ _hm_kept_out=$(run_feature hma.sh)
 assert_contains "feature: kept template warned" "$_hm_kept_out" "keeping existing template"
 assert_eq "feature: kept template appList preserved" "['com.hidden']" "$(_hma_pyval "$_hm_cfg5" "d['templates']['Hide List']['appList']")"
 assert_eq "feature: kept hidden app detached" "[]" "$(_hma_pyval "$_hm_cfg5" "str(d['scope']['com.hidden']['applyTemplates'])")"
-
-# ---------- feature: live reload gesture (status card long-press) ----------
-bootstrap
-export HMAOSS_BASE="$TEST_ROOT/misc"
-unset SPECTER_HMA_NO_UI_RELOAD
-source_libs
-mkdir -p "$HMAOSS_BASE/hide_my_applist_test"
-_hm_cfg3="$HMAOSS_BASE/hide_my_applist_test/config.json"
-printf '{}' > "$_hm_cfg3"
-cat > "$BIN_DIR/pm" << 'MOCK'
-#!/bin/sh
-case "$*" in
-  *"-3"*) printf 'package:com.live.app\npackage:org.frknkrc44.hma_oss\n' ;;
-  *list*packages*) printf 'package:com.live.app\npackage:org.frknkrc44.hma_oss\n' ;;
-  *) echo "mock pm $*" ;;
-esac
-MOCK
-chmod +x "$BIN_DIR/pm"
-printf '#!/bin/sh\nexit 0\n' > "$BIN_DIR/chown"; chmod +x "$BIN_DIR/chown"
-printf '#!/bin/sh\nexit 0\n' > "$BIN_DIR/restorecon"; chmod +x "$BIN_DIR/restorecon"
-cat > "$BIN_DIR/am" << 'MOCK'
-#!/bin/sh
-echo "AM $*" >> "$MOCK_DIR/logs/am.log"
-MOCK
-chmod +x "$BIN_DIR/am"
-cat > "$BIN_DIR/dumpsys" << 'MOCK'
-#!/bin/sh
-case "$*" in
-  *window*) echo "  mCurrentFocus=Window{abc u0 org.frknkrc44.hma_oss/org.frknkrc44.hma_oss.ui.activity.MainActivity}" ;;
-  *) echo "  mResumedActivity: ActivityRecord{abc u0 com.test.prev/.Main t7}" ;;
-esac
-MOCK
-chmod +x "$BIN_DIR/dumpsys"
-cat > "$BIN_DIR/uiautomator" << 'MOCK'
-#!/bin/sh
-[ "$1" = "dump" ] && printf '%s\n' '<hierarchy><node class="android.widget.FrameLayout" bounds="[0,0][1080,2400]"><node resource-id="org.frknkrc44.hma_oss:id/status_card" bounds="[100,200][900,400]" /></node></hierarchy>' > "$2"
-MOCK
-chmod +x "$BIN_DIR/uiautomator"
-cat > "$BIN_DIR/input" << 'MOCK'
-#!/bin/sh
-echo "INPUT $*" >> "$MOCK_DIR/logs/input.log"
-MOCK
-chmod +x "$BIN_DIR/input"
-mkdir -p "$SPECTER_DIR/config"
-printf 'me.weishu.kernelsu\n' > "$SPECTER_DIR/config/hma-hide-list.txt"
-
-set_cfg hma_launch_mode always
-_hm_feat_out3=$(run_feature hma.sh)
-assert_contains "feature: live reload requested" "$_hm_feat_out3" "Live reload requested"
-_hm_inp=$(cat "$LOGS_DIR/input.log" 2>/dev/null || echo "")
-assert_contains "feature: status card long-press dispatched" "$_hm_inp" "swipe 500 300 500 300 900"
-
-# ---------- feature: launch policy applies to the direct WebUI run ----------
-set_cfg hma_launch_mode never
-: > "$LOGS_DIR/input.log"
-: > "$LOGS_DIR/am.log"
-_hm_feat_never=$(run_feature hma.sh)
-assert_contains "feature: auto-refuse skips the launch" "$_hm_feat_never" "launch skipped (auto-refuse)"
-assert_eq "feature: auto-refuse leaves the app closed" "0" "$(wc -l < "$LOGS_DIR/am.log" | tr -d ' ')"
-assert_eq "feature: auto-refuse skips the gesture" "0" "$(wc -l < "$LOGS_DIR/input.log" | tr -d ' ')"
-
-set_cfg hma_launch_mode always
-set_cfg toggle_hma_live_reload 0
-: > "$LOGS_DIR/input.log"
-: > "$LOGS_DIR/am.log"
-_hm_feat_always=$(run_feature hma.sh)
-assert_contains "feature: auto-accept opens HMA-OSS" "$_hm_feat_always" "HMA-OSS opened"
-assert_contains "feature: auto-accept starts the activity" "$(cat "$LOGS_DIR/am.log")" "org.frknkrc44.hma_oss/org.frknkrc44.hma_oss.ui.activity.MainActivity"
-assert_eq "feature: auto-accept skips the gesture" "0" "$(wc -l < "$LOGS_DIR/input.log" | tr -d ' ')"
-
-set_cfg hma_launch_mode prompt
-set_cfg toggle_hma_live_reload 1
-: > "$LOGS_DIR/input.log"
-: > "$LOGS_DIR/am.log"
-_hm_feat_prompt=$(run_feature hma.sh)
-assert_contains "feature: prompt without a terminal does not launch" "$_hm_feat_prompt" "no terminal to ask"
-assert_eq "feature: prompt leaves the app closed" "0" "$(wc -l < "$LOGS_DIR/am.log" | tr -d ' ')"
-assert_eq "feature: prompt skips the gesture" "0" "$(wc -l < "$LOGS_DIR/input.log" | tr -d ' ')"
 
 # ---------- feature: hma not installed is a no-op ----------
 bootstrap

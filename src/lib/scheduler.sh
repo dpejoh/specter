@@ -105,11 +105,7 @@ while true; do
     if [ "$_now" -ge "$((_last_run + _cfg_interval))" ]; then
       log_rotate "$SPECTER_DIR/log/sched_${_name}.log"
       log_i "SCHED" "Running $_name"
-      if [ "$_name" = "hma" ]; then
-        SPECTER_HMA_NO_UI_RELOAD=1 sh "$MODDIR/features/$_script" >"$SPECTER_DIR/log/sched_${_name}.log" 2>&1 || log_e "SCHED" "$_name failed"
-      else
-        sh "$MODDIR/features/$_script" >"$SPECTER_DIR/log/sched_${_name}.log" 2>&1 || log_e "SCHED" "$_name failed"
-      fi
+      sh "$MODDIR/features/$_script" >"$SPECTER_DIR/log/sched_${_name}.log" 2>&1 || log_e "SCHED" "$_name failed"
       printf '%s' "$_now" > "$TASKS_DIR/${_name}_last"
 
       case "$_name" in
