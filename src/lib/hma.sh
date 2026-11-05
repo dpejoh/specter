@@ -1,20 +1,16 @@
 # shellcheck shell=sh
 # HMA-OSS (frknkrc44) config integration.
 #
-# HMA-OSS keeps its config in /data/misc/hide_my_applist*/config.json, written
-# by the system_server-side HMAService (uid 1000 "system"). The app never
-# touches the file itself, and external edits are only picked up on reboot or
-# via the HMA-OSS Home long-press (reloadConfigFromFile).
+# HMA-OSS keeps its config in /data/misc/hide_my_applist*/config.json, owned by
+# the system_server-side HMAService (uid 1000). External edits are only picked
+# up on reboot or via the Home status-card long-press (reloadConfigFromFile).
 #
 # Specter merges a generated hiding profile into the existing file and leaves
 # everything it does not manage byte-for-byte intact:
-#   - upserts the Specter template with only the hide-list packages that are
-#     actually installed on this device
-#   - adds a standard per-app config for every user app (all apps become
-#     targets that cannot see the hidden apps)
-#   - sets defaultConfig for future installs only when the user has none
-#   - drops configVersion so the file parses as the running HMA-OSS build
-#   - chowns the file back to system:system (issue #158)
+#   - upserts the Hide List template from installed hide-list packages
+#   - adds a blacklist AppConfig for each user app that is not itself hidden
+#   - sets defaultConfig only when the user has none
+#   - drops configVersion and restores system:system ownership (issue #158)
 
 HMAOSS_PKG="org.frknkrc44.hma_oss"
 HMAOSS_TEMPLATE="Hide List"
@@ -78,21 +74,36 @@ _hma_installed() {
   return 0
 }
 
-# User apps that become hiding targets, minus the Specter blacklist.
+# User apps that become hiding targets, minus the Specter blacklist and any
+# package listed in a blacklist template's appList (including the generated one).
 _hma_user_apps() {
+  _hua_exclude="${1:-}"
   _hua_bl=""
   if [ -f "$SPECTER_DIR/blacklist_enabled" ] && [ -s "$SPECTER_DIR/blacklist.txt" ]; then
     _hua_bl="$SPECTER_DIR/blacklist.txt"
   fi
   _hma_timeout "$HMAOSS_CMD_TIMEOUT" pm list packages -3 2>/dev/null | awk \
-    -v hma="$HMAOSS_PKG" -v bl_file="$_hua_bl" '
+    -v hma="$HMAOSS_PKG" -v bl_file="$_hua_bl" -v exclude_file="$_hua_exclude" '
     BEGIN {
       if (bl_file != "") {
         while ((getline b < bl_file) > 0) {
           gsub(/\r/, "", b)
-          if (b != "") black[b] = 1
+          gsub(/^[[:space:]]+/, "", b)
+          gsub(/[[:space:]]+$/, "", b)
+          sub(/[[:space:]].*$/, "", b)
+          if (b != "" && b !~ /^#/) black[b] = 1
         }
         close(bl_file)
+      }
+      if (exclude_file != "") {
+        while ((getline ex < exclude_file) > 0) {
+          gsub(/\r/, "", ex)
+          gsub(/^[[:space:]]+/, "", ex)
+          gsub(/[[:space:]]+$/, "", ex)
+          sub(/[[:space:]].*$/, "", ex)
+          if (ex != "" && ex !~ /^#/) excluded[ex] = 1
+        }
+        close(exclude_file)
       }
     }
     {
@@ -100,11 +111,40 @@ _hma_user_apps() {
       sub(/^package:/, "", $0)
       if ($0 == "" || $0 == hma) next
       if ($0 in black) next
+      if ($0 in excluded) next
       if (seen[$0]++) next
       print
     }
   '
-  unset _hua_bl
+  unset _hua_exclude _hua_bl
+  return 0
+}
+
+# Print every package listed in a blacklist template appList from an HMA-OSS
+# config. Whitelist templates list visible apps, not invisible ones. The
+# optional third argument skips one template (the generated Hide List).
+_hma_template_targets() {
+  _htt_cfg="$1" _htt_out="$2" _htt_skip="${3:-}"
+  : > "$_htt_out"
+  [ -f "$_htt_cfg" ] || { unset _htt_cfg _htt_out _htt_skip; return 0; }
+  tr -d '\n\r' < "$_htt_cfg" 2>/dev/null \
+    | grep -o '"[^"]*"[[:space:]]*:[[:space:]]*{[^{}]*}' \
+    | awk -v skip="$_htt_skip" '
+        {
+          if (match($0, /^"[^"]*"/)) {
+            name = substr($0, RSTART + 1, RLENGTH - 2)
+            if (skip != "" && name == skip) next
+          }
+          print
+        }
+      ' \
+    | grep '"isWhitelist"[[:space:]]*:[[:space:]]*false' \
+    | grep -o '"appList"[[:space:]]*:[[:space:]]*\[[^]]*\]' \
+    | sed 's/^"appList"[[:space:]]*:[[:space:]]*\[//; s/\]$//' \
+    | grep -o '"[^"]*"' \
+    | tr -d '"' \
+    | awk 'NF && !seen[$0]++' > "$_htt_out"
+  unset _htt_cfg _htt_out _htt_skip
   return 0
 }
 
@@ -126,8 +166,10 @@ _hma_filter_hide_list() {
     }
     {
       gsub(/\r/, "", $0)
+      gsub(/^[[:space:]]+/, "", $0)
+      gsub(/[[:space:]]+$/, "", $0)
       if ($0 == "" || $0 ~ /^#/) next
-      sub(/ .*$/, "", $0)
+      sub(/[[:space:]].*$/, "", $0)
       if ($0 != "" && ($0 in installed) && !seen[$0]++) print
     }
   ' "$_hfl_list" > "$_hfl_out"
@@ -157,20 +199,21 @@ _hma_build_scope() {
     _hbs_ac=$(_hma_appconfig_json "$_hbs_tpl")
     HMAOSS_AC="$_hbs_ac" awk '{ if ($0 != "") print $0 "\t" ENVIRON["HMAOSS_AC"] }' \
       "$_hbs_apps" > "$_hbs_out"
+    unset HMAOSS_AC
   fi
   unset _hbs_apps _hbs_tpl _hbs_out _hbs_def _hbs_ac
   return 0
 }
 
 # Lossless JSON merge: tokenizes the existing config, splices in the template,
-# scope additions and defaultConfig, removes configVersion, and re-emits the
+# scope entries and defaultConfig, removes configVersion, and re-emits the
 # original bytes everywhere else. Exits non-zero and writes nothing when the
 # base is not a JSON object or the result does not balance.
 _hma_merge_config() {
   _hmc_base="$1" _hmc_apps="$2" _hmc_scope="$3" _hmc_default="$4" _hmc_out="$5" _hmc_skip="${6:-}"
-  _hmc_timeout="${7:-$HMAOSS_MERGE_TIMEOUT}"
+  _hmc_timeout="${7:-$HMAOSS_MERGE_TIMEOUT}" _hmc_prune="${8:-}"
   _hma_timeout "$_hmc_timeout" awk -v cfg="$_hmc_base" -v tpl="$HMAOSS_TEMPLATE" -v legacytpl="$HMAOSS_LEGACY_TEMPLATE" -v applist="$_hmc_apps" \
-      -v scopefile="$_hmc_scope" -v deffile="$_hmc_default" -v skiptpl="$_hmc_skip" '
+      -v scopefile="$_hmc_scope" -v deffile="$_hmc_default" -v skiptpl="$_hmc_skip" -v prune="$_hmc_prune" '
 function jesc(s) { gsub(/\\/, "\\\\", s); gsub(/"/, "\\\"", s); return s }
 
 function unquote(s) {
@@ -229,18 +272,39 @@ function skipv(i,   d, t) {
 
 function add_edit(s, e, r) { ne++; es[ne] = s; ee[ne] = e; er[ne] = r }
 
-function scan_obj(vi0, vi1, kset,   i, k) {
-  hasany = 0
+function clear_arr(a,   k) {
+  for (k in a) delete a[k]
+}
+
+function scan_obj(vi0, vi1, kset,   i, k, found) {
+  found = 0
   i = vi0 + 1
   while (i < vi1) {
     if (tk[i] ~ /^"/) {
       k = unquote(tk[i]); i++
       if (tk[i] == ":") i++
-      hasany = 1
+      found = 1
       kset[k] = i
       i = skipv(i)
       if (tk[i] == ",") i++
     } else i++
+  }
+  return found
+}
+
+function array_remove_value(arr_i, value,   end_i, i) {
+  end_i = skipv(arr_i) - 1
+  for (i = arr_i + 1; i < end_i; i++) {
+    if (tk[i] ~ /^"/ && unquote(tk[i]) == value) {
+      if (i + 1 < end_i && tk[i + 1] == ",") {
+        add_edit(tp[i], te[i + 1], "")
+      } else if (i - 1 > arr_i && tk[i - 1] == ",") {
+        add_edit(tp[i - 1], te[i], "")
+      } else {
+        add_edit(tp[arr_i], te[end_i], "[]")
+      }
+      return
+    }
   }
 }
 
@@ -259,7 +323,7 @@ function build_template(   out, c, l) {
 
 BEGIN {
   RS = "\001"
-  if ((getline raw < cfg) > 0) { }
+  if ((getline raw < cfg) <= 0) raw = ""
   close(cfg)
   RS = "\n"
   if (raw == "") raw = "{}"
@@ -305,16 +369,29 @@ BEGIN {
   tpl_new = build_template()
   root_parts = ""
 
+  # Apps that should keep the generated template applied. When user-app
+  # targeting is disabled this list is empty and existing scope is left alone.
+  wanted_count = 0
+  while ((getline w < scopefile) > 0) {
+    sub(/\r$/, "", w)
+    tabi = index(w, "\t")
+    if (tabi > 0) {
+      wanted[substr(w, 1, tabi - 1)] = 1
+      wanted_count++
+    }
+  }
+  close(scopefile)
+
   if (skiptpl != "1") {
     if (tpl_i > 0) {
       if (tk[mvi0[tpl_i]] == "{") {
-        scan_obj(mvi0[tpl_i], mvi1[tpl_i], tset)
+        tpl_hasany = scan_obj(mvi0[tpl_i], mvi1[tpl_i], tset)
         if (tpl in tset) {
           vi = tset[tpl]
           add_edit(tp[vi], te[skipv(vi) - 1], tpl_new)
         } else {
           ins = "\"" jesc(tpl) "\":" tpl_new
-          if (hasany) ins = ins ","
+          if (tpl_hasany) ins = ins ","
           add_edit(te[mvi0[tpl_i]], te[mvi0[tpl_i]], ins)
         }
       } else {
@@ -326,8 +403,27 @@ BEGIN {
   }
 
   scope_exists = (scope_i > 0 && tk[mvi0[scope_i]] == "{")
-  if (scope_exists) scan_obj(mvi0[scope_i], mvi1[scope_i], sset)
-  scope_hasany = hasany
+  scope_hasany = 0
+  if (scope_exists) scope_hasany = scan_obj(mvi0[scope_i], mvi1[scope_i], sset)
+
+  # Detach the generated template from existing scope entries that are no
+  # longer in the desired applied-to set (e.g. apps listed as invisible).
+  # prune=1 keeps this working when the desired set is empty.
+  prune_scope = (prune == "1" || (prune == "" && wanted_count > 0))
+  if (scope_exists && prune_scope) {
+    for (p in sset) {
+      if (p in wanted) continue
+      ac_start = sset[p]
+      ac_end = skipv(ac_start) - 1
+      if (tk[ac_start] != "{") continue
+      clear_arr(acset)
+      scan_obj(ac_start, ac_end, acset)
+      if ("applyTemplates" in acset) {
+        arr = acset["applyTemplates"]
+        if (tk[arr] == "[") array_remove_value(arr, tpl)
+      }
+    }
+  }
 
   nadds = 0; addtext = ""
   while ((getline l < scopefile) > 0) {
@@ -408,7 +504,7 @@ BEGIN {
   if [ "$_hmc_rc" -ne 0 ]; then
     rm -f "$_hmc_out" 2>/dev/null || true
   fi
-  unset _hmc_base _hmc_apps _hmc_scope _hmc_default _hmc_out
+  unset _hmc_base _hmc_apps _hmc_scope _hmc_default _hmc_out _hmc_skip _hmc_timeout _hmc_prune
   return "$_hmc_rc"
 }
 
@@ -482,12 +578,9 @@ _hma_open_ui() {
   _hma_timeout 10 monkey -p "$HMAOSS_PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
 }
 
-# HMA-OSS reloads its service config from the file only through the status
-# card long-press on its Home screen (the ServiceProvider is not exported and
-# no broadcast/binder path exists), so drive that gesture once. Best effort:
-# returns non-zero when the UI could not be reached, callers fall back to the
-# reboot/long-press hint. Set SPECTER_HMA_NO_UI_RELOAD=1 to always skip.
-# $1 = scratch directory for the UI dump.
+# HMA-OSS only reloads its file through the Home status-card long-press, so
+# drive that gesture once. Best effort: non-zero means the UI was not reached.
+# Set SPECTER_HMA_NO_UI_RELOAD=1 to skip. $1 = scratch dir for the UI dump.
 _hma_request_reload() {
   _hml_dir="${1:-/data/local/tmp}"
   [ "${SPECTER_HMA_NO_UI_RELOAD:-}" = "1" ] && return 1

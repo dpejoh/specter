@@ -22,6 +22,28 @@ export HMAOSS_BASE="$TEST_ROOT/misc"
 source_libs
 mkdir -p "$HMAOSS_BASE"
 
+# ---------- template targets: only blacklist app lists ----------
+printf '%s' '{"templates":{"Black":{"isWhitelist":false,"appList":["hidden.one","hidden.two"]},"White":{"isWhitelist":true,"appList":["visible.one"]}}}' > "$TEST_ROOT/tpl.json"
+_hma_template_targets "$TEST_ROOT/tpl.json" "$TEST_ROOT/tpl.txt"
+assert_eq "template targets: blacklist only" "hidden.one hidden.two" "$(tr '\n' ' ' < "$TEST_ROOT/tpl.txt" | sed 's/ $//')"
+
+# Reordered fields, pretty whitespace, and a skipped generated template.
+cat > "$TEST_ROOT/tpl2.json" << 'EOF'
+{"templates": {
+  "Hide List": {"appList": ["stale.one"], "isWhitelist": false},
+  "Other": {"appList": ["hidden.two", "hidden.three"], "isWhitelist": false},
+  "White": {"appList": ["visible.one"], "isWhitelist": true}
+}}
+EOF
+_hma_template_targets "$TEST_ROOT/tpl2.json" "$TEST_ROOT/tpl2.txt" "Hide List"
+assert_eq "template targets: reordered and skipped" "hidden.two hidden.three" "$(tr '\n' ' ' < "$TEST_ROOT/tpl2.txt" | sed 's/ $//')"
+
+# Hide-list parsing: leading/trailing whitespace and trailing comments.
+printf '  me.weishu.kernelsu  \ncom.topjohnwu.magisk\t# root\ncom.not.installed\n# comment\n' > "$TEST_ROOT/hide-list.txt"
+printf 'me.weishu.kernelsu\ncom.topjohnwu.magisk\n' > "$TEST_ROOT/installed.txt"
+_hma_filter_hide_list "$TEST_ROOT/hide-list.txt" "$TEST_ROOT/installed.txt" "$TEST_ROOT/hide-out.txt"
+assert_eq "hide list: whitespace and comments" "me.weishu.kernelsu com.topjohnwu.magisk" "$(tr '\n' ' ' < "$TEST_ROOT/hide-out.txt" | sed 's/ $//')"
+
 _hm_applist="$TEST_ROOT/applist.txt"
 cat > "$_hm_applist" << 'EOF'
 me.weishu.kernelsu
@@ -65,6 +87,26 @@ assert_contains "merge: legacy template renamed" "$_hm_legacy" '"Hide List":'
 assert_not_contains "merge: legacy template name removed" "$_hm_legacy" 'HIDE MY CUSTOM APP'
 assert_contains "merge: legacy scope reference migrated" "$_hm_legacy" '"applyTemplates":["Hide List"]'
 assert_contains "merge: legacy default reference migrated" "$_hm_legacy" '"defaultConfig":{"applyTemplates":["Hide List"]}'
+
+# ---------- merge: excluded apps detached from generated template ----------
+printf '%s' '{"templates":{"Hide List":{"isWhitelist":false,"appList":["hidden.app"]}},"scope":{"keep.app":{"applyTemplates":["Hide List"],"x":1},"hidden.app":{"applyTemplates":["Hide List"],"y":2}}}' > "$TEST_ROOT/base12.json"
+printf 'hidden.app\n' > "$TEST_ROOT/applist12.txt"
+printf 'keep.app\t{"applyTemplates":["Hide List"],"x":1}\n' > "$TEST_ROOT/scope12.tsv"
+_hma_merge_config "$TEST_ROOT/base12.json" "$TEST_ROOT/applist12.txt" "$TEST_ROOT/scope12.tsv" "$_hm_default" "$TEST_ROOT/merged12.json"
+assert_exit_code "merge: applied-to cleanup succeeds" 0 "$?"
+assert_eq "merge: excluded app detached from template" "[]" "$(_hma_pyval "$TEST_ROOT/merged12.json" "str(d['scope']['hidden.app']['applyTemplates'])")"
+assert_eq "merge: wanted app keeps template" "['Hide List']" "$(_hma_pyval "$TEST_ROOT/merged12.json" "str(d['scope']['keep.app']['applyTemplates'])")"
+
+# ---------- merge: prune stale template even with no desired targets ----------
+printf '%s' '{"templates":{"Hide List":{"isWhitelist":false,"appList":["hidden.app"]}},"scope":{"hidden.app":{"applyTemplates":["Hide List"],"y":2},"keep.app":{"applyTemplates":["Hide List"],"x":1}}}' > "$TEST_ROOT/base13.json"
+: > "$TEST_ROOT/scope-empty.tsv"
+_hma_merge_config "$TEST_ROOT/base13.json" "$TEST_ROOT/applist12.txt" "$TEST_ROOT/scope-empty.tsv" "$_hm_default" "$TEST_ROOT/merged13.json" "0" "" "1"
+assert_exit_code "merge: empty-target prune succeeds" 0 "$?"
+assert_eq "merge: empty-target prune detaches hidden" "[]" "$(_hma_pyval "$TEST_ROOT/merged13.json" "str(d['scope']['hidden.app']['applyTemplates'])")"
+assert_eq "merge: empty-target prune detaches keep" "[]" "$(_hma_pyval "$TEST_ROOT/merged13.json" "str(d['scope']['keep.app']['applyTemplates'])")"
+
+_hma_merge_config "$TEST_ROOT/base13.json" "$TEST_ROOT/applist12.txt" "$TEST_ROOT/scope-empty.tsv" "$_hm_default" "$TEST_ROOT/merged14.json" "0" "" "0"
+assert_eq "merge: disabled prune keeps template" "['Hide List']" "$(_hma_pyval "$TEST_ROOT/merged14.json" "str(d['scope']['keep.app']['applyTemplates'])")"
 
 # ---------- merge: fresh empty base ----------
 printf '{}' > "$TEST_ROOT/base2.json"
@@ -140,13 +182,13 @@ export SPECTER_HMA_NO_UI_RELOAD=1
 source_libs
 mkdir -p "$HMAOSS_BASE/hide_my_applist_test"
 _hm_cfg="$HMAOSS_BASE/hide_my_applist_test/config.json"
-printf '{"configVersion":93,"detailLog":false,"scope":{"com.preexisting":{"useWhitelist":true,"extraAppList":["z"]}}}' > "$_hm_cfg"
+printf '{"configVersion":93,"detailLog":false,"templates":{"Hide example":{"isWhitelist":false,"appList":["com.excluded.app"]}},"scope":{"com.preexisting":{"useWhitelist":true,"extraAppList":["z"]}}}' > "$_hm_cfg"
 
 cat > "$BIN_DIR/pm" << 'MOCK'
 #!/bin/sh
 case "$*" in
-  *"-3"*) printf 'package:com.preexisting\npackage:com.newapp\npackage:org.frknkrc44.hma_oss\n' ;;
-  *list*packages*) printf 'package:com.preexisting\npackage:com.newapp\npackage:me.weishu.kernelsu\npackage:org.frknkrc44.hma_oss\n' ;;
+  *"-3"*) printf 'package:com.preexisting\npackage:com.newapp\npackage:com.excluded.app\npackage:me.weishu.kernelsu\npackage:org.frknkrc44.hma_oss\n' ;;
+  *list*packages*) printf 'package:com.preexisting\npackage:com.newapp\npackage:com.excluded.app\npackage:me.weishu.kernelsu\npackage:org.frknkrc44.hma_oss\n' ;;
   *) echo "mock pm $*" ;;
 esac
 MOCK
@@ -164,6 +206,8 @@ assert_file_exists "feature: backup written" "${_hm_cfg}.specter.bak"
 assert_eq "feature: preexisting kept" "{'useWhitelist': True, 'extraAppList': ['z']}" "$(_hma_pyval "$_hm_cfg" "str(d['scope']['com.preexisting'])")"
 assert_eq "feature: new app targeted" "True" "$(_hma_pyval "$_hm_cfg" "'com.newapp' in d['scope']")"
 assert_eq "feature: hma app not targeted" "False" "$(_hma_pyval "$_hm_cfg" "'org.frknkrc44.hma_oss' in d['scope']")"
+assert_eq "feature: hidden app not targeted" "False" "$(_hma_pyval "$_hm_cfg" "'me.weishu.kernelsu' in d['scope']")"
+assert_eq "feature: custom template target not targeted" "False" "$(_hma_pyval "$_hm_cfg" "'com.excluded.app' in d['scope']")"
 assert_eq "feature: hidden template filtered" "['me.weishu.kernelsu']" "$(_hma_pyval "$_hm_cfg" "d['templates']['Hide List']['appList']")"
 assert_eq "feature: configVersion absent" "False" "$(_hma_pyval "$_hm_cfg" "'configVersion' in d")"
 assert_eq "feature: defaultConfig set" "False" "$(_hma_pyval "$_hm_cfg" "d['defaultConfig'] is None")"
@@ -188,12 +232,66 @@ printf '#!/bin/sh\nexit 0\n' > "$BIN_DIR/chown"; chmod +x "$BIN_DIR/chown"
 printf '#!/bin/sh\nexit 0\n' > "$BIN_DIR/restorecon"; chmod +x "$BIN_DIR/restorecon"
 mkdir -p "$SPECTER_DIR/config"
 printf 'me.weishu.kernelsu\n' > "$SPECTER_DIR/config/hma-hide-list.txt"
-printf 'com.blocked\n' > "$SPECTER_DIR/blacklist.txt"
+printf 'com.blocked # comment\n' > "$SPECTER_DIR/blacklist.txt"
 : > "$SPECTER_DIR/blacklist_enabled"
 
 run_feature hma.sh >/dev/null 2>&1
 assert_eq "feature: blacklisted app skipped" "False" "$(_hma_pyval "$_hm_cfg2" "'com.blocked' in d['scope']")"
 assert_eq "feature: allowed app added" "True" "$(_hma_pyval "$_hm_cfg2" "'com.allowed' in d['scope']")"
+
+# ---------- feature: a failed Xposed scan is reported, not silent ----------
+bootstrap
+export HMAOSS_BASE="$TEST_ROOT/misc"
+export SPECTER_HMA_NO_UI_RELOAD=1
+export SPECTER_DEX="$TEST_ROOT/fake.dex"
+source_libs
+mkdir -p "$HMAOSS_BASE/hide_my_applist_test"
+_hm_cfg4="$HMAOSS_BASE/hide_my_applist_test/config.json"
+printf '{}' > "$_hm_cfg4"
+cat > "$BIN_DIR/pm" << 'MOCK'
+#!/bin/sh
+case "$*" in
+  *"-3"*) printf 'package:com.live.app\npackage:org.frknkrc44.hma_oss\n' ;;
+  *list*packages*) printf 'package:com.live.app\npackage:org.frknkrc44.hma_oss\n' ;;
+  *) echo "mock pm $*" ;;
+esac
+MOCK
+chmod +x "$BIN_DIR/pm"
+printf '#!/bin/sh\nexit 0\n' > "$BIN_DIR/chown"; chmod +x "$BIN_DIR/chown"
+printf '#!/bin/sh\nexit 0\n' > "$BIN_DIR/restorecon"; chmod +x "$BIN_DIR/restorecon"
+printf '#!/bin/sh\nexit 1\n' > "$BIN_DIR/app_process"; chmod +x "$BIN_DIR/app_process"
+printf 'fake dex\n' > "$SPECTER_DEX"
+mkdir -p "$SPECTER_DIR/config"
+printf 'me.weishu.kernelsu\n' > "$SPECTER_DIR/config/hma-hide-list.txt"
+_hm_scanfail_out=$(run_feature hma.sh)
+assert_contains "feature: scan failure warned" "$_hm_scanfail_out" "Xposed module scan failed"
+unset SPECTER_DEX
+
+# ---------- feature: a kept template still excludes its own hidden apps ----------
+bootstrap
+export HMAOSS_BASE="$TEST_ROOT/misc"
+export SPECTER_HMA_NO_UI_RELOAD=1
+source_libs
+mkdir -p "$HMAOSS_BASE/hide_my_applist_test"
+_hm_cfg5="$HMAOSS_BASE/hide_my_applist_test/config.json"
+printf '%s' '{"templates":{"Hide List":{"isWhitelist":false,"appList":["com.hidden"]}},"scope":{"com.hidden":{"applyTemplates":["Hide List"]}}}' > "$_hm_cfg5"
+cat > "$BIN_DIR/pm" << 'MOCK'
+#!/bin/sh
+case "$*" in
+  *"-3"*) printf 'package:com.hidden\npackage:org.frknkrc44.hma_oss\n' ;;
+  *list*packages*) printf 'package:com.hidden\npackage:org.frknkrc44.hma_oss\n' ;;
+  *) echo "mock pm $*" ;;
+esac
+MOCK
+chmod +x "$BIN_DIR/pm"
+printf '#!/bin/sh\nexit 0\n' > "$BIN_DIR/chown"; chmod +x "$BIN_DIR/chown"
+printf '#!/bin/sh\nexit 0\n' > "$BIN_DIR/restorecon"; chmod +x "$BIN_DIR/restorecon"
+mkdir -p "$SPECTER_DIR/config"
+printf 'com.not.installed\n' > "$SPECTER_DIR/config/hma-hide-list.txt"
+_hm_kept_out=$(run_feature hma.sh)
+assert_contains "feature: kept template warned" "$_hm_kept_out" "keeping existing template"
+assert_eq "feature: kept template appList preserved" "['com.hidden']" "$(_hma_pyval "$_hm_cfg5" "d['templates']['Hide List']['appList']")"
+assert_eq "feature: kept hidden app detached" "[]" "$(_hma_pyval "$_hm_cfg5" "str(d['scope']['com.hidden']['applyTemplates'])")"
 
 # ---------- feature: live reload gesture (status card long-press) ----------
 bootstrap
