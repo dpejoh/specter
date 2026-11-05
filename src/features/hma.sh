@@ -73,9 +73,9 @@ else
 fi
 unset _hma_probe
 
-# Apps that are invisible in existing blacklist templates and apps detected
-# across all 7 HMA-OSS built-in presets must never have hiding enabled on
-# themselves (never added to scope, and pruned if previously present).
+# Apps that are invisible in existing blacklist templates and sensitive apps
+# detected across HMA-OSS built-in presets (excluding detector apps, which must
+# remain in scope for testing/hiding) must never have hiding enabled on themselves.
 _hma_exclude="$_HMA_TMP/exclude-targets"
 _hma_template_targets "$_hma_base" "$_hma_exclude" "$HMAOSS_TEMPLATE"
 cat "$_hma_preset_apps" >> "$_hma_exclude"

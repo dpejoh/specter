@@ -48,12 +48,12 @@ assert_eq "hide list: whitespace and comments" "me.weishu.kernelsu com.topjohnwu
 printf '%s' '{"cache":{"root_apps":["com.topjohnwu.magisk","me.weishu.kernelsu"],"detector_apps":["io.github.vvb2060.mahoshojo"],"xposed":["org.lsposed.manager"],"sus_apps":["bin.mt.plus"],"shizuku_dhizuku":["moe.shizuku.privileged.api"],"custom_rom":["org.lineageos.updater"],"accessibility_apps":["com.example.acc"]},"riskyPackageCache":["com.bank.app"],"allAppsList":["com.android.chrome","com.topjohnwu.magisk"]}' > "$TEST_ROOT/preset_cache_v2.json"
 _hma_preset_cache_apps "$TEST_ROOT/preset_cache_v2.json" "$TEST_ROOT/preset_out.txt"
 assert_contains "preset cache: root app extracted" "$(cat "$TEST_ROOT/preset_out.txt")" "com.topjohnwu.magisk"
-assert_contains "preset cache: detector app extracted" "$(cat "$TEST_ROOT/preset_out.txt")" "io.github.vvb2060.mahoshojo"
+assert_not_contains "preset cache: detector app excluded from exclude-list" "$(cat "$TEST_ROOT/preset_out.txt")" "io.github.vvb2060.mahoshojo"
 assert_contains "preset cache: xposed extracted" "$(cat "$TEST_ROOT/preset_out.txt")" "org.lsposed.manager"
 assert_contains "preset cache: accessibility extracted" "$(cat "$TEST_ROOT/preset_out.txt")" "com.example.acc"
 assert_not_contains "preset cache: riskyPackageCache ignored" "$(cat "$TEST_ROOT/preset_out.txt")" "com.bank.app"
 assert_not_contains "preset cache: allAppsList ignored" "$(cat "$TEST_ROOT/preset_out.txt")" "com.android.chrome"
-assert_eq "preset cache: total packages" "8" "$(wc -l < "$TEST_ROOT/preset_out.txt" | tr -d ' ')"
+assert_eq "preset cache: total packages" "7" "$(wc -l < "$TEST_ROOT/preset_out.txt" | tr -d ' ')"
 
 # ---------- appconfig: 7 presets and empty applyTemplates ----------
 _hma_cfg_default=$(_hma_appconfig_json "")
@@ -278,12 +278,12 @@ source_libs
 mkdir -p "$HMAOSS_BASE/hide_my_applist_test"
 _hm_cfg4="$HMAOSS_BASE/hide_my_applist_test/config.json"
 printf '{}' > "$_hm_cfg4"
-printf '%s' '{"cache":{"xposed":["org.lsposed.manager"]}}' > "$HMAOSS_BASE/hide_my_applist_test/preset_cache_v2.json"
+printf '%s' '{"cache":{"xposed":["org.lsposed.manager"],"detector_apps":["io.github.vvb2060.mahoshojo"]}}' > "$HMAOSS_BASE/hide_my_applist_test/preset_cache_v2.json"
 cat > "$BIN_DIR/pm" << 'MOCK'
 #!/bin/sh
 case "$*" in
-  *"-3"*) printf 'package:org.lsposed.manager\npackage:com.live.app\npackage:org.frknkrc44.hma_oss\n' ;;
-  *list*packages*) printf 'package:org.lsposed.manager\npackage:com.live.app\npackage:org.frknkrc44.hma_oss\n' ;;
+  *"-3"*) printf 'package:org.lsposed.manager\npackage:io.github.vvb2060.mahoshojo\npackage:com.live.app\npackage:org.frknkrc44.hma_oss\n' ;;
+  *list*packages*) printf 'package:org.lsposed.manager\npackage:io.github.vvb2060.mahoshojo\npackage:com.live.app\npackage:org.frknkrc44.hma_oss\n' ;;
   *) echo "mock pm $*" ;;
 esac
 MOCK
@@ -292,6 +292,7 @@ printf '#!/bin/sh\nexit 0\n' > "$BIN_DIR/chown"; chmod +x "$BIN_DIR/chown"
 printf '#!/bin/sh\nexit 0\n' > "$BIN_DIR/restorecon"; chmod +x "$BIN_DIR/restorecon"
 run_feature hma.sh >/dev/null 2>&1
 assert_eq "feature: xposed module in preset cache not targeted" "False" "$(_hma_pyval "$_hm_cfg4" "'org.lsposed.manager' in d['scope']")"
+assert_eq "feature: detector app in preset cache targeted in scope" "True" "$(_hma_pyval "$_hm_cfg4" "'io.github.vvb2060.mahoshojo' in d['scope']")"
 assert_eq "feature: regular app targeted" "True" "$(_hma_pyval "$_hm_cfg4" "'com.live.app' in d['scope']")"
 
 # ---------- feature: preexisting scope entry for preset cache app pruned ----------
