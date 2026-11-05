@@ -2,7 +2,110 @@ import { exec, getModuleDir } from './bridge.js';
 import { getTranslation } from './i18n.js';
 import { showToast } from './toast.js';
 import { shellEscape } from './utils.js';
+import { runAction } from './actions.js';
+import { openSubPage } from './subpage.js';
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
+
+function renderOmkRestartRow(
+  container: HTMLElement,
+  posClass: string | undefined,
+  id: string,
+  icon: string,
+  title: string,
+  description: string,
+  script: string,
+  friendlyNameKey: string,
+) {
+  container.innerHTML = `
+    <div class="list-item ${posClass || 'list-item--first'}" id="${id}" role="button" tabindex="0">
+      <div class="li-icon"><md-icon aria-hidden="true">${icon}</md-icon></div>
+      <div class="list-item-content">
+        <div class="toggle-text">${title}</div>
+        <span class="supporting-text">${description}</span>
+      </div>
+      <div class="spacer"></div>
+      <md-circular-progress indeterminate class="action-spinner hidden"></md-circular-progress>
+      <md-ripple></md-ripple>
+    </div>
+  `;
+
+  const row = container.querySelector(`#${id}`) as HTMLElement | null;
+  if (!row) return;
+  let running = false;
+  const run = async () => {
+    if (running) return;
+    running = true;
+    row.setAttribute('aria-disabled', 'true');
+    const spinner = row.querySelector('.action-spinner');
+    spinner?.classList.remove('hidden');
+    try {
+      await runAction(script, friendlyNameKey);
+    } finally {
+      running = false;
+      row.removeAttribute('aria-disabled');
+      spinner?.classList.add('hidden');
+    }
+  };
+  row.addEventListener('click', run);
+  row.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      run();
+    }
+  });
+}
+
+export function wireOmkRestart() {
+  const btn = document.getElementById('omk-restart-btn');
+  if (!btn) return;
+  btn.addEventListener('click', openOmkRestartPage);
+}
+
+export function openOmkRestartPage() {
+  openSubPage({
+    id: 'omk-restart',
+    title: t('tools_restart_omk', 'Restart OMK'),
+    description: t('tools_restart_omk_desc', 'Restart keymint or injector after OMK changes.'),
+    groups: [
+      {
+        items: [
+          {
+            type: 'custom',
+            id: 'omk-restart-keymint-item',
+            render: (container, _isEnabled, posClass) => {
+              renderOmkRestartRow(
+                container,
+                posClass,
+                'omk-restart-keymint-row',
+                'memory',
+                t('tools_restart_omk_keymint', 'Restart OMK keymint'),
+                t('tools_restart_omk_keymint_desc', 'Use after changing OMK OS version or boot key.'),
+                'omk_restart_keymint.sh',
+                'tools_restart_omk_keymint',
+              );
+            },
+          },
+          {
+            type: 'custom',
+            id: 'omk-restart-injector-item',
+            render: (container, _isEnabled, posClass) => {
+              renderOmkRestartRow(
+                container,
+                posClass,
+                'omk-restart-injector-row',
+                'tune',
+                t('tools_restart_omk_injector', 'Restart OMK injector'),
+                t('tools_restart_omk_injector_desc', 'Use if a target-app change didn\'t stick; then reopen the app.'),
+                'omk_restart_injector.sh',
+                'tools_restart_omk_injector',
+              );
+            },
+          },
+        ],
+      },
+    ],
+  });
+}
 
 export function wireOmkTrust() {
   const btn = document.getElementById('omk-trust-btn');

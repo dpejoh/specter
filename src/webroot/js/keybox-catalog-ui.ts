@@ -5,10 +5,24 @@ import { API_URLS } from './constants.js';
 import { escapeHtml, fetchJson, shellEscape, updateListContainerCorners } from './utils.js';
 import { runAction } from './actions.js';
 import { refreshKeyboxStatus } from './device.js';
+import { createFilterDropdown, type FilterDropdownHandle, type FilterOption } from './filter-dropdown.js';
 import { openSubPage } from './subpage.js';
 import type { CatalogEntry, CatalogJson } from './types.js';
 
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
+
+export interface KeyboxCatalogOptions {
+  refreshButton?: HTMLElement | null;
+  onStateChange?: (canInstall: boolean) => void;
+  onInstalled?: () => void;
+}
+
+export interface KeyboxCatalogHandle {
+  load(): Promise<void>;
+  install(): Promise<void>;
+  canInstall(): boolean;
+  dispose(): void;
+}
 
 const AUTO_KEY = 'auto';
 
@@ -67,34 +81,39 @@ async function fetchCatalog(): Promise<CatalogJson | null> {
   return null;
 }
 
-export async function openKeyboxCatalogPage() {
-  const provider = (await cfgGet('keybox_provider', 'auto')) || 'auto';
-  let sourceFilter = provider === 'auto' ? '' : provider;
+export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalogOptions = {}): KeyboxCatalogHandle {
+  const { refreshButton = null, onStateChange, onInstalled } = options;
+  let statusFilter: 'active' | 'all' = 'active';
+  let providerFilter = 'all';
   let entries: CatalogEntry[] = [];
   let selectedKey = AUTO_KEY;
   let selectedEntry: CatalogEntry | null = null;
-  let catalogRoot: HTMLElement | null = null;
-  let refreshBtn: HTMLElement | null = null;
-  let installFab: HTMLElement | null = null;
+  let catalogBody: HTMLElement | null = null;
+  let statusDropdown: FilterDropdownHandle | null = null;
+  let providerDropdown: FilterDropdownHandle | null = null;
   let loading = false;
   let installing = false;
-  let activeOnly = true;
-  let closePage: (() => void) | null = null;
 
-  const activeInFilter = () =>
-    entries.filter(entry => isActiveEntry(entry) && (!sourceFilter || entry.source === sourceFilter));
+  const visibleEntries = () => entries.filter(entry => {
+    if (statusFilter === 'active' && !isActiveEntry(entry)) return false;
+    if (providerFilter !== 'all' && entry.source !== providerFilter) return false;
+    return true;
+  });
 
-  const updateFab = () => {
-    if (!installFab) return;
-    const enabled = !loading && !installing && (selectedEntry
+  const activeInFilter = () => visibleEntries().filter(isActiveEntry);
+
+  const canInstall = () =>
+    !loading && !installing && (selectedEntry
       ? isActiveEntry(selectedEntry)
       : activeInFilter().length > 0);
-    installFab.toggleAttribute('disabled', !enabled);
+
+  const updateFab = () => {
+    onStateChange?.(canInstall());
   };
 
   const renderStatus = (icon: string, text: string, retry = false) => {
-    if (!catalogRoot) return;
-    catalogRoot.innerHTML = `
+    if (!catalogBody) return;
+    catalogBody.innerHTML = `
       <div class="kb-catalog-status">
         <md-icon aria-hidden="true">${icon}</md-icon>
         <p>${text}</p>
@@ -102,15 +121,15 @@ export async function openKeyboxCatalogPage() {
       </div>
     `;
     if (retry) {
-      catalogRoot.querySelector('#kb-catalog-retry')?.addEventListener('click', () => {
+      catalogBody.querySelector('#kb-catalog-retry')?.addEventListener('click', () => {
         void loadCatalog();
       });
     }
   };
 
   const renderLoading = () => {
-    if (!catalogRoot) return;
-    catalogRoot.innerHTML = `
+    if (!catalogBody) return;
+    catalogBody.innerHTML = `
       <div class="kb-catalog-status">
         <md-circular-progress indeterminate></md-circular-progress>
         <p>${t('kb_catalog_loading', 'Loading keyboxes...')}</p>
@@ -119,7 +138,7 @@ export async function openKeyboxCatalogPage() {
   };
 
   const updateRadios = () => {
-    const list = catalogRoot?.querySelector('#kb-catalog-list');
+    const list = catalogBody?.querySelector('#kb-catalog-list');
     list?.querySelectorAll('md-radio').forEach(radio => {
       (radio as HTMLElement & { checked: boolean }).checked =
         (radio as HTMLElement & { value: string }).value === selectedKey;
@@ -176,74 +195,44 @@ export async function openKeyboxCatalogPage() {
   };
 
   const renderCatalog = () => {
-    if (!catalogRoot) return;
-    const statusEntries = entries.filter(entry => !activeOnly || isActiveEntry(entry));
-    const sources = [...new Set(statusEntries.map(entry => entry.source))].sort();
-    if (sourceFilter && !sources.includes(sourceFilter)) sourceFilter = '';
+    if (!catalogBody || !statusDropdown || !providerDropdown) return;
 
-    const visible = statusEntries.filter(entry => !sourceFilter || entry.source === sourceFilter);
-    const autoAvailable = activeInFilter().length > 0;
+    const sources = [...new Set(entries.map(entry => entry.source))].sort();
+    const statusOptions: FilterOption[] = [
+      { value: 'active', label: t('custom_kb_active', 'Active') },
+      { value: 'all', label: t('ta_filter_all', 'All') },
+    ];
+    const providerOptions: FilterOption[] = [
+      { value: 'all', label: t('kb_filter_provider_all', 'All providers') },
+      ...sources.map(source => ({ value: source, label: source })),
+    ];
+
+    statusDropdown.setOptions(statusOptions);
+    statusDropdown.setValue(statusFilter);
+    providerDropdown.setOptions(providerOptions);
+    if (!providerOptions.some(option => option.value === providerFilter)) {
+      providerFilter = 'all';
+    }
+    providerDropdown.setValue(providerFilter);
+
+    const visible = visibleEntries();
+    const autoAvailable = visible.some(isActiveEntry);
     if (selectedEntry && !visible.some(entry => entryKey(entry) === selectedKey && isActiveEntry(entry))) {
       selectedKey = AUTO_KEY;
       selectedEntry = null;
     }
 
-    catalogRoot.innerHTML = `
-      <div class="kb-catalog-filters" id="kb-catalog-filters"></div>
-      <div class="list-container" id="kb-catalog-list"></div>
-    `;
-
-    const filters = catalogRoot.querySelector('#kb-catalog-filters') as HTMLElement;
-    const list = catalogRoot.querySelector('#kb-catalog-list') as HTMLElement;
-
-    const activeChip = document.createElement('md-filter-chip') as HTMLElement & { label: string; selected: boolean };
-    activeChip.label = t('custom_kb_active', 'Active');
-    activeChip.selected = activeOnly;
-    activeChip.addEventListener('click', () => {
-      activeOnly = !activeOnly;
-      if (selectedEntry && activeOnly && !isActiveEntry(selectedEntry)) {
-        selectedKey = AUTO_KEY;
-        selectedEntry = null;
-      }
-      renderCatalog();
-      updateFab();
-    });
-    filters.appendChild(activeChip);
-
-    const chips: (HTMLElement & { label: string; selected: boolean })[] = [];
-    const makeChip = (label: string, source: string) => {
-      const chip = document.createElement('md-filter-chip') as HTMLElement & { label: string; selected: boolean };
-      chip.label = label;
-      chip.dataset.source = source;
-      chip.selected = sourceFilter === source;
-      chip.addEventListener('click', () => {
-        if (sourceFilter === source) return;
-        sourceFilter = source;
-        if (selectedEntry && sourceFilter && selectedEntry.source !== sourceFilter) {
-          selectedKey = AUTO_KEY;
-          selectedEntry = null;
-        }
-        renderCatalog();
-        updateFab();
-      });
-      filters.appendChild(chip);
-      chips.push(chip);
-      return chip;
-    };
-
-    makeChip(`${t('ta_filter_all', 'All')} (${statusEntries.length})`, '');
-    for (const source of sources) {
-      const count = statusEntries.filter(entry => entry.source === source).length;
-      makeChip(`${source} (${count})`, source);
-    }
-    for (const chip of chips) chip.selected = chip.dataset.source === sourceFilter;
+    catalogBody.innerHTML = '<div class="list-container" id="kb-catalog-list"></div>';
+    const list = catalogBody.querySelector('#kb-catalog-list') as HTMLElement;
 
     if (autoAvailable) {
-      const autoDescription = t('kb_catalog_auto_desc', 'Let Specter pick an active keybox.');
+      const autoDescription = providerFilter === 'all'
+        ? t('kb_catalog_auto_desc', 'Let Specter pick an active keybox.')
+        : `${t('kb_catalog_auto_desc', 'Let Specter pick an active keybox.')} (${providerFilter})`;
       list.appendChild(makeRadioRow(
         AUTO_KEY,
         t('kb_catalog_auto', 'Automatic'),
-        sourceFilter ? `${autoDescription} (${sourceFilter})` : autoDescription,
+        autoDescription,
         'autorenew',
         t('auto_target_recommended', 'Recommended'),
       ));
@@ -266,31 +255,38 @@ export async function openKeyboxCatalogPage() {
       empty.className = 'kb-catalog-status';
       empty.innerHTML = `
         <md-icon aria-hidden="true">info</md-icon>
-        <p>${activeOnly
-          ? t('kb_catalog_empty', 'No active keyboxes for this source.')
+        <p>${statusFilter === 'active'
+          ? t('kb_catalog_empty', 'No active keyboxes for this provider.')
           : t('kb_catalog_empty_all', 'No keyboxes available.')}</p>
       `;
-      catalogRoot.appendChild(empty);
+      catalogBody.appendChild(empty);
     }
 
     updateListContainerCorners(list);
   };
 
+  let providerLoaded = false;
+
   async function loadCatalog() {
     if (loading) return;
+    if (!providerLoaded) {
+      const provider = (await cfgGet('keybox_provider', 'auto').catch(() => 'auto')) || 'auto';
+      if (provider !== 'auto') providerFilter = provider;
+      providerLoaded = true;
+    }
     loading = true;
     updateFab();
-    refreshBtn?.setAttribute('disabled', '');
+    refreshButton?.setAttribute('disabled', '');
     renderLoading();
 
     const data = await fetchCatalog();
     loading = false;
-    refreshBtn?.removeAttribute('disabled');
+    refreshButton?.removeAttribute('disabled');
 
     if (!data?.entries) {
       entries = [];
       updateFab();
-      renderStatus('error', t('kb_catalog_error', "Couldn't load the keybox catalog."), true);
+      renderStatus('error', t('kb_catalog_error', "Couldn't load available keyboxes."), true);
       return;
     }
 
@@ -300,7 +296,9 @@ export async function openKeyboxCatalogPage() {
         a.source.localeCompare(b.source) ||
         a.version.localeCompare(b.version, undefined, { numeric: true }));
     const sources = [...new Set(entries.map(entry => entry.source))];
-    if (sourceFilter && !sources.includes(sourceFilter)) sourceFilter = '';
+    if (providerFilter !== 'all' && !sources.includes(providerFilter)) {
+      providerFilter = 'all';
+    }
     if (selectedEntry && !entries.some(entry => entryKey(entry) === selectedKey && isActiveEntry(entry))) {
       selectedKey = AUTO_KEY;
       selectedEntry = null;
@@ -332,7 +330,7 @@ export async function openKeyboxCatalogPage() {
       } else {
         cfgSet('keybox_select_source', '');
         cfgSet('keybox_select_version', '');
-        cfgSet('keybox_provider', sourceFilter || 'auto');
+        cfgSet('keybox_provider', providerFilter === 'all' ? 'auto' : providerFilter);
       }
 
       const code = await runAction('keybox.sh');
@@ -343,7 +341,7 @@ export async function openKeyboxCatalogPage() {
           await exec(`sh ${shellEscape(moddir + '/refresh_desc.sh')}`).catch(() => {});
         }
         await refreshKeyboxStatus();
-        closePage?.();
+        onInstalled?.();
       }
     } finally {
       cfgSet('keybox_select_source', '');
@@ -353,10 +351,67 @@ export async function openKeyboxCatalogPage() {
     }
   }
 
+  container.innerHTML = `
+    <div class="kb-catalog-filters" id="kb-catalog-filters"></div>
+    <div id="kb-catalog-body"></div>
+  `;
+  catalogBody = container.querySelector('#kb-catalog-body');
+  const filterHost = container.querySelector('#kb-catalog-filters') as HTMLElement;
+  statusDropdown = createFilterDropdown({
+    id: 'kb-status-filter',
+    ariaLabel: t('kb_filter_status_aria', 'Filter by status'),
+    value: statusFilter,
+    options: [
+      { value: 'active', label: t('custom_kb_active', 'Active') },
+      { value: 'all', label: t('ta_filter_all', 'All') },
+    ],
+    onChange: (next) => {
+      statusFilter = next === 'all' ? 'all' : 'active';
+      renderCatalog();
+      updateFab();
+    },
+  });
+  providerDropdown = createFilterDropdown({
+    id: 'kb-provider-filter',
+    ariaLabel: t('kb_filter_provider_aria', 'Filter by provider'),
+    value: providerFilter,
+    options: [
+      { value: 'all', label: t('kb_filter_provider_all', 'All providers') },
+    ],
+    onChange: (next) => {
+      providerFilter = next;
+      renderCatalog();
+      updateFab();
+    },
+  });
+  filterHost.append(statusDropdown.element, providerDropdown.element);
+
+  refreshButton?.addEventListener('click', () => {
+    void loadCatalog();
+  });
+  renderLoading();
+  updateFab();
+
+  return {
+    load: loadCatalog,
+    install: installSelected,
+    canInstall,
+    dispose: () => {
+      statusDropdown?.dispose();
+      providerDropdown?.dispose();
+    },
+  };
+}
+
+export async function openKeyboxCatalogPage() {
+  let catalogContent: HTMLElement | null = null;
+  let refreshButton: HTMLElement | null = null;
+  let catalog: KeyboxCatalogHandle | null = null;
+
   const instance = await openSubPage({
     id: 'keybox-catalog',
-    title: t('menu_import_keybox', 'Install Keybox'),
-    description: t('menu_import_keybox_desc', 'Choose an active keybox from the catalog.'),
+    title: t('kb_specter_keyboxes', 'Specter keyboxes'),
+    description: t('menu_import_keybox_desc', 'Browse available keyboxes and install one.'),
     groups: [
       {
         items: [
@@ -364,8 +419,15 @@ export async function openKeyboxCatalogPage() {
             type: 'custom',
             id: 'kb-catalog-content',
             render: (container) => {
-              catalogRoot = container;
-              renderLoading();
+              container.innerHTML = `
+                <div id="kb-catalog-mount"></div>
+                <md-filled-button id="kb-catalog-install" class="kb-install-btn" disabled>
+                  <md-icon slot="icon" aria-hidden="true">check</md-icon>
+                  ${t('kb_catalog_install', 'Install')}
+                </md-filled-button>
+              `;
+              catalogContent = container.querySelector('#kb-catalog-mount');
+              container.parentElement?.classList.add('kb-page-container');
             },
           },
         ],
@@ -377,39 +439,30 @@ export async function openKeyboxCatalogPage() {
           <md-icon aria-hidden="true">refresh</md-icon>
         </md-icon-button>
       `;
-      refreshBtn = container.querySelector('#kb-catalog-refresh');
-      refreshBtn?.addEventListener('click', () => {
-        void loadCatalog();
-      });
+      refreshButton = container.querySelector('#kb-catalog-refresh');
     },
-    fab: (container) => {
-      container.innerHTML = `
-        <md-fab variant="primary" class="subpage-fab" id="kb-catalog-install" label="${t('kb_catalog_install', 'Install')}" disabled>
-          <md-icon slot="icon" aria-hidden="true">download</md-icon>
-        </md-fab>
-      `;
-      installFab = container.querySelector('#kb-catalog-install');
-      installFab?.addEventListener('click', () => {
-        void installSelected();
-      });
-      updateFab();
+    onClose: () => {
+      catalog?.dispose();
     },
   });
 
-  closePage = instance.close;
-  await loadCatalog();
-}
+  if (!catalogContent) return;
 
-export function wireKeyboxCatalog() {
-  const btn = document.getElementById('keybox-catalog-btn');
-  if (!btn || btn.dataset.spWired) return;
-  btn.dataset.spWired = '1';
-  btn.addEventListener('click', () => {
-    void openKeyboxCatalogPage();
+  const installButton = instance.overlay.querySelector('#kb-catalog-install') as
+    | (HTMLElement & { disabled: boolean })
+    | null;
+
+  catalog = mountKeyboxCatalog(catalogContent, {
+    refreshButton,
+    onStateChange: (canInstall) => {
+      if (installButton) installButton.disabled = !canInstall;
+    },
+    onInstalled: () => instance.close(),
   });
-  btn.addEventListener('keydown', (event) => {
-    if (event.key !== 'Enter' && event.key !== ' ') return;
-    event.preventDefault();
-    void openKeyboxCatalogPage();
+
+  installButton?.addEventListener('click', () => {
+    void catalog?.install();
   });
+
+  void catalog.load();
 }

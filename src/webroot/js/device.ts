@@ -154,7 +154,7 @@ async function refreshKeystoreManagerFromScript(): Promise<KeystoreManagerJson |
 
 function applyKeystoreManager(data: KeystoreManagerJson) {
   const show = data.id === 'omk';
-  for (const id of ['omk-restart-keymint', 'omk-restart-injector', 'omk-trust-btn']) {
+  for (const id of ['omk-restart-btn', 'omk-trust-btn']) {
     const el = document.getElementById(id);
     if (el) el.hidden = !show;
   }

@@ -15,6 +15,8 @@ import { initFonts } from './font.js';
 import { FEATURE_I18N_KEYS } from './constants.js';
 import { wireActions, buildFriendlyNames } from './actions.js';
 import { wireControlRows } from './control-ui.js';
+import { updatePlayIntegritySectionVisibility } from './pif-section.js';
+import { updateModuleConfigSectionVisibility } from './module-config-section.js';
 
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
@@ -113,6 +115,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function loadToolsUI() {
+  const sectionVisibility = Promise.all([
+    updatePlayIntegritySectionVisibility().catch(() => false),
+    updateModuleConfigSectionVisibility().catch(() => false),
+  ]);
   const [keybox, autoTarget, autoHma, autopif, autokeybox, romFp, adb, prop, gms, hma, actionSecurityPatch, securityPatch, omk] = await Promise.all([
     import('./keybox-ui.js').catch(() => null),
     import('./auto-target-ui.js').catch(() => null),
@@ -129,8 +135,7 @@ async function loadToolsUI() {
     import('./omk-trust-ui.js').catch(() => null),
   ]);
 
-  keybox?.wireCustomKeybox();
-  wireLazyClick('keybox-catalog-btn', () => import('./keybox-catalog-ui.js').then(m => m.openKeyboxCatalogPage()));
+  keybox?.wireKeybox();
   autoTarget?.wireAutoTarget();
   autoHma?.wireAutoHma();
   autopif?.wireAutopif();
@@ -143,6 +148,7 @@ async function loadToolsUI() {
   actionSecurityPatch?.wireActionSecurityPatch();
   securityPatch?.wireSecurityPatch();
   omk?.wireOmkTrust();
+  omk?.wireOmkRestart();
 
   wireLazyClick('target-apps-btn', () => import('./target-apps.js').then(m => m.openTargetAppsManager()));
   const pifRow = document.getElementById('pif-choose-device');
@@ -152,6 +158,7 @@ async function loadToolsUI() {
   import('./pif-choose-desc.js').then(m => m.refreshPifChooseDesc()).catch(() => {});
 
   ensureConflicts().catch(() => {});
+  await sectionVisibility;
   updateListContainerCorners();
 }
 

@@ -7,15 +7,17 @@ import android.os.Bundle;
 import android.os.Looper;
 import android.system.Os;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.zip.ZipFile;
 
 /**
- * Prints installed apps that declare Xposed module metadata.
+ * Prints installed apps that declare Xposed module markers.
  *
- * Output is one tab-separated line per app: package name, matched metadata
- * keys. Runs through app_process; it does not stay resident.
+ * Output is one tab-separated line per app: package name, matched markers.
+ * Runs through app_process; it does not stay resident.
  */
 public class XposedProbe {
     private static final String[] XPOSED_KEYS = {
@@ -25,6 +27,41 @@ public class XposedProbe {
         "xposedscope",
         "xposedsharedprefs",
     };
+
+    private static final String[] LIBXPOSED_MARKERS = {
+        "META-INF/xposed/module.prop",
+        "META-INF/xposed/java_init.list",
+        "META-INF/xposed/scope.list",
+    };
+
+    private static final int MARKER_NONE = 0;
+    private static final int MARKER_LEGACY = 1;
+    private static final int MARKER_LIBXPOSED = 2;
+
+    private static void appendKey(StringBuilder keys, String key) {
+        if (keys.length() > 0) {
+            keys.append(',');
+        }
+        keys.append(key);
+    }
+
+    private static int readMarkers(String apkPath) {
+        int markers = MARKER_NONE;
+        try (ZipFile zip = new ZipFile(new File(apkPath))) {
+            for (String marker : LIBXPOSED_MARKERS) {
+                if (zip.getEntry(marker) != null) {
+                    markers |= MARKER_LIBXPOSED;
+                    break;
+                }
+            }
+            if (zip.getEntry("assets/xposed_init") != null) {
+                markers |= MARKER_LEGACY;
+            }
+        } catch (Throwable ignored) {
+            // Unreadable or non-APK paths are simply not modules.
+        }
+        return markers;
+    }
 
     public static void main(String[] args) {
         try {
@@ -47,19 +84,22 @@ public class XposedProbe {
             List<String> lines = new ArrayList<>();
             for (ApplicationInfo app : apps) {
                 Bundle metadata = app.metaData;
-                if (metadata == null) {
-                    continue;
+                StringBuilder keys = new StringBuilder();
+
+                if (metadata != null) {
+                    for (String key : XPOSED_KEYS) {
+                        if (metadata.containsKey(key)) {
+                            appendKey(keys, key);
+                        }
+                    }
                 }
 
-                StringBuilder keys = new StringBuilder();
-                for (String key : XPOSED_KEYS) {
-                    if (!metadata.containsKey(key)) {
-                        continue;
-                    }
-                    if (keys.length() > 0) {
-                        keys.append(',');
-                    }
-                    keys.append(key);
+                String apkPath = app.sourceDir;
+                int markers = apkPath == null ? MARKER_NONE : readMarkers(apkPath);
+                if ((markers & MARKER_LIBXPOSED) != 0) {
+                    appendKey(keys, "libxposed");
+                } else if (keys.length() == 0 && (markers & MARKER_LEGACY) != 0) {
+                    keys.append("xposed_init");
                 }
 
                 if (keys.length() > 0) {
