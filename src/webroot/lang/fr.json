@@ -20,7 +20,7 @@
   "kb_catalog_retry": "Réessayer",
   "kb_catalog_install": "Installer",
   "kb_catalog_expires": "Expire",
-  "kb_catalog_classic": "Classique",
+  "kb_catalog_normal": "Normal",
   "kb_catalog_loading": "Chargement des keyboxes...",
   "menu_force_clear": "Arrêt forcé du Play Store",
   "menu_force_clear_desc": "Tue l'application DroidGuard, force l'arrêt du Play Store, des GMS, du GSF, de Chrome, de SafetyCore, etc.",

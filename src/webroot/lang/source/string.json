@@ -20,7 +20,7 @@
   "kb_catalog_retry": "Retry",
   "kb_catalog_install": "Install",
   "kb_catalog_expires": "Expires",
-  "kb_catalog_classic": "Classic",
+  "kb_catalog_normal": "Normal",
   "kb_catalog_loading": "Loading keyboxes...",
   "menu_force_clear": "Force Stop & Clear Play Store",
   "menu_force_clear_desc": "Kill droidguard, force-stop and clear Play Store, GMS, GSF, Chrome, SafetyCore, and more",

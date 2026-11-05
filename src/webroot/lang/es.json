@@ -20,7 +20,7 @@
   "kb_catalog_retry": "Reintentar",
   "kb_catalog_install": "Instalar",
   "kb_catalog_expires": "Caduca",
-  "kb_catalog_classic": "Clásico",
+  "kb_catalog_normal": "Normal",
   "kb_catalog_loading": "Cargando keyboxes...",
   "menu_force_clear": "Forzar detención y borrar datos de Play Store",
   "menu_force_clear_desc": "Detiene forzosamente Play Store, Chrome, GMS, GSF, Wallet y otros 10 procesos DroidGuard",

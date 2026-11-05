@@ -20,7 +20,7 @@
   "kb_catalog_retry": "إعادة المحاولة",
   "kb_catalog_install": "تثبيت",
   "kb_catalog_expires": "ينتهي",
-  "kb_catalog_classic": "كلاسيكي",
+  "kb_catalog_normal": "عادي",
   "kb_catalog_loading": "جارٍ تحميل keyboxes...",
   "menu_force_clear": "إيقاف إجباري ومسح بيانات متجر Play",
   "menu_force_clear_desc": "إيقاف قسري ومسح متجر Play وGMS وGSF وChrome وSafetyCore و droidguard والمزيد",

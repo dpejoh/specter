@@ -20,7 +20,7 @@
   "kb_catalog_retry": "Thử lại",
   "kb_catalog_install": "Cài đặt",
   "kb_catalog_expires": "Hết hạn",
-  "kb_catalog_classic": "Cổ điển",
+  "kb_catalog_normal": "Thường",
   "kb_catalog_loading": "Đang tải keybox...",
   "menu_force_clear": "Buộc dừng & Xóa dữ liệu Play Store",
   "menu_force_clear_desc": "Kill droidguard, buộc dừng và xóa dữ liệu Play Store, GMS, GSF, Chrome, SafetyCore, v.v.",

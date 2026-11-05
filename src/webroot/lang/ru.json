@@ -20,7 +20,7 @@
   "kb_catalog_retry": "Повторить",
   "kb_catalog_install": "Установить",
   "kb_catalog_expires": "Истекает",
-  "kb_catalog_classic": "Классический",
+  "kb_catalog_normal": "Обычный",
   "kb_catalog_loading": "Загрузка keybox...",
   "menu_force_clear": "Принудительная остановка и очистка Play Store",
   "menu_force_clear_desc": "Принудительно останавливает Play Store, Chrome, GMS, GSF, Wallet и 10 других процессов DroidGuard",

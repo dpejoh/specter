@@ -33,12 +33,12 @@ import { openKeyboxCatalogPage } from './keybox-catalog-ui.js';
 
 const CATALOG = {
   entries: [
-    { source: 'TAKR', version: '36', text: 'v36', revoked: false, softbanned: false },
-    { source: 'TAKR', version: '35', text: 'v35', revoked: false, softbanned: true },
-    { source: 'TAKR', version: '34', text: 'v34', revoked: true, softbanned: false },
-    { source: 'Yuri', version: '8', text: 'v8', revoked: false, softbanned: false },
-    { source: 'rkp', version: '3', text: 'r3', revoked: false, softbanned: false, rkp: true, expires_at: '2000-01-01T00:00:00Z' },
-    { source: 'rkp', version: '4', text: 'r4', revoked: false, softbanned: false, rkp: true, expires_at: '2999-01-01T00:00:00Z' },
+    { source: 'TAKR', version: '36', text: 'v36', revoked: false, softbanned: false, timestamp: '2026-11-03T10:00:00Z' },
+    { source: 'TAKR', version: '35', text: 'v35', revoked: false, softbanned: true, timestamp: '2026-11-02T10:00:00Z' },
+    { source: 'TAKR', version: '34', text: 'v34', revoked: true, softbanned: false, timestamp: '2026-11-01T10:00:00Z' },
+    { source: 'Yuri', version: '8', text: 'v8', revoked: false, softbanned: false, timestamp: '2026-10-30T10:00:00Z' },
+    { source: 'rkp', version: '3', text: 'r3', revoked: false, softbanned: false, rkp: true, expires_at: '2000-01-01T00:00:00Z', timestamp: '2026-10-29T10:00:00Z' },
+    { source: 'rkp', version: '4', text: 'r4', revoked: false, softbanned: false, rkp: true, expires_at: '2999-01-01T00:00:00Z', timestamp: '2026-11-04T10:00:00Z' },
   ],
 };
 
@@ -67,16 +67,19 @@ describe('keybox catalog page', () => {
     const list = container.querySelector('#kb-catalog-list');
     const rows = list ? [...list.querySelectorAll('.list-item')] : [];
     const titles = rows.map(row => row.querySelector('.toggle-text')?.textContent?.trim());
+    const descriptions = rows.map(row => row.querySelector('.supporting-text')?.textContent?.trim());
     const chips = [...container.querySelectorAll('md-filter-chip')]
       .map(chip => (chip as HTMLElement & { label: string }).label);
 
     expect(titles).toHaveLength(4);
-    expect(titles).toEqual(expect.arrayContaining([
+    expect(titles).toEqual([
       'Automatic Recommended',
+      'rkp r4',
       'TAKR v36',
       'Yuri v8',
-      'rkp r4',
-    ]));
+    ]);
+    expect(descriptions[2]).toContain('Normal');
+    expect(descriptions[1]).toContain('RKP');
     expect(chips).toEqual(expect.arrayContaining([
       'Active',
       'All (3)',

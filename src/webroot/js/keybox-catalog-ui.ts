@@ -36,7 +36,7 @@ function entryStatus(entry: CatalogEntry): string {
 }
 
 function entryDescription(entry: CatalogEntry): string {
-  const kind = entry.rkp ? 'RKP' : t('kb_catalog_classic', 'Classic');
+  const kind = entry.rkp ? 'RKP' : t('kb_catalog_normal', 'Normal');
   const expiry = entry.rkp && entry.expires_at
     ? `${t('kb_catalog_expires', 'Expires')} ${entry.expires_at.slice(0, 10)}`
     : '';
@@ -296,6 +296,7 @@ export async function openKeyboxCatalogPage() {
 
     entries = data.entries
       .sort((a, b) =>
+        (b.timestamp || '').localeCompare(a.timestamp || '') ||
         a.source.localeCompare(b.source) ||
         a.version.localeCompare(b.version, undefined, { numeric: true }));
     const sources = [...new Set(entries.map(entry => entry.source))];

@@ -20,7 +20,7 @@
   "kb_catalog_retry": "Ponów",
   "kb_catalog_install": "Zainstaluj",
   "kb_catalog_expires": "Wygasa",
-  "kb_catalog_classic": "Klasyczny",
+  "kb_catalog_normal": "Normalny",
   "kb_catalog_loading": "Ładowanie keyboxów...",
   "menu_force_clear": "Force Stop i czyszczenie Play Store",
   "menu_force_clear_desc": "Ubija droidguard, wymusza zatrzymanie i czyści dane Play Store, GMS, GSF, Chrome, SafetyCore i inne",

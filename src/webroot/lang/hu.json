@@ -20,7 +20,7 @@
   "kb_catalog_retry": "Újrapróbálás",
   "kb_catalog_install": "Telepítés",
   "kb_catalog_expires": "Lejár",
-  "kb_catalog_classic": "Klasszikus",
+  "kb_catalog_normal": "Normál",
   "kb_catalog_loading": "Keyboxok betöltése...",
   "menu_force_clear": "Google Play Áruház kényszerített leállítása és tárhelyének tisztítása",
   "menu_force_clear_desc": "DroidGuard kényszerített leállítása, Play Store, GMS, GSF, Chrome, SafetyCore és egyéb folyamatok kényszerített leállítása és tárhelyének tisztítása",

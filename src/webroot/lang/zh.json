@@ -20,7 +20,7 @@
   "kb_catalog_retry": "重试",
   "kb_catalog_install": "安装",
   "kb_catalog_expires": "到期",
-  "kb_catalog_classic": "经典",
+  "kb_catalog_normal": "普通",
   "kb_catalog_loading": "正在加载 keybox...",
   "menu_force_clear": "强制停止并清除 Play 商店",
   "menu_force_clear_desc": "强制停止 Play Store、Chrome、GMS、GSF、Wallet 及其他 10 个 DroidGuard 进程",

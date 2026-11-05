@@ -20,7 +20,7 @@
   "kb_catalog_retry": "Coba lagi",
   "kb_catalog_install": "Pasang",
   "kb_catalog_expires": "Kedaluwarsa",
-  "kb_catalog_classic": "Klasik",
+  "kb_catalog_normal": "Normal",
   "kb_catalog_loading": "Memuat keybox...",
   "menu_force_clear": "Paksa Berhenti & Hapus Data Play Store",
   "menu_force_clear_desc": "Hentikan droidguard, paksa berhenti dan hapus data Play Store, GMS, GSF, Chrome, SafetyCore, dan lainnya",

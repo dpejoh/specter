@@ -20,7 +20,7 @@
   "kb_catalog_retry": "Tekrar dene",
   "kb_catalog_install": "Yükle",
   "kb_catalog_expires": "Sona erer",
-  "kb_catalog_classic": "Klasik",
+  "kb_catalog_normal": "Normal",
   "kb_catalog_loading": "Keybox'lar yükleniyor...",
   "menu_force_clear": "Play Store'yi zorla durdur, tekrar başlat",
   "menu_force_clear_desc": "Droidguard'ı durdur, Play Store'yi zorla durdurup temizle, GMS, GSF, Chrome, SafetyCore gibi uygulamaları durdur.",
