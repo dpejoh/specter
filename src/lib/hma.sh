@@ -63,9 +63,9 @@ _hma_find_preset_cache() {
   return 0
 }
 
-# Parse HMA-OSS preset cache and extract only the packages detected across
-# the built-in presets (custom_rom, detector_apps, root_apps, xposed, sus_apps,
-# shizuku_dhizuku, accessibility_apps). Ignores allAppsList and riskyPackageCache.
+# Parse HMA-OSS preset cache and extract sensitive packages to exclude
+# (root_apps, xposed, sus_apps, shizuku_dhizuku, custom_rom, accessibility_apps).
+# Skips detector_apps so checker apps remain eligible for hiding scope.
 _hma_preset_cache_apps() {
   _hpca_file="$1" _hpca_out="$2"
   : > "$_hpca_out"
@@ -127,6 +127,7 @@ BEGIN {
   in_cache = 0
   cache_depth = 0
   in_array = 0
+  cur_preset = ""
 
   for (i = 1; i <= tn; i++) {
     t = tk[i]
@@ -148,7 +149,9 @@ BEGIN {
       in_array = 1
     } else if (t == "]") {
       in_array = 0
-    } else if (in_array && t ~ /^"/) {
+    } else if (cache_depth == 1 && t ~ /^"/ && i + 1 <= tn && tk[i+1] == ":") {
+      cur_preset = unquote(t)
+    } else if (in_array && cur_preset != "detector_apps" && t ~ /^"/) {
       pkg = unquote(t)
       if (pkg != "" && !seen[pkg]++) print pkg
     }
