@@ -118,8 +118,8 @@ function tokenize(s,   n, off, chunk, clen, i, c, abs) {
 }
 BEGIN {
   RS = "\001"
-  if ((getline raw < ARGV[1]) <= 0) raw = ""
-  close(ARGV[1])
+  if (ARGV[1] != "" && (getline raw < ARGV[1]) <= 0) raw = ""
+  if (ARGV[1] != "") close(ARGV[1])
   if (raw == "") exit 0
 
   tokenize(raw)
@@ -267,11 +267,13 @@ _hma_filter_hide_list() {
   fi
   awk -v inst="$_hfl_inst" '
     BEGIN {
-      while ((getline p < inst) > 0) {
-        gsub(/\r/, "", p)
-        if (p != "") installed[p] = 1
+      if (inst != "") {
+        while ((getline p < inst) > 0) {
+          gsub(/\r/, "", p)
+          if (p != "") installed[p] = 1
+        }
+        close(inst)
       }
-      close(inst)
     }
     {
       gsub(/\r/, "", $0)
@@ -306,8 +308,8 @@ _hma_build_scope() {
   if [ -n "$_hbs_def" ] && [ -f "$_hbs_def" ]; then
     awk -v def="$_hbs_def" '
       BEGIN {
-        if ((getline ac < def) > 0) sub(/\r$/, "", ac)
-        close(def)
+        if (def != "" && (getline ac < def) > 0) sub(/\r$/, "", ac)
+        if (def != "") close(def)
       }
       { if ($0 != "") print $0 "\t" ac }
     ' "$_hbs_apps" > "$_hbs_out"
@@ -427,20 +429,22 @@ function array_remove_value(arr_i, value,   end_i, i) {
 function build_template(   out, c, l) {
   out = "{\"isWhitelist\":false,\"appList\":["
   c = 0
-  while ((getline l < applist) > 0) {
-    sub(/\r$/, "", l)
-    if (l == "") continue
-    c++
-    out = out (c > 1 ? "," : "") "\"" jesc(l) "\""
+  if (applist != "") {
+    while ((getline l < applist) > 0) {
+      sub(/\r$/, "", l)
+      if (l == "") continue
+      c++
+      out = out (c > 1 ? "," : "") "\"" jesc(l) "\""
+    }
+    close(applist)
   }
-  close(applist)
   return out "]}"
 }
 
 BEGIN {
   RS = "\001"
-  if ((getline raw < cfg) <= 0) raw = ""
-  close(cfg)
+  if (cfg != "" && (getline raw < cfg) <= 0) raw = ""
+  if (cfg != "") close(cfg)
   RS = "\n"
   if (raw == "") raw = "{}"
 
@@ -487,8 +491,8 @@ BEGIN {
   }
 
   defjson = ""
-  if ((getline d < deffile) > 0) { sub(/\r$/, "", d); defjson = d }
-  close(deffile)
+  if (deffile != "" && (getline d < deffile) > 0) { sub(/\r$/, "", d); defjson = d }
+  if (deffile != "") close(deffile)
 
   tpl_new = build_template()
   root_parts = ""
@@ -496,15 +500,17 @@ BEGIN {
   # Apps that should keep the generated template applied. When user-app
   # targeting is disabled this list is empty and existing scope is left alone.
   wanted_count = 0
-  while ((getline w < scopefile) > 0) {
-    sub(/\r$/, "", w)
-    tabi = index(w, "\t")
-    if (tabi > 0) {
-      wanted[substr(w, 1, tabi - 1)] = 1
-      wanted_count++
+  if (scopefile != "") {
+    while ((getline w < scopefile) > 0) {
+      sub(/\r$/, "", w)
+      tabi = index(w, "\t")
+      if (tabi > 0) {
+        wanted[substr(w, 1, tabi - 1)] = 1
+        wanted_count++
+      }
     }
+    close(scopefile)
   }
-  close(scopefile)
 
   if (skiptpl != "1") {
     if (tpl_i > 0) {
@@ -565,36 +571,40 @@ BEGIN {
     }
 
     nadds = 0; addtext = ""
-    while ((getline l < scopefile) > 0) {
-      sub(/\r$/, "", l)
-      if (l == "") continue
-      tabi = index(l, "\t")
-      if (tabi == 0) continue
-      p = substr(l, 1, tabi - 1); js = substr(l, tabi + 1)
-      if (scope_exists && (p in sset)) continue
-      if (p in excluded) continue
-      nadds++
-      addtext = addtext (nadds > 1 ? "," : "") "\"" jesc(p) "\":" js
+    if (scopefile != "") {
+      while ((getline l < scopefile) > 0) {
+        sub(/\r$/, "", l)
+        if (l == "") continue
+        tabi = index(l, "\t")
+        if (tabi == 0) continue
+        p = substr(l, 1, tabi - 1); js = substr(l, tabi + 1)
+        if (scope_exists && (p in sset)) continue
+        if (p in excluded) continue
+        nadds++
+        addtext = addtext (nadds > 1 ? "," : "") "\"" jesc(p) "\":" js
+      }
+      close(scopefile)
     }
-    close(scopefile)
 
     ins = kept_text
     if (addtext != "") ins = ins (nkept > 0 ? "," : "") addtext
     add_edit(tp[mvi0[scope_i]], te[end_scope], "{" ins "}")
   } else {
     nadds = 0; addtext = ""
-    while ((getline l < scopefile) > 0) {
-      sub(/\r$/, "", l)
-      if (l == "") continue
-      tabi = index(l, "\t")
-      if (tabi == 0) continue
-      p = substr(l, 1, tabi - 1); js = substr(l, tabi + 1)
-      if (scope_exists && (p in sset)) continue
-      if (p in excluded) continue
-      nadds++
-      addtext = addtext (nadds > 1 ? "," : "") "\"" jesc(p) "\":" js
+    if (scopefile != "") {
+      while ((getline l < scopefile) > 0) {
+        sub(/\r$/, "", l)
+        if (l == "") continue
+        tabi = index(l, "\t")
+        if (tabi == 0) continue
+        p = substr(l, 1, tabi - 1); js = substr(l, tabi + 1)
+        if (scope_exists && (p in sset)) continue
+        if (p in excluded) continue
+        nadds++
+        addtext = addtext (nadds > 1 ? "," : "") "\"" jesc(p) "\":" js
+      }
+      close(scopefile)
     }
-    close(scopefile)
 
     if (scope_i > 0) {
       if (scope_exists) {
