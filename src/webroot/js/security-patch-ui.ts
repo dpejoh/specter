@@ -4,6 +4,7 @@ import { showToast, closeToast } from './toast.js';
 import { API_URLS, defaultSecurityPatch } from './constants.js';
 import { fetchJson, makeRowInteractive, shellEscape } from './utils.js';
 import { openSubPage } from './subpage.js';
+import { row } from './ui-row.js';
 import type { KeystoreManagerJson } from './types.js';
 
 
@@ -162,16 +163,14 @@ export async function openSecurityPatchPage() {
     description: string,
     onClick: () => void,
   ) => {
-    container.innerHTML = `
-      <button type="button" class="list-item sp-action-row ${posClass || ''}" id="${id}">
-        <div class="li-icon"><md-icon aria-hidden="true">${icon}</md-icon></div>
-        <div class="list-item-content">
-          <div class="toggle-text">${title}</div>
-          <span class="supporting-text">${description}</span>
-        </div>
-        <md-ripple></md-ripple>
-      </button>
-    `;
+    container.innerHTML = row({
+      tag: 'button',
+      id,
+      className: `sp-action-row ${posClass || ''}`.trim(),
+      icon,
+      title,
+      description,
+    });
     container.querySelector(`#${id}`)?.addEventListener('click', onClick);
   };
 

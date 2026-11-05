@@ -4,6 +4,7 @@ import { escapeHtml } from './utils.js';
 import { showToast } from './toast.js';
 import type { MdSwitch } from '@material/web/switch/switch.js';
 import { installKeybox } from './keybox-install.js';
+import { rowContent, rowIcon, rowShell, rowSpacer } from './ui-row.js';
 
 
 export interface KeyboxLocalOptions {
@@ -44,56 +45,54 @@ export async function mountLocalKeyboxForm(
     }
   };
 
-  container.innerHTML = `
-    <div class="list-item list-item--first kb-file-row" id="kb-file-row">
-      <div class="li-icon"><md-icon id="kb-file-icon" aria-hidden="true">${selectedFilePath ? 'vpn_key' : 'upload_file'}</md-icon></div>
-      <div class="list-item-content">
-        <div class="toggle-text">${escapeHtml(t('custom_kb_file', 'Import File'))}</div>
-        <span class="supporting-text kb-file-subtitle${selectedFilePath ? ' kb-file-subtitle--active' : ''}" id="kb-file-subtitle">
-          ${selectedFilePath ? escapeHtml(selectedFilePath.split('/').pop() || '') : escapeHtml(t('custom_kb_file_desc', 'Select a keybox XML file from your device'))}
-        </span>
-      </div>
-      <div class="spacer"></div>
-      <md-filled-tonal-button id="kb-browse-btn" class="kb-browse-btn">
-        <md-icon slot="icon" aria-hidden="true">folder_open</md-icon>
-        ${escapeHtml(t('custom_kb_browse', 'Browse Files'))}
-      </md-filled-tonal-button>
-      <md-ripple></md-ripple>
-    </div>
-
-    <div class="list-item list-item--middle kb-url-card">
-      <div class="kb-url-row">
-        <div class="li-icon"><md-icon aria-hidden="true">link</md-icon></div>
-        <div class="list-item-content">
-          <div class="toggle-text">${escapeHtml(t('custom_kb_url', 'URL or Path'))}</div>
-          <span class="supporting-text">${escapeHtml(t('custom_kb_desc', 'Paste a download URL or enter a device path'))}</span>
-        </div>
+  container.innerHTML = [
+    rowShell({
+      id: 'kb-file-row',
+      className: 'list-item--first kb-file-row',
+      leading: `<div class="li-icon"><md-icon id="kb-file-icon" aria-hidden="true">${selectedFilePath ? 'vpn_key' : 'upload_file'}</md-icon></div>`,
+      content: rowContent({
+        title: t('custom_kb_file', 'Import File'),
+        description: selectedFilePath
+          ? (selectedFilePath.split('/').pop() || '')
+          : t('custom_kb_file_desc', 'Select a keybox XML file from your device'),
+        descriptionId: 'kb-file-subtitle',
+        descriptionClass: `kb-file-subtitle${selectedFilePath ? ' kb-file-subtitle--active' : ''}`,
+      }),
+      trailing: `${rowSpacer()}
+        <md-filled-tonal-button id="kb-browse-btn" class="kb-browse-btn">
+          <md-icon slot="icon" aria-hidden="true">folder_open</md-icon>
+          ${escapeHtml(t('custom_kb_browse', 'Browse Files'))}
+        </md-filled-tonal-button>`,
+    }),
+    rowShell({
+      className: 'list-item--middle kb-url-card',
+      content: `<div class="kb-url-row">
+        ${rowIcon('link')}
+        ${rowContent({
+          title: t('custom_kb_url', 'URL or Path'),
+          description: t('custom_kb_desc', 'Paste a download URL or enter a device path'),
+        })}
       </div>
       <div class="subpage-text-input-wrap">
-        <input
-          type="text"
-          id="kb-url-input"
-          class="subpage-full-input"
+        <input type="text" id="kb-url-input" class="subpage-full-input"
           placeholder="${escapeHtml(t('kb_url_placeholder', 'https://example.com/keybox.xml or /sdcard/keybox.xml'))}"
-          value=""
-          aria-label="${escapeHtml(t('custom_kb_url', 'URL or Path'))}"
-        />
+          value="" aria-label="${escapeHtml(t('custom_kb_url', 'URL or Path'))}" />
         <md-icon-button id="kb-paste-btn" aria-label="${escapeHtml(t('kb_paste_aria', 'Paste from clipboard'))}">
           <md-icon aria-hidden="true">content_paste</md-icon>
         </md-icon-button>
-      </div>
-    </div>
-
-    <div class="list-item list-item--toggle list-item--last" id="kb-private-row">
-      <div class="li-icon"><md-icon aria-hidden="true">lock</md-icon></div>
-      <div class="list-item-content">
-        <div class="toggle-text">${escapeHtml(t('custom_kb_private_toggle', 'Private Keybox'))}</div>
-        <span class="supporting-text">${escapeHtml(t('custom_kb_private_desc', 'Hide certificate subject and serial in keybox information'))}</span>
-      </div>
-      <md-switch icons id="kb-private-switch" ${privateVal === 'true' ? 'selected' : ''} aria-label="${escapeHtml(t('custom_kb_private_toggle', 'Private Keybox'))}"></md-switch>
-      <md-ripple></md-ripple>
-    </div>
-  `;
+      </div>`,
+    }),
+    rowShell({
+      id: 'kb-private-row',
+      className: 'list-item--toggle list-item--last',
+      leading: rowIcon('lock'),
+      content: rowContent({
+        title: t('custom_kb_private_toggle', 'Private Keybox'),
+        description: t('custom_kb_private_desc', 'Hide certificate subject and serial in keybox information'),
+      }),
+      trailing: `<md-switch icons id="kb-private-switch" ${privateVal === 'true' ? 'selected' : ''} aria-label="${escapeHtml(t('custom_kb_private_toggle', 'Private Keybox'))}"></md-switch>`,
+    }),
+  ].join('\n');
 
   fileSubtitleEl = container.querySelector('#kb-file-subtitle');
   fileIconEl = container.querySelector('#kb-file-icon');

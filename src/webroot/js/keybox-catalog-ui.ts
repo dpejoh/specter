@@ -6,6 +6,7 @@ import { escapeHtml, fetchJson, shellEscape, updateListContainerCorners } from '
 import { createFilterDropdown, type FilterDropdownHandle, type FilterOption } from './filter-dropdown.js';
 import { openSubPage } from './subpage.js';
 import { installKeybox } from './keybox-install.js';
+import { rowContent, rowIcon } from './ui-row.js';
 import type { CatalogEntry, CatalogJson } from './types.js';
 
 
@@ -171,11 +172,12 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
     row.setAttribute('aria-disabled', disabled ? 'true' : 'false');
     row.innerHTML = `
       <md-radio name="kb-catalog" value="${escapeHtml(key)}" aria-label="${escapeHtml(title)}${badge ? `, ${escapeHtml(badge)}` : ''}" ${disabled ? 'disabled' : ''}></md-radio>
-      <div class="li-icon"><md-icon aria-hidden="true">${icon}</md-icon></div>
-      <div class="list-item-content">
-        <div class="toggle-text">${escapeHtml(title)}${badge ? ` <span class="subpage-radio-badge">${escapeHtml(badge)}</span>` : ''}</div>
-        <span class="supporting-text">${escapeHtml(description)}</span>
-      </div>
+      ${rowIcon(icon)}
+      ${rowContent({
+        title,
+        titleHtml: `${escapeHtml(title)}${badge ? ` <span class="subpage-radio-badge">${escapeHtml(badge)}</span>` : ''}`,
+        description,
+      })}
       <md-ripple></md-ripple>
     `;
     const radio = row.querySelector('md-radio') as HTMLElement & { checked: boolean };

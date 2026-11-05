@@ -6,6 +6,7 @@ import { cfgGet, cfgSet } from './cfg.js';
 import { t } from './i18n.js';
 import { escapeHtml } from './utils.js';
 import { setupOverlayA11y } from './overlay-a11y.js';
+import { rowContent, rowIcon, rowShell, rowSpacer } from './ui-row.js';
 
 
 export interface SubPageSwitchItem {
@@ -187,14 +188,16 @@ async function openSubPageInternal(config: SubPageConfig): Promise<SubPageInstan
         ` : ''}
         ${config.masterToggle ? `
           <div class="subpage-master-container">
-            <div class="list-item list-item--toggle subpage-master-item ${masterEnabled ? 'subpage-master-item--active' : ''}" id="subpage-master-card">
-              <div class="list-item-content">
-                <div class="toggle-text subpage-master-text">${escapeHtml(config.masterToggle.title)}</div>
-                ${config.masterToggle.description ? `<span class="supporting-text">${escapeHtml(config.masterToggle.description)}</span>` : ''}
-              </div>
-              <md-switch icons id="subpage-master-switch" ${masterEnabled ? 'selected' : ''} aria-label="${escapeHtml(config.masterToggle.title)}"></md-switch>
-              <md-ripple></md-ripple>
-            </div>
+            ${rowShell({
+              id: 'subpage-master-card',
+              className: `list-item--toggle subpage-master-item ${masterEnabled ? 'subpage-master-item--active' : ''}`.trim(),
+              content: rowContent({
+                title: config.masterToggle.title,
+                titleClass: 'subpage-master-text',
+                description: config.masterToggle.description,
+              }),
+              trailing: `<md-switch icons id="subpage-master-switch" ${masterEnabled ? 'selected' : ''} aria-label="${escapeHtml(config.masterToggle.title)}"></md-switch>`,
+            })}
           </div>
         ` : ''}
 
@@ -213,55 +216,55 @@ async function openSubPageInternal(config: SubPageConfig): Promise<SubPageInstan
                   const rItem = item as SubPageRadioItem;
                   const isChecked = !!rItem.selected;
                   return `
-                    <div class="list-item list-item--radio ${posClass}" id="${rItem.id}-row" data-radio-group="${rItem.name}" data-radio-value="${rItem.value}">
-                      <md-radio name="${rItem.name}" value="${rItem.value}" id="${rItem.id}" ${isChecked ? 'checked' : ''} aria-label="${escapeHtml(rItem.title)}${rItem.badge ? `, ${escapeHtml(rItem.badge)}` : ''}"></md-radio>
-                      <div class="list-item-content">
-                        <div class="toggle-text">${escapeHtml(rItem.title)}${rItem.badge ? ` <span class="subpage-radio-badge">${escapeHtml(rItem.badge)}</span>` : ''}</div>
-                        ${rItem.description ? `<span class="supporting-text">${escapeHtml(rItem.description)}</span>` : ''}
-                      </div>
-                      <md-ripple></md-ripple>
-                    </div>
+                    ${rowShell({
+                      id: `${rItem.id}-row`,
+                      className: `list-item--radio ${posClass}`,
+                      leading: `<md-radio name="${rItem.name}" value="${rItem.value}" id="${rItem.id}" ${isChecked ? 'checked' : ''} aria-label="${escapeHtml(rItem.title)}${rItem.badge ? `, ${escapeHtml(rItem.badge)}` : ''}"></md-radio>`,
+                      content: rowContent({
+                        title: rItem.title,
+                        titleHtml: `${escapeHtml(rItem.title)}${rItem.badge ? ` <span class="subpage-radio-badge">${escapeHtml(rItem.badge)}</span>` : ''}`,
+                        description: rItem.description,
+                      }),
+                      attributes: { 'data-radio-group': rItem.name, 'data-radio-value': rItem.value },
+                    })}
                   `;
                 }
                 if (item.type === 'input') {
                   const inpItem = item as SubPageInputItem;
                   const currentVal = inputValues.get(inpItem.id) ?? inpItem.value ?? '';
                   return `
-                    <div class="list-item list-item--input ${posClass}" id="${inpItem.id}-row">
-                      ${inpItem.icon ? `<div class="li-icon"><md-icon aria-hidden="true">${inpItem.icon}</md-icon></div>` : ''}
-                      <div class="list-item-content">
-                        <div class="toggle-text">${escapeHtml(inpItem.title)}</div>
-                        ${inpItem.description ? `<span class="supporting-text">${escapeHtml(inpItem.description)}</span>` : ''}
-                      </div>
-                      <div class="spacer"></div>
-                      <div class="subpage-input-wrapper">
-                        <input
-                          type="${inpItem.inputType || 'number'}"
-                          id="${inpItem.id}"
-                          class="subpage-inline-input"
-                          value="${escapeHtml(currentVal)}"
-                          ${inpItem.min !== undefined ? `min="${inpItem.min}"` : ''}
-                          ${inpItem.max !== undefined ? `max="${inpItem.max}"` : ''}
-                          ${inpItem.step !== undefined ? `step="${inpItem.step}"` : ''}
-                          aria-label="${escapeHtml(inpItem.ariaLabel || inpItem.title)}"
-                        />
-                        ${inpItem.unit ? `<span class="subpage-input-unit">${inpItem.unit}</span>` : ''}
-                      </div>
-                    </div>
+                    ${rowShell({
+                      id: `${inpItem.id}-row`,
+                      className: `list-item--input ${posClass}`,
+                      leading: inpItem.icon ? rowIcon(inpItem.icon) : '',
+                      content: rowContent({ title: inpItem.title, description: inpItem.description }),
+                      trailing: `${rowSpacer()}
+                        <div class="subpage-input-wrapper">
+                          <input
+                            type="${inpItem.inputType || 'number'}"
+                            id="${inpItem.id}"
+                            class="subpage-inline-input"
+                            value="${escapeHtml(currentVal)}"
+                            ${inpItem.min !== undefined ? `min="${inpItem.min}"` : ''}
+                            ${inpItem.max !== undefined ? `max="${inpItem.max}"` : ''}
+                            ${inpItem.step !== undefined ? `step="${inpItem.step}"` : ''}
+                            aria-label="${escapeHtml(inpItem.ariaLabel || inpItem.title)}"
+                          />
+                          ${inpItem.unit ? `<span class="subpage-input-unit">${inpItem.unit}</span>` : ''}
+                        </div>`,
+                    })}
                   `;
                 }
                 const swItem = item as SubPageSwitchItem;
                 const isChecked = switchValues.get(swItem.key) ?? true;
                 return `
-                  <div class="list-item list-item--toggle ${posClass}" id="${swItem.id}-row">
-                    ${swItem.icon ? `<div class="li-icon"><md-icon aria-hidden="true">${swItem.icon}</md-icon></div>` : ''}
-                    <div class="list-item-content">
-                      <div class="toggle-text">${escapeHtml(swItem.title)}</div>
-                      <span class="supporting-text">${escapeHtml(swItem.description)}</span>
-                    </div>
-                    <md-switch icons id="${swItem.id}" ${isChecked ? 'selected' : ''} aria-label="${escapeHtml(swItem.title)}"></md-switch>
-                    <md-ripple></md-ripple>
-                  </div>
+                  ${rowShell({
+                    id: `${swItem.id}-row`,
+                    className: `list-item--toggle ${posClass}`,
+                    leading: swItem.icon ? rowIcon(swItem.icon) : '',
+                    content: rowContent({ title: swItem.title, description: swItem.description }),
+                    trailing: `<md-switch icons id="${swItem.id}" ${isChecked ? 'selected' : ''} aria-label="${escapeHtml(swItem.title)}"></md-switch>`,
+                  })}
                 `;
               }).join('')}
             </div>

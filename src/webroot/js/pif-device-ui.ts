@@ -22,6 +22,7 @@ import { t } from './i18n.js';
 import { refreshPifChooseDesc as refreshChooseDesc } from './pif-choose-desc.js';
 import { openSubPage } from './subpage.js';
 import { wireMenuTrigger } from './menu-utils.js';
+import { rowContent, rowShell } from './ui-row.js';
 
 const tf = (key: string, fallback: string, value: string): string =>
   t(key, fallback).replaceAll('{0}', value);
@@ -274,14 +275,17 @@ export async function openPifDeviceSubpage() {
         html += `
           <h2 class="list-title">${escapeHtml(defaultLabel)}</h2>
           <div class="list-container">
-            <div class="list-item list-item--only pif-device-row" data-product="" role="button" tabindex="0">
-              <md-radio name="pif-device" value="" ${isChecked ? 'checked' : ''} aria-label="${escapeHtml(randomLabel)}"></md-radio>
-              <div class="list-item-content">
-                <div class="toggle-text">${escapeHtml(randomLabel)}</div>
-                <span class="supporting-text">${escapeHtml(t('menu_pif_random_desc', 'Randomly emulate any Pixel Canary model') + blNotice)}</span>
-              </div>
-              <md-ripple></md-ripple>
-            </div>
+            ${rowShell({
+              className: 'list-item--only pif-device-row',
+              leading: `<md-radio name="pif-device" value="" ${isChecked ? 'checked' : ''} aria-label="${escapeHtml(randomLabel)}"></md-radio>`,
+              content: rowContent({
+                title: randomLabel,
+                description: t('menu_pif_random_desc', 'Randomly emulate any Pixel Canary model') + blNotice,
+              }),
+              role: 'button',
+              tabindex: '0',
+              attributes: { 'data-product': '' },
+            })}
           </div>
         `;
       }
@@ -314,15 +318,15 @@ export async function openPifDeviceSubpage() {
               : '';
 
             return `
-              <div class="list-item ${posClass} pif-device-row${greyClass}" data-product="${escapeHtml(d.product)}" role="button" tabindex="0">
-                <md-radio name="pif-device" value="${escapeHtml(d.product)}" ${isChecked ? 'checked' : ''} aria-label="${escapeHtml(d.model)}"></md-radio>
-                <div class="list-item-content">
-                  <div class="toggle-text">${escapeHtml(d.model)}</div>
-                  <span class="supporting-text">${escapeHtml(subText)}</span>
-                </div>
-                ${trash}
-                <md-ripple></md-ripple>
-              </div>
+              ${rowShell({
+                className: `${posClass} pif-device-row${greyClass}`,
+                leading: `<md-radio name="pif-device" value="${escapeHtml(d.product)}" ${isChecked ? 'checked' : ''} aria-label="${escapeHtml(d.model)}"></md-radio>`,
+                content: rowContent({ title: d.model, description: subText }),
+                trailing: trash,
+                role: 'button',
+                tabindex: '0',
+                attributes: { 'data-product': d.product },
+              })}
             `;
           })
           .join('');
@@ -440,14 +444,14 @@ export async function openPifDeviceSubpage() {
             const excludedClass = isBlacklisted ? ' pif-blacklist-row--excluded' : '';
 
             return `
-              <div class="list-item ${posClass} pif-blacklist-row${excludedClass}" data-product="${escapeHtml(d.product)}" role="button" tabindex="0">
-                <md-checkbox touch-target="wrapper" data-product="${escapeHtml(d.product)}" ${isBlacklisted ? 'checked' : ''} aria-label="${escapeHtml(d.model)}"></md-checkbox>
-                <div class="list-item-content">
-                  <div class="toggle-text">${escapeHtml(d.model)}</div>
-                  <span class="supporting-text">${escapeHtml(subText)}</span>
-                </div>
-                <md-ripple></md-ripple>
-              </div>
+              ${rowShell({
+                className: `${posClass} pif-blacklist-row${excludedClass}`,
+                leading: `<md-checkbox touch-target="wrapper" data-product="${escapeHtml(d.product)}" ${isBlacklisted ? 'checked' : ''} aria-label="${escapeHtml(d.model)}"></md-checkbox>`,
+                content: rowContent({ title: d.model, description: subText }),
+                role: 'button',
+                tabindex: '0',
+                attributes: { 'data-product': d.product },
+              })}
             `;
           })
           .join('');

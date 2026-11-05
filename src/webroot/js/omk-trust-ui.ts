@@ -4,9 +4,11 @@ import '@material/web/button/text-button.js';
 import { exec, getModuleDir } from './bridge.js';
 import { t } from './i18n.js';
 import { showToast } from './toast.js';
-import { makeRowInteractive, shellEscape } from './utils.js';
+import { escapeHtml, makeRowInteractive, shellEscape } from './utils.js';
 import { runAction } from './actions.js';
 import { openSubPage } from './subpage.js';
+import { createDialog } from './dialog.js';
+import { row } from './ui-row.js';
 
 function renderOmkRestartRow(
   container: HTMLElement,
@@ -18,38 +20,36 @@ function renderOmkRestartRow(
   script: string,
   friendlyNameKey: string,
 ) {
-  container.innerHTML = `
-    <div class="list-item ${posClass || 'list-item--first'}" id="${id}" role="button" tabindex="0">
-      <div class="li-icon"><md-icon aria-hidden="true">${icon}</md-icon></div>
-      <div class="list-item-content">
-        <div class="toggle-text">${title}</div>
-        <span class="supporting-text">${description}</span>
-      </div>
-      <div class="spacer"></div>
-      <md-circular-progress indeterminate class="action-spinner hidden"></md-circular-progress>
-      <md-ripple></md-ripple>
-    </div>
-  `;
+  container.innerHTML = row({
+    id,
+    className: posClass || 'list-item--first',
+    icon,
+    title,
+    description,
+    spinner: true,
+    role: 'button',
+    tabindex: '0',
+  });
 
-  const row = container.querySelector(`#${id}`) as HTMLElement | null;
-  if (!row) return;
+  const rowEl = container.querySelector(`#${id}`) as HTMLElement | null;
+  if (!rowEl) return;
   let running = false;
   const run = async () => {
     if (running) return;
     running = true;
-    row.setAttribute('aria-disabled', 'true');
-    const spinner = row.querySelector('.action-spinner');
+    rowEl.setAttribute('aria-disabled', 'true');
+    const spinner = rowEl.querySelector('.action-spinner');
     spinner?.classList.remove('hidden');
     try {
       await runAction(script, friendlyNameKey);
     } finally {
       running = false;
-      row.removeAttribute('aria-disabled');
+      rowEl.removeAttribute('aria-disabled');
       spinner?.classList.add('hidden');
     }
   };
-  row.addEventListener('click', run);
-  row.addEventListener('keydown', (e) => {
+  rowEl.addEventListener('click', run);
+  rowEl.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       run();
@@ -127,30 +127,26 @@ export function wireOmkTrust() {
     }
     const scriptPath = shellEscape(moddir + '/features/omk_trust.sh');
 
-    const dialog = document.createElement('md-dialog');
-    dialog.innerHTML = `
-      <div slot="headline">${t('omk_title', 'OMK OS & Boot Key')}</div>
-      <div slot="content" class="omk-trust-content">
+    const dialog = createDialog(
+      escapeHtml(t('omk_title', 'OMK OS & Boot Key')),
+      `<div class="omk-trust-content">
         <md-outlined-text-field id="ot-os-version" type="text"
-          label="${t('omk_os_version', 'OS Version')}"
+          label="${escapeHtml(t('omk_os_version', 'OS Version'))}"
           placeholder="auto"
-          helper-text="${t('omk_os_version_helper', 'auto or number (e.g. 15)')}"
+          helper-text="${escapeHtml(t('omk_os_version_helper', 'auto or number (e.g. 15)'))}"
           class="omk-field">
         </md-outlined-text-field>
         <md-outlined-text-field id="ot-vb-key" type="text"
-          label="${t('omk_vb_key', 'VB Key')}"
+          label="${escapeHtml(t('omk_vb_key', 'VB Key'))}"
           placeholder="auto"
-          helper-text="${t('omk_vb_key_helper', 'auto, random, or 64 hex chars')}"
+          helper-text="${escapeHtml(t('omk_vb_key_helper', 'auto, random, or 64 hex chars'))}"
           maxlength="64"
           class="omk-field">
         </md-outlined-text-field>
-      </div>
-      <div slot="actions">
-        <md-text-button id="ot-cancel">${t('dialog_cancel', 'Cancel')}</md-text-button>
-        <md-filled-tonal-button id="ot-save">${t('dialog_save', 'Save')}</md-filled-tonal-button>
-      </div>
-    `;
-    document.body.appendChild(dialog);
+      </div>`,
+      `<md-text-button id="ot-cancel">${escapeHtml(t('dialog_cancel', 'Cancel'))}</md-text-button>
+       <md-filled-tonal-button id="ot-save">${escapeHtml(t('dialog_save', 'Save'))}</md-filled-tonal-button>`
+    );
 
     const osVerInput = dialog.querySelector('#ot-os-version') as HTMLInputElement | null;
     const vbKeyInput = dialog.querySelector('#ot-vb-key') as HTMLInputElement | null;
@@ -205,7 +201,6 @@ export function wireOmkTrust() {
       }
     });
 
-    dialog.addEventListener('closed', () => dialog.remove());
     dialog.show();
   };
 
