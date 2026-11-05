@@ -50,6 +50,115 @@ _hma_find_dir() {
   return 0
 }
 
+# Locate preset_cache_v2.json (or fallback legacy preset_cache.json).
+_hma_find_preset_cache() {
+  _hfpc_dir="${1:-}"
+  [ -d "$_hfpc_dir" ] || { unset _hfpc_dir; return 0; }
+  if [ -s "$_hfpc_dir/preset_cache_v2.json" ]; then
+    printf '%s\n' "$_hfpc_dir/preset_cache_v2.json"
+  elif [ -s "$_hfpc_dir/preset_cache.json" ]; then
+    printf '%s\n' "$_hfpc_dir/preset_cache.json"
+  fi
+  unset _hfpc_dir
+  return 0
+}
+
+# Parse HMA-OSS preset cache and extract only the packages detected across
+# the built-in presets (custom_rom, detector_apps, root_apps, xposed, sus_apps,
+# shizuku_dhizuku, accessibility_apps). Ignores allAppsList and riskyPackageCache.
+_hma_preset_cache_apps() {
+  _hpca_file="$1" _hpca_out="$2"
+  : > "$_hpca_out"
+  [ -f "$_hpca_file" ] || { unset _hpca_file _hpca_out; return 0; }
+  _hma_timeout "$HMAOSS_CMD_TIMEOUT" awk '
+function unquote(s) {
+  gsub(/^"/, "", s); gsub(/"$/, "", s)
+  gsub(/\\"/, "\"", s); gsub(/\\\\/, "\\", s)
+  return s
+}
+function tokenize(s,   n, off, chunk, clen, i, c, abs) {
+  tn = 0; n = length(s); off = 1
+  instr = 0; esc = 0; intok = 0; tstart = 0; tc = ""
+  while (off <= n) {
+    chunk = substr(s, off, 1024)
+    clen = length(chunk)
+    for (i = 1; i <= clen; i++) {
+      c = substr(chunk, i, 1)
+      abs = off + i - 1
+      if (instr) {
+        if (esc) { esc = 0; tc = tc c }
+        else if (c == "\\") { esc = 1; tc = tc c }
+        else if (c == "\"") {
+          tk[++tn] = tc "\""; tp[tn] = tstart; te[tn] = abs + 1
+          instr = 0; intok = 0; tc = ""
+        }
+        else { tc = tc c }
+        continue
+      }
+      if (c == " " || c == "\t" || c == "\r" || c == "\n") {
+        if (intok) { tk[++tn] = tc; tp[tn] = tstart; te[tn] = abs; intok = 0; tc = "" }
+        continue
+      }
+      if (c == "{" || c == "}" || c == "[" || c == "]" || c == ":" || c == ",") {
+        if (intok) { tk[++tn] = tc; tp[tn] = tstart; te[tn] = abs; intok = 0; tc = "" }
+        tk[++tn] = c; tp[tn] = abs; te[tn] = abs + 1
+        continue
+      }
+      if (c == "\"") {
+        if (intok) { tk[++tn] = tc; tp[tn] = tstart; te[tn] = abs; intok = 0 }
+        instr = 1; esc = 0; tstart = abs; tc = "\""; intok = 1
+        continue
+      }
+      if (!intok) { intok = 1; tstart = abs; tc = "" }
+      tc = tc c
+    }
+    off += 1024
+  }
+  if (intok) { tk[++tn] = tc; tp[tn] = tstart; te[tn] = n + 1 }
+}
+BEGIN {
+  RS = "\001"
+  if ((getline raw < ARGV[1]) <= 0) raw = ""
+  close(ARGV[1])
+  if (raw == "") exit 0
+
+  tokenize(raw)
+
+  in_cache = 0
+  cache_depth = 0
+  in_array = 0
+
+  for (i = 1; i <= tn; i++) {
+    t = tk[i]
+    if (!in_cache) {
+      if ((t == "\"cache\"" || t == "\"presetPackageNames\"") && i + 2 <= tn && tk[i+1] == ":" && tk[i+2] == "{") {
+        in_cache = 1
+        cache_depth = 1
+        i += 2
+      }
+      continue
+    }
+
+    if (t == "{") {
+      cache_depth++
+    } else if (t == "}") {
+      cache_depth--
+      if (cache_depth == 0) break
+    } else if (t == "[") {
+      in_array = 1
+    } else if (t == "]") {
+      in_array = 0
+    } else if (in_array && t ~ /^"/) {
+      pkg = unquote(t)
+      if (pkg != "" && !seen[pkg]++) print pkg
+    }
+  }
+}
+' "$_hpca_file" > "$_hpca_out"
+  unset _hpca_file _hpca_out
+  return 0
+}
+
 # Prefer the user-editable copy in the data dir; fall back to the module copy.
 _hma_list_path() {
   _hlp_mod="${1:-}"
@@ -177,10 +286,17 @@ _hma_filter_hide_list() {
   return 0
 }
 
-# Standard per-target AppConfig: blacklist mode (the template lists what is
-# hidden), HMA's own presets for the rest of the detection surface.
+# Standard per-target AppConfig: blacklist mode, all 7 HMA-OSS built-in
+# presets enabled for detection surface, templates empty by default.
 _hma_appconfig_json() {
-  printf '{"useWhitelist":false,"excludeSystemApps":true,"hideInstallationSource":false,"hideSystemInstallationSource":false,"excludeTargetInstallationSource":false,"invertActivityLaunchProtection":false,"excludeVoldIsolation":false,"restrictedZygotePermissions":[],"applyTemplates":["%s"],"applyPresets":["custom_rom","detector_apps","root_apps","shizuku_dhizuku","sus_apps","xposed"],"applySettingTemplates":[],"applySettingsPresets":["accessibility","dev_options","input_method"],"extraAppList":[],"extraOppositeAppList":[]}' "$1"
+  _hac_tpl="${1:-}"
+  if [ -n "$_hac_tpl" ]; then
+    _hac_tpl_json="[\"$_hac_tpl\"]"
+  else
+    _hac_tpl_json="[]"
+  fi
+  printf '{"useWhitelist":false,"excludeSystemApps":true,"hideInstallationSource":false,"hideSystemInstallationSource":false,"excludeTargetInstallationSource":false,"invertActivityLaunchProtection":false,"excludeVoldIsolation":false,"restrictedZygotePermissions":[],"applyTemplates":%s,"applyPresets":["accessibility_apps","custom_rom","detector_apps","root_apps","shizuku_dhizuku","sus_apps","xposed"],"applySettingTemplates":[],"applySettingsPresets":["accessibility","dev_options","input_method"],"extraAppList":[],"extraOppositeAppList":[]}' "$_hac_tpl_json"
+  unset _hac_tpl _hac_tpl_json
   return 0
 }
 
@@ -211,9 +327,9 @@ _hma_build_scope() {
 # base is not a JSON object or the result does not balance.
 _hma_merge_config() {
   _hmc_base="$1" _hmc_apps="$2" _hmc_scope="$3" _hmc_default="$4" _hmc_out="$5" _hmc_skip="${6:-}"
-  _hmc_timeout="${7:-$HMAOSS_MERGE_TIMEOUT}" _hmc_prune="${8:-}"
+  _hmc_timeout="${7:-$HMAOSS_MERGE_TIMEOUT}" _hmc_prune="${8:-}" _hmc_exclude="${9:-}"
   _hma_timeout "$_hmc_timeout" awk -v cfg="$_hmc_base" -v tpl="$HMAOSS_TEMPLATE" -v legacytpl="$HMAOSS_LEGACY_TEMPLATE" -v applist="$_hmc_apps" \
-      -v scopefile="$_hmc_scope" -v deffile="$_hmc_default" -v skiptpl="$_hmc_skip" -v prune="$_hmc_prune" '
+      -v scopefile="$_hmc_scope" -v deffile="$_hmc_default" -v skiptpl="$_hmc_skip" -v prune="$_hmc_prune" -v excludefile="$_hmc_exclude" '
 function jesc(s) { gsub(/\\/, "\\\\", s); gsub(/"/, "\\\"", s); return s }
 
 function unquote(s) {
@@ -328,6 +444,14 @@ BEGIN {
   RS = "\n"
   if (raw == "") raw = "{}"
 
+  if (excludefile != "") {
+    while ((getline ex < excludefile) > 0) {
+      sub(/\r$/, "", ex)
+      if (ex != "") excluded[ex] = 1
+    }
+    close(excludefile)
+  }
+
   # Rename the legacy Specter template and every reference to it in place.
   if (legacytpl != "" && legacytpl != tpl) {
     gsub("\"" jesc(legacytpl) "\"", "\"" jesc(tpl) "\"", raw)
@@ -408,48 +532,83 @@ BEGIN {
 
   # Detach the generated template from existing scope entries that are no
   # longer in the desired applied-to set (e.g. apps listed as invisible).
+  # Apps in excluded (e.g. preset cache) are dropped completely from scope.
   # prune=1 keeps this working when the desired set is empty.
   prune_scope = (prune == "1" || (prune == "" && wanted_count > 0))
   if (scope_exists && prune_scope) {
-    for (p in sset) {
-      if (p in wanted) continue
-      ac_start = sset[p]
-      ac_end = skipv(ac_start) - 1
-      if (tk[ac_start] != "{") continue
-      clear_arr(acset)
-      scan_obj(ac_start, ac_end, acset)
-      if ("applyTemplates" in acset) {
-        arr = acset["applyTemplates"]
-        if (tk[arr] == "[") array_remove_value(arr, tpl)
-      }
+    end_scope = skipv(mvi0[scope_i]) - 1
+    i = mvi0[scope_i] + 1
+    kept_text = ""
+    nkept = 0
+    while (i < end_scope) {
+      if (tk[i] ~ /^"/) {
+        ks = i
+        k = unquote(tk[i]); i++
+        if (tk[i] == ":") i++
+        vs = i
+        ve = skipv(vs) - 1
+        i = ve + 1
+        if (!(k in excluded)) {
+          nkept++
+          val_str = substr(raw, tp[vs], te[ve] - tp[vs])
+          if (tpl != "" && (skiptpl == "1" || !(k in wanted))) {
+            gsub("\"" jesc(tpl) "\"[[:space:]]*,?", "", val_str)
+            gsub(",[[:space:]]*\"" jesc(tpl) "\"", "", val_str)
+            gsub(",,", ",", val_str)
+            gsub("\\[,", "[", val_str)
+            gsub(",\\]", "]", val_str)
+          }
+          kept_text = kept_text (nkept > 1 ? "," : "") "\"" jesc(k) "\":" val_str
+        }
+        if (tk[i] == ",") i++
+      } else i++
     }
-  }
 
-  nadds = 0; addtext = ""
-  while ((getline l < scopefile) > 0) {
-    sub(/\r$/, "", l)
-    if (l == "") continue
-    tabi = index(l, "\t")
-    if (tabi == 0) continue
-    p = substr(l, 1, tabi - 1); js = substr(l, tabi + 1)
-    if (scope_exists && (p in sset)) continue
-    nadds++
-    addtext = addtext (nadds > 1 ? "," : "") "\"" jesc(p) "\":" js
-  }
-  close(scopefile)
-
-  if (scope_i > 0) {
-    if (scope_exists) {
-      if (nadds > 0) {
-        ins = addtext
-        if (scope_hasany) ins = ins ","
-        add_edit(te[mvi0[scope_i]], te[mvi0[scope_i]], ins)
-      }
-    } else {
-      add_edit(mvs[scope_i], mve[scope_i], "{" addtext "}")
+    nadds = 0; addtext = ""
+    while ((getline l < scopefile) > 0) {
+      sub(/\r$/, "", l)
+      if (l == "") continue
+      tabi = index(l, "\t")
+      if (tabi == 0) continue
+      p = substr(l, 1, tabi - 1); js = substr(l, tabi + 1)
+      if (scope_exists && (p in sset)) continue
+      if (p in excluded) continue
+      nadds++
+      addtext = addtext (nadds > 1 ? "," : "") "\"" jesc(p) "\":" js
     }
-  } else if (nadds > 0) {
-    root_parts = root_parts (root_parts == "" ? "" : ",") "\"scope\":{" addtext "}"
+    close(scopefile)
+
+    ins = kept_text
+    if (addtext != "") ins = ins (nkept > 0 ? "," : "") addtext
+    add_edit(tp[mvi0[scope_i]], te[end_scope], "{" ins "}")
+  } else {
+    nadds = 0; addtext = ""
+    while ((getline l < scopefile) > 0) {
+      sub(/\r$/, "", l)
+      if (l == "") continue
+      tabi = index(l, "\t")
+      if (tabi == 0) continue
+      p = substr(l, 1, tabi - 1); js = substr(l, tabi + 1)
+      if (scope_exists && (p in sset)) continue
+      if (p in excluded) continue
+      nadds++
+      addtext = addtext (nadds > 1 ? "," : "") "\"" jesc(p) "\":" js
+    }
+    close(scopefile)
+
+    if (scope_i > 0) {
+      if (scope_exists) {
+        if (nadds > 0) {
+          ins = addtext
+          if (scope_hasany) ins = ins ","
+          add_edit(te[mvi0[scope_i]], te[mvi0[scope_i]], ins)
+        }
+      } else {
+        add_edit(mvs[scope_i], mve[scope_i], "{" addtext "}")
+      }
+    } else if (nadds > 0) {
+      root_parts = root_parts (root_parts == "" ? "" : ",") "\"scope\":{" addtext "}"
+    }
   }
 
   if (def_i > 0) {
@@ -504,7 +663,7 @@ BEGIN {
   if [ "$_hmc_rc" -ne 0 ]; then
     rm -f "$_hmc_out" 2>/dev/null || true
   fi
-  unset _hmc_base _hmc_apps _hmc_scope _hmc_default _hmc_out _hmc_skip _hmc_timeout _hmc_prune
+  unset _hmc_base _hmc_apps _hmc_scope _hmc_default _hmc_out _hmc_skip _hmc_timeout _hmc_prune _hmc_exclude
   return "$_hmc_rc"
 }
 
