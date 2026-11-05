@@ -118,7 +118,12 @@ let _cornerObserver: MutationObserver | null = null;
 export function updateListContainerCorners(root: ParentNode = document) {
   _isUpdatingCorners = true;
   try {
-    root.querySelectorAll('.list-container').forEach(container => {
+    const containers = new Set<Element>();
+    // The root itself may be the container (catalog/subpage renderers pass
+    // the list element directly), not just an ancestor of one.
+    if (root instanceof Element && root.matches('.list-container')) containers.add(root);
+    root.querySelectorAll('.list-container').forEach(container => containers.add(container));
+    containers.forEach(container => {
       const items = Array.from(container.querySelectorAll<HTMLElement>(':scope > .list-item'));
       const visible = items.filter(el => !el.hidden && !el.classList.contains('hidden') && el.style.display !== 'none');
 

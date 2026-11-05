@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { escapeHtml, shellEscape, fetchJson } from './utils.js'
+import { escapeHtml, shellEscape, fetchJson, updateListContainerCorners } from './utils.js'
 
 function mockFetch(data: unknown, status = 200) {
   globalThis.fetch = vi.fn(() => Promise.resolve(new Response(JSON.stringify(data), { status }))) as unknown as typeof globalThis.fetch
@@ -7,6 +7,23 @@ function mockFetch(data: unknown, status = 200) {
 
 beforeEach(() => {
   document.body.innerHTML = ''
+})
+
+
+describe('updateListContainerCorners', () => {
+  it('processes a list container passed directly as the root', () => {
+    document.body.innerHTML = `
+      <div class="list-container" id="direct-list">
+        <div class="list-item"></div>
+        <div class="list-item"></div>
+      </div>
+    `
+    const list = document.getElementById('direct-list')!
+    updateListContainerCorners(list)
+    const items = list.querySelectorAll('.list-item')
+    expect(items[0]!.classList.contains('list-item--first')).toBe(true)
+    expect(items[1]!.classList.contains('list-item--last')).toBe(true)
+  })
 })
 
 describe('escapeHtml', () => {
