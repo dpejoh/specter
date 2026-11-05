@@ -38,7 +38,7 @@ vi.mock('./bridge.js', () => ({ exec, getModuleDir: () => '/data/adb/modules/spe
 vi.mock('./subpage.js', () => ({ openSubPage }));
 
 import { mountKeyboxCatalog, openKeyboxCatalogPage } from './keybox-catalog-ui.js';
-import { cfgInvalidate } from './cfg.js';
+import { cfgInvalidate, cfgSet } from './cfg.js';
 
 const CATALOG = {
   entries: [
@@ -105,6 +105,20 @@ describe('keybox catalog', () => {
     expect(descriptions[2]).toContain('Normal');
     expect(descriptions[1]).toContain('RKP');
   });
+
+
+  it('opens at All providers even when a provider is installed', async () => {
+    cfgSet('keybox_provider', 'TAKR');
+    const container = makeContainer();
+    const catalog = mountKeyboxCatalog(container);
+    await catalog.load();
+
+    const providerFilter = container.querySelector('[data-filter-id="kb-provider-filter"]') as HTMLElement;
+    expect(providerFilter.querySelector('.filter-trigger-label')?.textContent).toBe('All providers');
+    const sources = [...container.querySelectorAll('#kb-catalog-list .list-item .toggle-text')]
+      .map(el => el.textContent || '');
+    expect(sources.some(text => text.includes('Yuri'))).toBe(true);
+  })
 
   it('shows inactive keyboxes when the Active filter is turned off', async () => {
     const container = makeContainer();

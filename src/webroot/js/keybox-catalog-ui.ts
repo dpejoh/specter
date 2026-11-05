@@ -1,5 +1,5 @@
 import { exec } from './bridge.js';
-import { cfgGet, cfgSet } from './cfg.js';
+import { cfgSet } from './cfg.js';
 import { t } from './i18n.js';
 import { API_URLS } from './constants.js';
 import { escapeHtml, fetchJson, shellEscape, updateListContainerCorners } from './utils.js';
@@ -265,15 +265,10 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
     updateListContainerCorners(list);
   };
 
-  let providerLoaded = false;
-
   async function loadCatalog() {
     if (loading) return;
-    if (!providerLoaded) {
-      const provider = (await cfgGet('keybox_provider', 'auto').catch(() => 'auto')) || 'auto';
-      if (provider !== 'auto') providerFilter = provider;
-      providerLoaded = true;
-    }
+    // providerFilter starts at "all"; the installed provider must not silently
+    // hide other sources when the catalog opens.
     loading = true;
     updateFab();
     refreshButton?.setAttribute('disabled', '');
