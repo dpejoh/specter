@@ -11,6 +11,7 @@
   "menu_keybox_desc": "Choose a remote keybox or apply a local one",
   "kb_source_remote": "Remote",
   "kb_source_local": "Local",
+  "kb_filter_aria": "Filter keyboxes",
   "menu_google_services": "Google Services",
   "menu_tricky_store": "Keystore Management",
   "menu_import_keybox": "Install Keybox",

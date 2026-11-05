@@ -11,6 +11,7 @@
   "menu_keybox_desc": "Wybierz zdalny keybox lub zastosuj lokalny",
   "kb_source_remote": "Zdalny",
   "kb_source_local": "Lokalny",
+  "kb_filter_aria": "Filtruj keyboxy",
   "menu_google_services": "Usługi Google",
   "menu_tricky_store": "Zarządzanie keystore",
   "menu_import_keybox": "Wgraj Keybox",

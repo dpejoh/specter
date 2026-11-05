@@ -56,8 +56,13 @@ describe('keybox catalog', () => {
     const rows = list ? [...list.querySelectorAll('.list-item')] : [];
     const titles = rows.map(row => row.querySelector('.toggle-text')?.textContent?.trim());
     const descriptions = rows.map(row => row.querySelector('.supporting-text')?.textContent?.trim());
-    const chips = [...container.querySelectorAll('md-filter-chip')]
-      .map(chip => (chip as HTMLElement & { label: string }).label);
+
+    expect(container.querySelector('.filter-trigger-label')?.textContent).toBe('Active');
+    const trigger = container.querySelector('.filter-trigger') as HTMLButtonElement;
+    trigger.click();
+    const filterLabels = [...container.querySelectorAll('.filter-option span')]
+      .map(option => option.textContent?.trim());
+    expect(filterLabels).toEqual(['Active', 'All', 'TAKR', 'Yuri', 'rkp']);
 
     expect(titles).toHaveLength(4);
     expect(titles).toEqual([
@@ -68,13 +73,6 @@ describe('keybox catalog', () => {
     ]);
     expect(descriptions[2]).toContain('Normal');
     expect(descriptions[1]).toContain('RKP');
-    expect(chips).toEqual(expect.arrayContaining([
-      'Active',
-      'All (3)',
-      'TAKR (1)',
-      'Yuri (1)',
-      'rkp (1)',
-    ]));
   });
 
   it('shows inactive keyboxes when the Active filter is turned off', async () => {
@@ -82,15 +80,14 @@ describe('keybox catalog', () => {
     const catalog = mountKeyboxCatalog(container);
     await catalog.load();
 
-    const activeChip = [...container.querySelectorAll('md-filter-chip')]
-      .find(chip => (chip as HTMLElement & { label: string }).label === 'Active') as HTMLElement;
-
-    activeChip.click();
+    const trigger = container.querySelector('.filter-trigger') as HTMLButtonElement;
+    trigger.click();
+    const allOption = [...container.querySelectorAll('.filter-option')]
+      .find(option => option.querySelector('span')?.textContent?.trim() === 'All') as HTMLButtonElement;
+    allOption.click();
 
     const rows = [...container.querySelectorAll('#kb-catalog-list .list-item')];
     const titles = rows.map(row => row.querySelector('.toggle-text')?.textContent?.trim());
-    const chips = [...container.querySelectorAll('md-filter-chip')]
-      .map(chip => (chip as HTMLElement & { label: string }).label);
 
     expect(rows).toHaveLength(7);
     expect(titles).toEqual(expect.arrayContaining([
@@ -101,12 +98,6 @@ describe('keybox catalog', () => {
       'Yuri v8',
       'rkp r3',
       'rkp r4',
-    ]));
-    expect(chips).toEqual(expect.arrayContaining([
-      'All (6)',
-      'TAKR (3)',
-      'Yuri (1)',
-      'rkp (2)',
     ]));
     const revoked = rows.find(row => row.querySelector('.toggle-text')?.textContent?.includes('TAKR v34'));
     expect(revoked?.classList.contains('kb-catalog-row--disabled')).toBe(true);

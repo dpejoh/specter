@@ -5,6 +5,7 @@ import { API_URLS } from './constants.js';
 import { escapeHtml, fetchJson, shellEscape, updateListContainerCorners } from './utils.js';
 import { runAction } from './actions.js';
 import { refreshKeyboxStatus } from './device.js';
+import { createFilterDropdown, type FilterDropdownHandle, type FilterOption } from './filter-dropdown.js';
 import type { CatalogEntry, CatalogJson } from './types.js';
 
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
@@ -80,17 +81,22 @@ async function fetchCatalog(): Promise<CatalogJson | null> {
 
 export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalogOptions = {}): KeyboxCatalogHandle {
   const { refreshButton = null, onStateChange, onInstalled } = options;
-  let sourceFilter = '';
+  let filterValue = 'active';
   let entries: CatalogEntry[] = [];
   let selectedKey = AUTO_KEY;
   let selectedEntry: CatalogEntry | null = null;
-  let catalogRoot: HTMLElement | null = container;
+  let catalogBody: HTMLElement | null = null;
+  let filterDropdown: FilterDropdownHandle | null = null;
   let loading = false;
   let installing = false;
-  let activeOnly = true;
 
-  const activeInFilter = () =>
-    entries.filter(entry => isActiveEntry(entry) && (!sourceFilter || entry.source === sourceFilter));
+  const visibleEntries = () => entries.filter(entry => {
+    if (filterValue === 'active') return isActiveEntry(entry);
+    if (filterValue === 'all') return true;
+    return entry.source === filterValue;
+  });
+
+  const activeInFilter = () => visibleEntries().filter(isActiveEntry);
 
   const canInstall = () =>
     !loading && !installing && (selectedEntry
@@ -102,8 +108,8 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
   };
 
   const renderStatus = (icon: string, text: string, retry = false) => {
-    if (!catalogRoot) return;
-    catalogRoot.innerHTML = `
+    if (!catalogBody) return;
+    catalogBody.innerHTML = `
       <div class="kb-catalog-status">
         <md-icon aria-hidden="true">${icon}</md-icon>
         <p>${text}</p>
@@ -111,15 +117,15 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
       </div>
     `;
     if (retry) {
-      catalogRoot.querySelector('#kb-catalog-retry')?.addEventListener('click', () => {
+      catalogBody.querySelector('#kb-catalog-retry')?.addEventListener('click', () => {
         void loadCatalog();
       });
     }
   };
 
   const renderLoading = () => {
-    if (!catalogRoot) return;
-    catalogRoot.innerHTML = `
+    if (!catalogBody) return;
+    catalogBody.innerHTML = `
       <div class="kb-catalog-status">
         <md-circular-progress indeterminate></md-circular-progress>
         <p>${t('kb_catalog_loading', 'Loading keyboxes...')}</p>
@@ -128,7 +134,7 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
   };
 
   const updateRadios = () => {
-    const list = catalogRoot?.querySelector('#kb-catalog-list');
+    const list = catalogBody?.querySelector('#kb-catalog-list');
     list?.querySelectorAll('md-radio').forEach(radio => {
       (radio as HTMLElement & { checked: boolean }).checked =
         (radio as HTMLElement & { value: string }).value === selectedKey;
@@ -185,74 +191,38 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
   };
 
   const renderCatalog = () => {
-    if (!catalogRoot) return;
-    const statusEntries = entries.filter(entry => !activeOnly || isActiveEntry(entry));
-    const sources = [...new Set(statusEntries.map(entry => entry.source))].sort();
-    if (sourceFilter && !sources.includes(sourceFilter)) sourceFilter = '';
+    if (!catalogBody || !filterDropdown) return;
 
-    const visible = statusEntries.filter(entry => !sourceFilter || entry.source === sourceFilter);
-    const autoAvailable = activeInFilter().length > 0;
+    const sources = [...new Set(entries.map(entry => entry.source))].sort();
+    const filterOptions: FilterOption[] = [
+      { value: 'active', label: t('custom_kb_active', 'Active') },
+      { value: 'all', label: t('ta_filter_all', 'All') },
+      ...sources.map(source => ({ value: source, label: source })),
+    ];
+    filterDropdown.setOptions(filterOptions);
+    if (!filterOptions.some(option => option.value === filterValue)) {
+      filterValue = 'active';
+    }
+    filterDropdown.setValue(filterValue);
+
+    const visible = visibleEntries();
+    const autoAvailable = visible.some(isActiveEntry);
     if (selectedEntry && !visible.some(entry => entryKey(entry) === selectedKey && isActiveEntry(entry))) {
       selectedKey = AUTO_KEY;
       selectedEntry = null;
     }
 
-    catalogRoot.innerHTML = `
-      <div class="kb-catalog-filters" id="kb-catalog-filters"></div>
-      <div class="list-container" id="kb-catalog-list"></div>
-    `;
-
-    const filters = catalogRoot.querySelector('#kb-catalog-filters') as HTMLElement;
-    const list = catalogRoot.querySelector('#kb-catalog-list') as HTMLElement;
-
-    const activeChip = document.createElement('md-filter-chip') as HTMLElement & { label: string; selected: boolean };
-    activeChip.label = t('custom_kb_active', 'Active');
-    activeChip.selected = activeOnly;
-    activeChip.addEventListener('click', () => {
-      activeOnly = !activeOnly;
-      if (selectedEntry && activeOnly && !isActiveEntry(selectedEntry)) {
-        selectedKey = AUTO_KEY;
-        selectedEntry = null;
-      }
-      renderCatalog();
-      updateFab();
-    });
-    filters.appendChild(activeChip);
-
-    const chips: (HTMLElement & { label: string; selected: boolean })[] = [];
-    const makeChip = (label: string, source: string) => {
-      const chip = document.createElement('md-filter-chip') as HTMLElement & { label: string; selected: boolean };
-      chip.label = label;
-      chip.dataset.source = source;
-      chip.selected = sourceFilter === source;
-      chip.addEventListener('click', () => {
-        if (sourceFilter === source) return;
-        sourceFilter = source;
-        if (selectedEntry && sourceFilter && selectedEntry.source !== sourceFilter) {
-          selectedKey = AUTO_KEY;
-          selectedEntry = null;
-        }
-        renderCatalog();
-        updateFab();
-      });
-      filters.appendChild(chip);
-      chips.push(chip);
-      return chip;
-    };
-
-    makeChip(`${t('ta_filter_all', 'All')} (${statusEntries.length})`, '');
-    for (const source of sources) {
-      const count = statusEntries.filter(entry => entry.source === source).length;
-      makeChip(`${source} (${count})`, source);
-    }
-    for (const chip of chips) chip.selected = chip.dataset.source === sourceFilter;
+    catalogBody.innerHTML = '<div class="list-container" id="kb-catalog-list"></div>';
+    const list = catalogBody.querySelector('#kb-catalog-list') as HTMLElement;
 
     if (autoAvailable) {
-      const autoDescription = t('kb_catalog_auto_desc', 'Let Specter pick an active keybox.');
+      const autoDescription = filterValue === 'active' || filterValue === 'all'
+        ? t('kb_catalog_auto_desc', 'Let Specter pick an active keybox.')
+        : `${t('kb_catalog_auto_desc', 'Let Specter pick an active keybox.')} (${filterValue})`;
       list.appendChild(makeRadioRow(
         AUTO_KEY,
         t('kb_catalog_auto', 'Automatic'),
-        sourceFilter ? `${autoDescription} (${sourceFilter})` : autoDescription,
+        autoDescription,
         'autorenew',
         t('auto_target_recommended', 'Recommended'),
       ));
@@ -275,11 +245,11 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
       empty.className = 'kb-catalog-status';
       empty.innerHTML = `
         <md-icon aria-hidden="true">info</md-icon>
-        <p>${activeOnly
+        <p>${filterValue === 'active'
           ? t('kb_catalog_empty', 'No active keyboxes for this source.')
           : t('kb_catalog_empty_all', 'No keyboxes available.')}</p>
       `;
-      catalogRoot.appendChild(empty);
+      catalogBody.appendChild(empty);
     }
 
     updateListContainerCorners(list);
@@ -291,7 +261,7 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
     if (loading) return;
     if (!providerLoaded) {
       const provider = (await cfgGet('keybox_provider', 'auto').catch(() => 'auto')) || 'auto';
-      if (provider !== 'auto') sourceFilter = provider;
+      if (provider !== 'auto') filterValue = provider;
       providerLoaded = true;
     }
     loading = true;
@@ -316,7 +286,9 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
         a.source.localeCompare(b.source) ||
         a.version.localeCompare(b.version, undefined, { numeric: true }));
     const sources = [...new Set(entries.map(entry => entry.source))];
-    if (sourceFilter && !sources.includes(sourceFilter)) sourceFilter = '';
+    if (filterValue !== 'active' && filterValue !== 'all' && !sources.includes(filterValue)) {
+      filterValue = 'active';
+    }
     if (selectedEntry && !entries.some(entry => entryKey(entry) === selectedKey && isActiveEntry(entry))) {
       selectedKey = AUTO_KEY;
       selectedEntry = null;
@@ -348,7 +320,7 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
       } else {
         cfgSet('keybox_select_source', '');
         cfgSet('keybox_select_version', '');
-        cfgSet('keybox_provider', sourceFilter || 'auto');
+        cfgSet('keybox_provider', filterValue === 'active' || filterValue === 'all' ? 'auto' : filterValue);
       }
 
       const code = await runAction('keybox.sh');
@@ -368,6 +340,28 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
       updateFab();
     }
   }
+
+  container.innerHTML = `
+    <div class="kb-catalog-filters" id="kb-catalog-filters"></div>
+    <div id="kb-catalog-body"></div>
+  `;
+  catalogBody = container.querySelector('#kb-catalog-body');
+  const filterHost = container.querySelector('#kb-catalog-filters') as HTMLElement;
+  filterDropdown = createFilterDropdown({
+    id: 'kb-catalog-filter',
+    ariaLabel: t('kb_filter_aria', 'Filter keyboxes'),
+    value: filterValue,
+    options: [
+      { value: 'active', label: t('custom_kb_active', 'Active') },
+      { value: 'all', label: t('ta_filter_all', 'All') },
+    ],
+    onChange: (next) => {
+      filterValue = next;
+      renderCatalog();
+      updateFab();
+    },
+  });
+  filterHost.appendChild(filterDropdown.element);
 
   refreshButton?.addEventListener('click', () => {
     void loadCatalog();

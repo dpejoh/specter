@@ -11,6 +11,7 @@
   "menu_keybox_desc": "اختر Keybox عن بُعد أو طبّق واحدًا محليًا",
   "kb_source_remote": "عن بُعد",
   "kb_source_local": "محلي",
+  "kb_filter_aria": "تصفية Keybox",
   "menu_google_services": "خدمات Google",
   "menu_tricky_store": "إدارة مخزن المفاتيح",
   "menu_import_keybox": "تثبيت Keybox",

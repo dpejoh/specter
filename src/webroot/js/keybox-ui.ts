@@ -48,6 +48,7 @@ export async function openKeyboxPage() {
             id: 'kb-page',
             render: (container) => {
               container.className = 'kb-page';
+              container.parentElement?.classList.add('kb-page-container');
               container.innerHTML = `
                 <div class="kb-source-switch">
                   <md-outlined-segmented-button-set id="kb-source-set">

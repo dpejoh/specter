@@ -11,6 +11,7 @@
   "menu_keybox_desc": "选择远程 Keybox 或应用本地 Keybox",
   "kb_source_remote": "远程",
   "kb_source_local": "本地",
+  "kb_filter_aria": "筛选 Keybox",
   "menu_google_services": "Google 服务",
   "menu_tricky_store": "Keystore 管理",
   "menu_import_keybox": "安装 Keybox",

@@ -609,6 +609,10 @@ md-icon-button[hidden] {
   display: none !important;
 }
 
+.list-container.kb-page-container {
+  overflow: visible;
+}
+
 .kb-page {
   display: flex;
   flex-direction: column;
@@ -3275,19 +3279,100 @@ md-filled-tonal-button {
 
 .kb-catalog-filters {
   display: flex;
-  gap: 8px;
+  align-items: flex-start;
   padding: 0 0 16px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
 }
 
-.kb-catalog-filters::-webkit-scrollbar {
-  display: none;
+.filter-dropdown {
+  position: relative;
+  z-index: 10;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
-.kb-catalog-filters md-filter-chip {
-  flex-shrink: 0;
+.filter-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 9999px;
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.filter-trigger:hover {
+  background: color-mix(in srgb, var(--md-sys-color-secondary-container) 88%, var(--md-sys-color-on-secondary-container));
+}
+
+.filter-trigger:focus-visible {
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: 2px;
+}
+
+.filter-trigger md-icon {
+  font-size: 24px;
+}
+
+.filter-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 220px;
+  padding: 8px;
+  border-radius: 20px;
+  background: var(--md-sys-color-surface-container-lowest);
+  box-shadow: 0 8px 24px #00000059;
+}
+
+.filter-menu[hidden] {
+  display: none !important;
+}
+
+.filter-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--md-sys-color-on-surface);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-align: start;
+  cursor: pointer;
+}
+
+.filter-option:hover {
+  background: var(--md-sys-color-surface-container-highest);
+}
+
+.filter-option:focus-visible {
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: -2px;
+}
+
+.filter-option--selected,
+.filter-option--selected:hover {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.filter-option-check {
+  font-size: 20px;
 }
 
 .kb-catalog-row--disabled {
