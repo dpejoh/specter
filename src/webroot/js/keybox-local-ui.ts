@@ -10,6 +10,7 @@ const t = (key: string, fallback: string): string => getTranslation(key) || fall
 
 export interface KeyboxLocalOptions {
   onInstalled?: () => void;
+  onValueChange?: (hasValue: boolean) => void;
 }
 
 export interface KeyboxLocalHandle {
@@ -107,6 +108,7 @@ export async function mountLocalKeyboxForm(
   const pasteBtn = container.querySelector('#kb-paste-btn');
   const privateSwitch = container.querySelector('#kb-private-switch') as MdSwitch | null;
   const privateRow = container.querySelector('#kb-private-row');
+  const hasValue = () => Boolean(urlInputEl?.value.trim() || selectedFilePath.trim());
 
   const onPick = () => {
     void import('./file-browser.js').then(({ openFileBrowser }) => {
@@ -114,6 +116,7 @@ export async function mountLocalKeyboxForm(
         selectedFilePath = filePath;
         updateFileUI(filePath);
         if (urlInputEl) urlInputEl.value = filePath;
+        options.onValueChange?.(hasValue());
       }, {
         title: t('fb_internal_storage', 'Internal storage'),
       });
@@ -129,6 +132,7 @@ export async function mountLocalKeyboxForm(
   urlInputEl?.addEventListener('input', () => {
     selectedFilePath = urlInputEl?.value.trim() || '';
     updateFileUI(selectedFilePath);
+    options.onValueChange?.(hasValue());
   });
 
   pasteBtn?.addEventListener('click', async () => {
@@ -138,6 +142,7 @@ export async function mountLocalKeyboxForm(
         urlInputEl.value = text.trim();
         selectedFilePath = text.trim();
         updateFileUI(selectedFilePath);
+        options.onValueChange?.(hasValue());
       }
     } catch (e) {
       console.warn('Clipboard read failed:', e);
@@ -153,6 +158,8 @@ export async function mountLocalKeyboxForm(
     if (privateSwitch) privateSwitch.selected = !privateSwitch.selected;
     setPrivate();
   });
+
+  options.onValueChange?.(hasValue());
 
   return {
     async apply(): Promise<boolean> {
@@ -188,3 +195,5 @@ export async function mountLocalKeyboxForm(
     },
   };
 }
+
+

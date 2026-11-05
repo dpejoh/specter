@@ -1,6 +1,5 @@
 import { getTranslation } from './i18n.js';
 import { openSubPage } from './subpage.js';
-import { mountKeyboxCatalog, type KeyboxCatalogHandle } from './keybox-catalog-ui.js';
 import { mountLocalKeyboxForm, type KeyboxLocalHandle } from './keybox-local-ui.js';
 
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
@@ -14,32 +13,13 @@ export function wireKeybox() {
 }
 
 export async function openKeyboxPage() {
-  let source: 'remote' | 'local' = 'remote';
-  let refreshButton: HTMLElement | null = null;
-  let fab: (HTMLElement & { label: string; disabled: boolean }) | null = null;
-  let catalog: KeyboxCatalogHandle | null = null;
   let local: KeyboxLocalHandle | null = null;
   let page: { overlay: HTMLElement; close: () => void } | null = null;
-
-  const applySource = () => {
-    if (!page) return;
-    const remotePane = page.overlay.querySelector('#kb-remote-pane') as HTMLElement | null;
-    const localPane = page.overlay.querySelector('#kb-local-pane') as HTMLElement | null;
-    if (remotePane) remotePane.hidden = source !== 'remote';
-    if (localPane) localPane.hidden = source !== 'local';
-    if (refreshButton) refreshButton.hidden = source !== 'remote';
-    if (fab) {
-      fab.label = source === 'remote'
-        ? t('kb_catalog_install', 'Install')
-        : t('custom_kb_apply', 'Apply');
-      fab.disabled = source === 'remote' ? !(catalog?.canInstall() ?? false) : false;
-    }
-  };
 
   page = await openSubPage({
     id: 'keybox',
     title: t('menu_keybox', 'Keybox'),
-    description: t('menu_keybox_desc', 'Choose a remote keybox or apply a local one.'),
+    description: t('menu_keybox_desc', 'Choose a Specter keybox or use a custom source.'),
     groups: [
       {
         items: [
@@ -47,86 +27,65 @@ export async function openKeyboxPage() {
             type: 'custom',
             id: 'kb-page',
             render: (container) => {
-              container.className = 'kb-page';
+              container.className = 'kb-hub';
               container.parentElement?.classList.add('kb-page-container');
               container.innerHTML = `
-                <div class="kb-source-switch">
-                  <md-outlined-segmented-button-set id="kb-source-set">
-                    <md-outlined-segmented-button value="remote" label="${t('kb_source_remote', 'Remote')}" selected></md-outlined-segmented-button>
-                    <md-outlined-segmented-button value="local" label="${t('kb_source_local', 'Local')}"></md-outlined-segmented-button>
-                  </md-outlined-segmented-button-set>
+                <h2 class="list-title">${t('kb_remote_section', 'Specter source')}</h2>
+                <div class="list-container">
+                  <button type="button" class="list-item" id="kb-remote-open">
+                    <div class="li-icon"><md-icon aria-hidden="true">cloud_download</md-icon></div>
+                    <div class="list-item-content">
+                      <div class="toggle-text">${t('kb_specter_keyboxes', 'Specter keyboxes')}</div>
+                      <span class="supporting-text">${t('menu_import_keybox_desc', 'Browse available keyboxes and install one')}</span>
+                    </div>
+                    <div class="spacer"></div>
+                    <md-ripple></md-ripple>
+                  </button>
                 </div>
-                <div id="kb-remote-pane">
-                  <div id="kb-remote-content"></div>
-                </div>
-                <div id="kb-local-pane" hidden>
-                  <div class="list-container" id="kb-local-content"></div>
-                </div>
+
+                <h2 class="list-title">${t('kb_local_section', 'Custom source')}</h2>
+                <div class="list-container" id="kb-local-content"></div>
+                <md-filled-button id="kb-local-apply" class="kb-install-btn" disabled>
+                  <md-icon slot="icon" aria-hidden="true">check</md-icon>
+                  ${t('kb_catalog_install', 'Install')}
+                </md-filled-button>
               `;
 
-              const sourceSet = container.querySelector('#kb-source-set');
-              const sourceButtons = sourceSet
-                ? [...sourceSet.querySelectorAll<HTMLElement & { selected: boolean }>('md-outlined-segmented-button')]
-                : [];
-              sourceButtons.forEach((button) => {
-                button.addEventListener('click', () => {
-                  source = (button.getAttribute('value') as 'remote' | 'local') || 'remote';
-                  sourceButtons.forEach(candidate => {
-                    const isSelected = candidate === button;
-                    candidate.selected = isSelected;
-                    candidate.toggleAttribute('selected', isSelected);
-                  });
-                  applySource();
-                });
+              const remoteOpen = container.querySelector('#kb-remote-open') as HTMLElement | null;
+              const openRemote = () => {
+                void import('./keybox-catalog-ui.js').then(m => m.openKeyboxCatalogPage());
+              };
+              remoteOpen?.addEventListener('click', openRemote);
+              remoteOpen?.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  openRemote();
+                }
               });
             },
           },
         ],
       },
     ],
-    headerAction: (container) => {
-      container.innerHTML = `
-        <md-icon-button id="kb-refresh" aria-label="${t('kb_refresh_btn', 'Refresh')}">
-          <md-icon aria-hidden="true">refresh</md-icon>
-        </md-icon-button>
-      `;
-      refreshButton = container.querySelector('#kb-refresh');
-    },
-    fab: (container) => {
-      container.innerHTML = `
-        <md-fab variant="primary" class="subpage-fab" id="kb-fab" label="${t('kb_catalog_install', 'Install')}" disabled>
-          <md-icon slot="icon" aria-hidden="true">download</md-icon>
-        </md-fab>
-      `;
-      fab = container.querySelector('#kb-fab');
-      fab?.addEventListener('click', async () => {
-        if (source === 'remote') {
-          await catalog?.install();
-          return;
-        }
-        if (!local || !fab) return;
-        fab.disabled = true;
-        try {
-          await local.apply();
-        } finally {
-          if (fab) fab.disabled = false;
-        }
-      });
-    },
   });
 
-  const remoteContent = page.overlay.querySelector('#kb-remote-content') as HTMLElement;
   const localContent = page.overlay.querySelector('#kb-local-content') as HTMLElement;
+  const localApply = page.overlay.querySelector('#kb-local-apply') as HTMLButtonElement;
 
-  catalog = mountKeyboxCatalog(remoteContent, {
-    refreshButton,
-    onStateChange: () => applySource(),
-    onInstalled: () => page?.close(),
-  });
   local = await mountLocalKeyboxForm(localContent, {
     onInstalled: () => page?.close(),
+    onValueChange: (hasValue) => {
+      if (localApply) localApply.disabled = !hasValue;
+    },
   });
 
-  applySource();
-  void catalog.load();
+  localApply?.addEventListener('click', async () => {
+    if (!local || !localApply) return;
+    localApply.disabled = true;
+    try {
+      await local.apply();
+    } finally {
+      if (localApply) localApply.disabled = false;
+    }
+  });
 }

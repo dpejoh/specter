@@ -1,10 +1,31 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { fetchJson, runAction, refreshKeyboxStatus, exec } = vi.hoisted(() => ({
+const { fetchJson, runAction, refreshKeyboxStatus, exec, openSubPage } = vi.hoisted(() => ({
   fetchJson: vi.fn(),
   runAction: vi.fn(async () => 0),
   refreshKeyboxStatus: vi.fn(async () => {}),
   exec: vi.fn(async (_command: string) => ({ stdout: '', stderr: '', code: 0 })),
+  openSubPage: vi.fn((config: {
+    headerAction?: (container: HTMLElement, instance: unknown) => void
+    fab?: (container: HTMLElement, instance: unknown) => void
+    groups: { items: { type?: string; render?: (container: HTMLElement, isEnabled: () => boolean, posClass?: string) => void }[] }[]
+  }) => {
+    const overlay = document.createElement('div');
+    const host = document.createElement('div');
+    overlay.appendChild(host);
+    for (const group of config.groups) {
+      for (const item of group.items) {
+        if (item.type === 'custom') item.render?.(host, () => true, '');
+      }
+    }
+    const instance = { overlay, close: vi.fn(), isMasterEnabled: () => true };
+    const header = document.createElement('div');
+    const fab = document.createElement('div');
+    overlay.append(header, fab);
+    config.headerAction?.(header, instance);
+    config.fab?.(fab, instance);
+    return Promise.resolve(instance);
+  }),
 }));
 
 vi.mock('./utils.js', async importOriginal => {
@@ -14,8 +35,9 @@ vi.mock('./utils.js', async importOriginal => {
 vi.mock('./actions.js', () => ({ runAction }));
 vi.mock('./device.js', () => ({ refreshKeyboxStatus }));
 vi.mock('./bridge.js', () => ({ exec, getModuleDir: () => '/data/adb/modules/specter' }));
+vi.mock('./subpage.js', () => ({ openSubPage }));
 
-import { mountKeyboxCatalog } from './keybox-catalog-ui.js';
+import { mountKeyboxCatalog, openKeyboxCatalogPage } from './keybox-catalog-ui.js';
 import { cfgInvalidate } from './cfg.js';
 
 const CATALOG = {
@@ -44,6 +66,7 @@ describe('keybox catalog', () => {
     runAction.mockClear();
     refreshKeyboxStatus.mockClear();
     exec.mockClear();
+    openSubPage.mockClear();
     exec.mockResolvedValue({ stdout: '', stderr: '', code: 0 });
   });
 
@@ -162,5 +185,20 @@ describe('keybox catalog', () => {
 
     expect(runAction).toHaveBeenCalledWith('keybox.sh');
     expect(onInstalled).toHaveBeenCalled();
+  });
+
+  it('opens the remote catalog page and mounts the catalog', async () => {
+    await openKeyboxCatalogPage();
+
+    const config = openSubPage.mock.calls[0]![0] as unknown as { title: string };
+    expect(config.title).toBe('Specter keyboxes');
+
+    const instance = await (openSubPage.mock.results[0]!.value as Promise<{ overlay: HTMLElement }>);
+    const container = instance.overlay;
+    expect(container.querySelector('#kb-catalog-filters')).not.toBeNull();
+
+    await vi.waitFor(() => {
+      expect(container.querySelectorAll('#kb-catalog-list .list-item')).toHaveLength(4);
+    });
   });
 });

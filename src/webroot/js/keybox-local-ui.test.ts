@@ -66,4 +66,5 @@ describe('local keybox form', () => {
     expect(exec).not.toHaveBeenCalled()
     expect(showToast).toHaveBeenCalled()
   })
+
 })

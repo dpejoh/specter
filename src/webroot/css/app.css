@@ -620,10 +620,15 @@ md-icon-button[hidden] {
   width: 100%;
 }
 
-.kb-source-switch {
+.kb-hub {
   width: 100%;
-  max-width: 800px;
-  margin: 0 auto;
+}
+
+.kb-install-btn {
+  width: 100%;
+  min-height: 56px;
+  margin: 12px 0 0;
+  --md-filled-button-container-shape: 9999px;
 }
 
 .list-item {
@@ -1588,13 +1593,6 @@ md-dialog {
   align-items: center;
   justify-content: center;
   padding: 32px 0;
-}
-
-.subpage-nav-cue {
-  color: var(--md-sys-color-on-surface-variant);
-  opacity: 0.6;
-  font-size: 22px;
-  flex-shrink: 0;
 }
 
 .private-dialog [slot="content"] {

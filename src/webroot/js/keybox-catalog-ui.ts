@@ -6,6 +6,7 @@ import { escapeHtml, fetchJson, shellEscape, updateListContainerCorners } from '
 import { runAction } from './actions.js';
 import { refreshKeyboxStatus } from './device.js';
 import { createFilterDropdown, type FilterDropdownHandle, type FilterOption } from './filter-dropdown.js';
+import { openSubPage } from './subpage.js';
 import type { CatalogEntry, CatalogJson } from './types.js';
 
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
@@ -20,6 +21,7 @@ export interface KeyboxCatalogHandle {
   load(): Promise<void>;
   install(): Promise<void>;
   canInstall(): boolean;
+  dispose(): void;
 }
 
 const AUTO_KEY = 'auto';
@@ -254,7 +256,7 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
       empty.innerHTML = `
         <md-icon aria-hidden="true">info</md-icon>
         <p>${statusFilter === 'active'
-          ? t('kb_catalog_empty', 'No active keyboxes for this source.')
+          ? t('kb_catalog_empty', 'No active keyboxes for this provider.')
           : t('kb_catalog_empty_all', 'No keyboxes available.')}</p>
       `;
       catalogBody.appendChild(empty);
@@ -284,7 +286,7 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
     if (!data?.entries) {
       entries = [];
       updateFab();
-      renderStatus('error', t('kb_catalog_error', "Couldn't load the keybox catalog."), true);
+      renderStatus('error', t('kb_catalog_error', "Couldn't load available keyboxes."), true);
       return;
     }
 
@@ -394,5 +396,73 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
     load: loadCatalog,
     install: installSelected,
     canInstall,
+    dispose: () => {
+      statusDropdown?.dispose();
+      providerDropdown?.dispose();
+    },
   };
+}
+
+export async function openKeyboxCatalogPage() {
+  let catalogContent: HTMLElement | null = null;
+  let refreshButton: HTMLElement | null = null;
+  let catalog: KeyboxCatalogHandle | null = null;
+
+  const instance = await openSubPage({
+    id: 'keybox-catalog',
+    title: t('kb_specter_keyboxes', 'Specter keyboxes'),
+    description: t('menu_import_keybox_desc', 'Browse available keyboxes and install one.'),
+    groups: [
+      {
+        items: [
+          {
+            type: 'custom',
+            id: 'kb-catalog-content',
+            render: (container) => {
+              container.innerHTML = `
+                <div id="kb-catalog-mount"></div>
+                <md-filled-button id="kb-catalog-install" class="kb-install-btn" disabled>
+                  <md-icon slot="icon" aria-hidden="true">check</md-icon>
+                  ${t('kb_catalog_install', 'Install')}
+                </md-filled-button>
+              `;
+              catalogContent = container.querySelector('#kb-catalog-mount');
+              container.parentElement?.classList.add('kb-page-container');
+            },
+          },
+        ],
+      },
+    ],
+    headerAction: (container) => {
+      container.innerHTML = `
+        <md-icon-button id="kb-catalog-refresh" aria-label="${t('kb_refresh_btn', 'Refresh')}">
+          <md-icon aria-hidden="true">refresh</md-icon>
+        </md-icon-button>
+      `;
+      refreshButton = container.querySelector('#kb-catalog-refresh');
+    },
+    onClose: () => {
+      catalog?.dispose();
+    },
+  });
+
+  if (!catalogContent) return;
+
+  const installButton = instance.overlay.querySelector('#kb-catalog-install') as
+    | (HTMLElement & { disabled: boolean })
+    | null;
+
+  catalog = mountKeyboxCatalog(catalogContent, {
+    refreshButton,
+    onStateChange: (canInstall) => {
+      if (installButton) installButton.disabled = !canInstall;
+    },
+    onInstalled: () => instance.close(),
+  });
+
+  installButton?.addEventListener('click', () => {
+    void catalog?.install();
+  });
+
+  void catalog.load();
 }
