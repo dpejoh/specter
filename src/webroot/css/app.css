@@ -578,6 +578,7 @@ code, pre {
 .danger-zone-title {
   color: var(--md-sys-color-error);
   margin-top: 24px;
+  margin-bottom: 0;
 }
 
 .danger-zone-desc {
