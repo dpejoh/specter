@@ -464,7 +464,7 @@
   "hma_live_reload": "Geste de rechargement automatisé",
   "hma_live_reload_desc": "Simule une pression longue sur la carte d'état de l'écran d'accueil de HMA-OSS pour déclencher un rechargement de sa configuration",
   "hma_info_title": "Emplacement de la liste des applications masquées",
-  "hma_info_text": "Les définitions des packages d'applications sont chargées depuis le fichier \"/data/adb/specter/config/hma-hide-list.txt\". La modification de ce fichier permet d'ajouter ou de supprimer des applications \"root\" à masquer."
+  "hma_info_text": "Les définitions des packages d'applications sont chargées depuis le fichier \"/data/adb/specter/config/hma-hide-list.txt\". La modification de ce fichier permet d'ajouter ou de supprimer des applications \"root\" à masquer.",
   "control_toggle_boot_hash": "Hachage de démarrage",
   "control_toggle_boot_hash_desc": "Corrige le hachage de démarrage (propriété système \"ro.boot.vbmeta.digest\") depuis le TEE",
   "control_toggle_boot_hash_master": "Correction du hachage de démarrage",
