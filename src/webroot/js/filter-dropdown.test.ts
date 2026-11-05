@@ -67,6 +67,22 @@ describe('filter dropdown', () => {
     expect(dropdown.element.querySelector('.filter-option--selected')?.textContent).toContain('TAKR')
   })
 
+  it('closes another filter when one opens', () => {
+    const first = makeDropdown()
+    const second = makeDropdown()
+    const firstTrigger = first.dropdown.element.querySelector('.filter-trigger') as HTMLButtonElement
+    const secondTrigger = second.dropdown.element.querySelector('.filter-trigger') as HTMLButtonElement
+    const firstMenu = first.dropdown.element.querySelector('.filter-menu') as HTMLElement
+    const secondMenu = second.dropdown.element.querySelector('.filter-menu') as HTMLElement
+
+    firstTrigger.click()
+    expect(firstMenu.hidden).toBe(false)
+
+    secondTrigger.click()
+    expect(firstMenu.hidden).toBe(true)
+    expect(secondMenu.hidden).toBe(false)
+  })
+
   it('closes on Escape and outside pointer events', () => {
     const { dropdown } = makeDropdown()
     const trigger = dropdown.element.querySelector('.filter-trigger') as HTMLButtonElement

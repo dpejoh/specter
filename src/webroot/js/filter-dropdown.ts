@@ -20,6 +20,8 @@ export interface FilterDropdownHandle {
   dispose(): void;
 }
 
+const OPEN_EVENT = 'filter-dropdown-open';
+
 export function createFilterDropdown(config: FilterDropdownConfig): FilterDropdownHandle {
   let options = [...config.options];
   let value = config.value;
@@ -72,6 +74,7 @@ export function createFilterDropdown(config: FilterDropdownConfig): FilterDropdo
   const close = () => {
     if (!open) return;
     open = false;
+    root.classList.remove('filter-dropdown--open');
     menu.hidden = true;
     trigger.setAttribute('aria-expanded', 'false');
     triggerIcon.textContent = 'expand_more';
@@ -142,6 +145,8 @@ export function createFilterDropdown(config: FilterDropdownConfig): FilterDropdo
   const openMenu = () => {
     if (open) return;
     open = true;
+    root.classList.add('filter-dropdown--open');
+    document.dispatchEvent(new CustomEvent(OPEN_EVENT, { detail: root }));
     renderMenu();
     menu.hidden = false;
     trigger.setAttribute('aria-expanded', 'true');
@@ -195,6 +200,11 @@ export function createFilterDropdown(config: FilterDropdownConfig): FilterDropdo
     renderMenu();
   };
 
+  const onOtherOpen = (event: Event) => {
+    if ((event as CustomEvent).detail !== root) close();
+  };
+  document.addEventListener(OPEN_EVENT, onOtherOpen);
+
   syncTrigger();
   renderMenu();
 
@@ -204,6 +214,9 @@ export function createFilterDropdown(config: FilterDropdownConfig): FilterDropdo
     setValue,
     getValue: () => value,
     close,
-    dispose: close,
+    dispose: () => {
+      close();
+      document.removeEventListener(OPEN_EVENT, onOtherOpen);
+    },
   };
 }

@@ -3279,7 +3279,9 @@ md-filled-tonal-button {
 
 .kb-catalog-filters {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
+  gap: 8px;
   padding: 0 0 16px;
 }
 
@@ -3289,6 +3291,10 @@ md-filled-tonal-button {
   display: inline-flex;
   flex-direction: column;
   align-items: flex-start;
+}
+
+.filter-dropdown--open {
+  z-index: 20;
 }
 
 .filter-trigger {
@@ -3331,7 +3337,7 @@ md-filled-tonal-button {
   min-width: 220px;
   padding: 8px;
   border-radius: 20px;
-  background: var(--md-sys-color-surface-container-lowest);
+  background: var(--md-sys-color-surface-container-low);
   box-shadow: 0 8px 24px #00000059;
 }
 

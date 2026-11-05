@@ -57,12 +57,20 @@ describe('keybox catalog', () => {
     const titles = rows.map(row => row.querySelector('.toggle-text')?.textContent?.trim());
     const descriptions = rows.map(row => row.querySelector('.supporting-text')?.textContent?.trim());
 
-    expect(container.querySelector('.filter-trigger-label')?.textContent).toBe('Active');
-    const trigger = container.querySelector('.filter-trigger') as HTMLButtonElement;
-    trigger.click();
-    const filterLabels = [...container.querySelectorAll('.filter-option span')]
+    const statusFilter = container.querySelector('[data-filter-id="kb-status-filter"]') as HTMLElement;
+    const providerFilter = container.querySelector('[data-filter-id="kb-provider-filter"]') as HTMLElement;
+    expect(statusFilter.querySelector('.filter-trigger-label')?.textContent).toBe('Active');
+    expect(providerFilter.querySelector('.filter-trigger-label')?.textContent).toBe('All providers');
+
+    (statusFilter.querySelector('.filter-trigger') as HTMLButtonElement).click();
+    const statusLabels = [...statusFilter.querySelectorAll('.filter-option span')]
       .map(option => option.textContent?.trim());
-    expect(filterLabels).toEqual(['Active', 'All', 'TAKR', 'Yuri', 'rkp']);
+    expect(statusLabels).toEqual(['Active', 'All']);
+
+    (providerFilter.querySelector('.filter-trigger') as HTMLButtonElement).click();
+    const providerLabels = [...providerFilter.querySelectorAll('.filter-option span')]
+      .map(option => option.textContent?.trim());
+    expect(providerLabels).toEqual(['All providers', 'TAKR', 'Yuri', 'rkp']);
 
     expect(titles).toHaveLength(4);
     expect(titles).toEqual([
@@ -80,9 +88,9 @@ describe('keybox catalog', () => {
     const catalog = mountKeyboxCatalog(container);
     await catalog.load();
 
-    const trigger = container.querySelector('.filter-trigger') as HTMLButtonElement;
-    trigger.click();
-    const allOption = [...container.querySelectorAll('.filter-option')]
+    const statusFilter = container.querySelector('[data-filter-id="kb-status-filter"]') as HTMLElement;
+    (statusFilter.querySelector('.filter-trigger') as HTMLButtonElement).click();
+    const allOption = [...statusFilter.querySelectorAll('.filter-option')]
       .find(option => option.querySelector('span')?.textContent?.trim() === 'All') as HTMLButtonElement;
     allOption.click();
 
@@ -102,6 +110,30 @@ describe('keybox catalog', () => {
     const revoked = rows.find(row => row.querySelector('.toggle-text')?.textContent?.includes('TAKR v34'));
     expect(revoked?.classList.contains('kb-catalog-row--disabled')).toBe(true);
     expect(revoked?.querySelector('md-radio')?.hasAttribute('disabled')).toBe(true);
+  });
+
+  it('filters by provider independently of status', async () => {
+    const container = makeContainer();
+    const catalog = mountKeyboxCatalog(container);
+    await catalog.load();
+
+    const statusFilter = container.querySelector('[data-filter-id="kb-status-filter"]') as HTMLElement;
+    (statusFilter.querySelector('.filter-trigger') as HTMLButtonElement).click();
+    const allOption = [...statusFilter.querySelectorAll('.filter-option')]
+      .find(option => option.querySelector('span')?.textContent?.trim() === 'All') as HTMLButtonElement;
+    allOption.click();
+
+    const providerFilter = container.querySelector('[data-filter-id="kb-provider-filter"]') as HTMLElement;
+    (providerFilter.querySelector('.filter-trigger') as HTMLButtonElement).click();
+    const takrOption = [...providerFilter.querySelectorAll('.filter-option')]
+      .find(option => option.querySelector('span')?.textContent?.trim() === 'TAKR') as HTMLButtonElement;
+    takrOption.click();
+
+    const titles = [...container.querySelectorAll('#kb-catalog-list .list-item')]
+      .map(row => row.querySelector('.toggle-text')?.textContent?.trim());
+
+    expect(providerFilter.querySelector('.filter-trigger-label')?.textContent).toBe('TAKR');
+    expect(titles).toEqual(['Automatic Recommended', 'TAKR v36', 'TAKR v35', 'TAKR v34']);
   });
 
   it('falls back to busybox wget when browser fetch is unavailable', async () => {
