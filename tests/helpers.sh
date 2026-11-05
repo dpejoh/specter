@@ -8,7 +8,7 @@ fail() { _label="$1" _detail="${2:-}"; _fail=$((_fail + 1)); echo "  FAIL  $_lab
 
 assert_eq() { _label="$1" _expected="$2" _actual="$3"; if [ "$_expected" = "$_actual" ]; then ok "$_label"; else fail "$_label" "expected [$_expected] got [$_actual]"; fi; }
 
-assert_contains() { _label="$1" _haystack="$2" _needle="$3"; case "$_haystack" in *"$_needle"*) ok "$_label" ;; *) fail "$_label" "expected to contain [$_needle]" ;; esac; }
+assert_contains() { _label="$1" _haystack="$2" _needle="$3"; case "$_haystack" in *"$_needle"*) ok "$_label" ;; *) fail "$_label" "expected to contain [$_needle] got [$_haystack]" ;; esac; }
 
 assert_not_contains() { _label="$1" _haystack="$2" _needle="$3"; case "$_haystack" in *"$_needle"*) fail "$_label" "unexpectedly contained [$_needle]" ;; *) ok "$_label" ;; esac; }
 

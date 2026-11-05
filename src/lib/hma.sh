@@ -712,11 +712,14 @@ _hma_install_config() {
 }
 
 _hma_tmp_base() {
-  if mkdir -p "$SPECTER_DIR/tmp" 2>/dev/null && : > "$SPECTER_DIR/tmp/.hma_probe" 2>/dev/null; then
+  if [ -n "${SPECTER_DIR:-}" ] && mkdir -p "$SPECTER_DIR/tmp" 2>/dev/null && : > "$SPECTER_DIR/tmp/.hma_probe" 2>/dev/null; then
     rm -f "$SPECTER_DIR/tmp/.hma_probe" 2>/dev/null || true
     printf '%s\n' "$SPECTER_DIR/tmp"
-  else
+  elif mkdir -p "/data/local/tmp" 2>/dev/null && : > "/data/local/tmp/.hma_probe" 2>/dev/null; then
+    rm -f "/data/local/tmp/.hma_probe" 2>/dev/null || true
     printf '%s\n' /data/local/tmp
+  else
+    printf '%s\n' "${TMPDIR:-/tmp}"
   fi
   return 0
 }
