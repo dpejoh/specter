@@ -5,10 +5,21 @@ import { API_URLS } from './constants.js';
 import { escapeHtml, fetchJson, shellEscape, updateListContainerCorners } from './utils.js';
 import { runAction } from './actions.js';
 import { refreshKeyboxStatus } from './device.js';
-import { openSubPage } from './subpage.js';
 import type { CatalogEntry, CatalogJson } from './types.js';
 
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
+
+export interface KeyboxCatalogOptions {
+  refreshButton?: HTMLElement | null;
+  onStateChange?: (canInstall: boolean) => void;
+  onInstalled?: () => void;
+}
+
+export interface KeyboxCatalogHandle {
+  load(): Promise<void>;
+  install(): Promise<void>;
+  canInstall(): boolean;
+}
 
 const AUTO_KEY = 'auto';
 
@@ -67,29 +78,27 @@ async function fetchCatalog(): Promise<CatalogJson | null> {
   return null;
 }
 
-export async function openKeyboxCatalogPage() {
-  const provider = (await cfgGet('keybox_provider', 'auto')) || 'auto';
-  let sourceFilter = provider === 'auto' ? '' : provider;
+export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalogOptions = {}): KeyboxCatalogHandle {
+  const { refreshButton = null, onStateChange, onInstalled } = options;
+  let sourceFilter = '';
   let entries: CatalogEntry[] = [];
   let selectedKey = AUTO_KEY;
   let selectedEntry: CatalogEntry | null = null;
-  let catalogRoot: HTMLElement | null = null;
-  let refreshBtn: HTMLElement | null = null;
-  let installFab: HTMLElement | null = null;
+  let catalogRoot: HTMLElement | null = container;
   let loading = false;
   let installing = false;
   let activeOnly = true;
-  let closePage: (() => void) | null = null;
 
   const activeInFilter = () =>
     entries.filter(entry => isActiveEntry(entry) && (!sourceFilter || entry.source === sourceFilter));
 
-  const updateFab = () => {
-    if (!installFab) return;
-    const enabled = !loading && !installing && (selectedEntry
+  const canInstall = () =>
+    !loading && !installing && (selectedEntry
       ? isActiveEntry(selectedEntry)
       : activeInFilter().length > 0);
-    installFab.toggleAttribute('disabled', !enabled);
+
+  const updateFab = () => {
+    onStateChange?.(canInstall());
   };
 
   const renderStatus = (icon: string, text: string, retry = false) => {
@@ -276,16 +285,23 @@ export async function openKeyboxCatalogPage() {
     updateListContainerCorners(list);
   };
 
+  let providerLoaded = false;
+
   async function loadCatalog() {
     if (loading) return;
+    if (!providerLoaded) {
+      const provider = (await cfgGet('keybox_provider', 'auto').catch(() => 'auto')) || 'auto';
+      if (provider !== 'auto') sourceFilter = provider;
+      providerLoaded = true;
+    }
     loading = true;
     updateFab();
-    refreshBtn?.setAttribute('disabled', '');
+    refreshButton?.setAttribute('disabled', '');
     renderLoading();
 
     const data = await fetchCatalog();
     loading = false;
-    refreshBtn?.removeAttribute('disabled');
+    refreshButton?.removeAttribute('disabled');
 
     if (!data?.entries) {
       entries = [];
@@ -343,7 +359,7 @@ export async function openKeyboxCatalogPage() {
           await exec(`sh ${shellEscape(moddir + '/refresh_desc.sh')}`).catch(() => {});
         }
         await refreshKeyboxStatus();
-        closePage?.();
+        onInstalled?.();
       }
     } finally {
       cfgSet('keybox_select_source', '');
@@ -353,63 +369,15 @@ export async function openKeyboxCatalogPage() {
     }
   }
 
-  const instance = await openSubPage({
-    id: 'keybox-catalog',
-    title: t('menu_import_keybox', 'Install Keybox'),
-    description: t('menu_import_keybox_desc', 'Choose an active keybox from the catalog.'),
-    groups: [
-      {
-        items: [
-          {
-            type: 'custom',
-            id: 'kb-catalog-content',
-            render: (container) => {
-              catalogRoot = container;
-              renderLoading();
-            },
-          },
-        ],
-      },
-    ],
-    headerAction: (container) => {
-      container.innerHTML = `
-        <md-icon-button id="kb-catalog-refresh" aria-label="${t('kb_refresh_btn', 'Refresh')}">
-          <md-icon aria-hidden="true">refresh</md-icon>
-        </md-icon-button>
-      `;
-      refreshBtn = container.querySelector('#kb-catalog-refresh');
-      refreshBtn?.addEventListener('click', () => {
-        void loadCatalog();
-      });
-    },
-    fab: (container) => {
-      container.innerHTML = `
-        <md-fab variant="primary" class="subpage-fab" id="kb-catalog-install" label="${t('kb_catalog_install', 'Install')}" disabled>
-          <md-icon slot="icon" aria-hidden="true">download</md-icon>
-        </md-fab>
-      `;
-      installFab = container.querySelector('#kb-catalog-install');
-      installFab?.addEventListener('click', () => {
-        void installSelected();
-      });
-      updateFab();
-    },
+  refreshButton?.addEventListener('click', () => {
+    void loadCatalog();
   });
+  renderLoading();
+  updateFab();
 
-  closePage = instance.close;
-  await loadCatalog();
-}
-
-export function wireKeyboxCatalog() {
-  const btn = document.getElementById('keybox-catalog-btn');
-  if (!btn || btn.dataset.spWired) return;
-  btn.dataset.spWired = '1';
-  btn.addEventListener('click', () => {
-    void openKeyboxCatalogPage();
-  });
-  btn.addEventListener('keydown', (event) => {
-    if (event.key !== 'Enter' && event.key !== ' ') return;
-    event.preventDefault();
-    void openKeyboxCatalogPage();
-  });
+  return {
+    load: loadCatalog,
+    install: installSelected,
+    canInstall,
+  };
 }

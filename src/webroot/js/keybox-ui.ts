@@ -1,302 +1,131 @@
-import { getModuleDir, exec } from './bridge.js';
-import { cfgGet, cfgSet } from './cfg.js';
 import { getTranslation } from './i18n.js';
-import { shellEscape } from './utils.js';
-import { showToast } from './toast.js';
-import { refreshKeyboxStatus } from './device.js';
 import { openSubPage } from './subpage.js';
-import type { MdSwitch } from '@material/web/switch/switch.js';
+import { mountKeyboxCatalog, type KeyboxCatalogHandle } from './keybox-catalog-ui.js';
+import { mountLocalKeyboxForm, type KeyboxLocalHandle } from './keybox-local-ui.js';
 
 const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
 export function wireKeybox() {
   const btn = document.getElementById('keybox-btn');
   if (!btn) return;
-  btn.addEventListener('click', openKeyboxPage);
-}
-
-export function openKeyboxPage() {
-  openSubPage({
-    id: 'keybox',
-    title: t('menu_keybox', 'Keybox'),
-    description: t('menu_keybox_desc', 'Install a catalog keybox or set a custom one.'),
-    groups: [
-      {
-        items: [
-          {
-            type: 'custom',
-            id: 'keybox-install-item',
-            render: (container, _isEnabled, posClass) => {
-              container.innerHTML = `
-                <div class="list-item ${posClass || 'list-item--first'}" id="keybox-install-row" role="button" tabindex="0">
-                  <div class="li-icon"><md-icon aria-hidden="true">key</md-icon></div>
-                  <div class="list-item-content">
-                    <div class="toggle-text">${t('menu_import_keybox', 'Install Keybox')}</div>
-                    <span class="supporting-text">${t('menu_import_keybox_desc', 'Choose an active keybox from the catalog')}</span>
-                  </div>
-                  <div class="spacer"></div>
-                  <md-icon class="subpage-nav-cue" aria-hidden="true">chevron_right</md-icon>
-                  <md-ripple></md-ripple>
-                </div>
-              `;
-              const row = container.querySelector('#keybox-install-row') as HTMLElement | null;
-              const open = () => {
-                void import('./keybox-catalog-ui.js').then(m => m.openKeyboxCatalogPage());
-              };
-              row?.addEventListener('click', open);
-              row?.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  open();
-                }
-              });
-            },
-          },
-          {
-            type: 'custom',
-            id: 'keybox-custom-item',
-            render: (container, _isEnabled, posClass) => {
-              container.innerHTML = `
-                <div class="list-item ${posClass || 'list-item--last'}" id="keybox-custom-row" role="button" tabindex="0">
-                  <div class="li-icon"><md-icon aria-hidden="true">settings</md-icon></div>
-                  <div class="list-item-content">
-                    <div class="toggle-text">${t('menu_custom_keybox', 'Set Custom Keybox')}</div>
-                    <span class="supporting-text">${t('menu_custom_keybox_desc', 'Use your own keybox file, URL, or device path')}</span>
-                  </div>
-                  <div class="spacer"></div>
-                  <md-icon class="subpage-nav-cue" aria-hidden="true">chevron_right</md-icon>
-                  <md-ripple></md-ripple>
-                </div>
-              `;
-              const row = container.querySelector('#keybox-custom-row') as HTMLElement | null;
-              const open = () => {
-                void openCustomKeyboxDialog();
-              };
-              row?.addEventListener('click', open);
-              row?.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  open();
-                }
-              });
-            },
-          },
-        ],
-      },
-    ],
+  btn.addEventListener('click', () => {
+    void openKeyboxPage();
   });
 }
 
-export async function openCustomKeyboxDialog() {
-  const [{ openFileBrowser }, existingVal] = await Promise.all([
-    import('./file-browser.js'),
-    cfgGet('keybox_custom_value', ''),
-  ]);
+export async function openKeyboxPage() {
+  let source: 'remote' | 'local' = 'remote';
+  let refreshButton: HTMLElement | null = null;
+  let fab: (HTMLElement & { label: string; disabled: boolean }) | null = null;
+  let catalog: KeyboxCatalogHandle | null = null;
+  let local: KeyboxLocalHandle | null = null;
+  let page: { overlay: HTMLElement; close: () => void } | null = null;
 
-  let selectedFilePath = existingVal || '';
-  let urlInputEl: HTMLInputElement | null = null;
-  let fileSubtitleEl: HTMLElement | null = null;
-  let fileIconEl: HTMLElement | null = null;
-
-  const updateFileUI = (val: string) => {
-    if (fileSubtitleEl) {
-      if (val) {
-        fileSubtitleEl.textContent = val.split('/').pop() || val;
-        fileSubtitleEl.style.color = 'var(--md-sys-color-primary)';
-        fileSubtitleEl.style.fontWeight = '500';
-      } else {
-        fileSubtitleEl.textContent = t('custom_kb_file_desc', 'Select a keybox XML file from your device');
-        fileSubtitleEl.style.color = '';
-        fileSubtitleEl.style.fontWeight = '';
-      }
-    }
-    if (fileIconEl) {
-      fileIconEl.textContent = val ? 'vpn_key' : 'upload_file';
+  const applySource = () => {
+    if (!page) return;
+    const remotePane = page.overlay.querySelector('#kb-remote-pane') as HTMLElement | null;
+    const localPane = page.overlay.querySelector('#kb-local-pane') as HTMLElement | null;
+    if (remotePane) remotePane.hidden = source !== 'remote';
+    if (localPane) localPane.hidden = source !== 'local';
+    if (refreshButton) refreshButton.hidden = source !== 'remote';
+    if (fab) {
+      fab.label = source === 'remote'
+        ? t('kb_catalog_install', 'Install')
+        : t('custom_kb_apply', 'Apply');
+      fab.disabled = source === 'remote' ? !(catalog?.canInstall() ?? false) : false;
     }
   };
 
-  openSubPage({
-    id: 'custom-keybox',
-    title: t('custom_kb_title', 'Custom Keybox'),
-    headerAction: (container, instance) => {
-      container.innerHTML = `
-        <md-icon-button id="kb-clear" aria-label="${t('custom_kb_clear', 'Clear')}">
-          <md-icon aria-hidden="true">delete_outline</md-icon>
-        </md-icon-button>
-      `;
-
-      const clearBtn = container.querySelector('#kb-clear') as HTMLElement | null;
-      clearBtn?.addEventListener('click', async () => {
-        cfgSet('keybox_custom_type', '');
-        cfgSet('keybox_custom_value', '');
-        cfgSet('keybox_private', '');
-        selectedFilePath = '';
-        if (urlInputEl) urlInputEl.value = '';
-        updateFileUI('');
-        showToast(t('custom_kb_cleared', 'Custom keybox cleared'), { icon: 'info', type: 'info', autoCloseDelay: 2500 });
-        instance.close();
-      });
-    },
+  page = await openSubPage({
+    id: 'keybox',
+    title: t('menu_keybox', 'Keybox'),
+    description: t('menu_keybox_desc', 'Choose a remote keybox or apply a local one.'),
     groups: [
       {
         items: [
           {
             type: 'custom',
-            id: 'kb-file-picker-item',
-            render: (container, _isEnabled, posClass) => {
+            id: 'kb-page',
+            render: (container) => {
+              container.className = 'kb-page';
               container.innerHTML = `
-                <div class="list-item ${posClass || 'list-item--first'}" id="kb-file-row" style="cursor: pointer; padding: 14px 16px;">
-                  <div class="li-icon"><md-icon id="kb-file-icon" aria-hidden="true">${selectedFilePath ? 'vpn_key' : 'upload_file'}</md-icon></div>
-                  <div class="list-item-content">
-                    <div class="toggle-text">${t('custom_kb_file', 'Import File')}</div>
-                    <span class="supporting-text" id="kb-file-subtitle" style="${selectedFilePath ? 'color: var(--md-sys-color-primary); font-weight: 500;' : ''}">
-                      ${selectedFilePath ? selectedFilePath.split('/').pop() : t('custom_kb_file_desc', 'Select a keybox XML file from your device')}
-                    </span>
-                  </div>
-                  <div class="spacer"></div>
-                  <md-filled-tonal-button id="kb-browse-btn" style="flex-shrink: 0; --md-filled-tonal-button-container-shape: 9999px; border-radius: 9999px;">
-                    <md-icon slot="icon" aria-hidden="true">folder_open</md-icon>
-                    ${t('custom_kb_browse', 'Browse Files')}
-                  </md-filled-tonal-button>
-                  <md-ripple></md-ripple>
+                <div class="kb-source-switch">
+                  <md-outlined-segmented-button-set id="kb-source-set">
+                    <md-outlined-segmented-button value="remote" label="${t('kb_source_remote', 'Remote')}" selected></md-outlined-segmented-button>
+                    <md-outlined-segmented-button value="local" label="${t('kb_source_local', 'Local')}"></md-outlined-segmented-button>
+                  </md-outlined-segmented-button-set>
+                </div>
+                <div id="kb-remote-pane">
+                  <div id="kb-remote-content"></div>
+                </div>
+                <div id="kb-local-pane" hidden>
+                  <div class="list-container" id="kb-local-content"></div>
                 </div>
               `;
 
-              fileSubtitleEl = container.querySelector('#kb-file-subtitle');
-              fileIconEl = container.querySelector('#kb-file-icon');
-              const browseBtn = container.querySelector('#kb-browse-btn');
-              const fileRow = container.querySelector('#kb-file-row');
-
-              const onPick = () => {
-                openFileBrowser((filePath: string) => {
-                  selectedFilePath = filePath;
-                  updateFileUI(filePath);
-                  if (urlInputEl) urlInputEl.value = filePath;
-                }, {
-                  title: t('fb_internal_storage', 'Internal storage'),
+              const sourceSet = container.querySelector('#kb-source-set');
+              const sourceButtons = sourceSet
+                ? [...sourceSet.querySelectorAll<HTMLElement & { selected: boolean }>('md-outlined-segmented-button')]
+                : [];
+              sourceButtons.forEach((button) => {
+                button.addEventListener('click', () => {
+                  source = (button.getAttribute('value') as 'remote' | 'local') || 'remote';
+                  sourceButtons.forEach(candidate => {
+                    const isSelected = candidate === button;
+                    candidate.selected = isSelected;
+                    candidate.toggleAttribute('selected', isSelected);
+                  });
+                  applySource();
                 });
-              };
-
-              fileRow?.addEventListener('click', onPick);
-              browseBtn?.addEventListener('click', (e) => {
-                e.stopPropagation();
-                onPick();
               });
             },
-          },
-          {
-            type: 'custom',
-            id: 'kb-url-path-item',
-            render: (container, _isEnabled, posClass) => {
-              container.innerHTML = `
-                <div class="list-item ${posClass || 'list-item--last'}" style="flex-direction: column; align-items: stretch; gap: 8px; cursor: default; padding: 14px 16px;">
-                  <div style="display: flex; align-items: center; gap: 14px;">
-                    <div class="li-icon"><md-icon aria-hidden="true">link</md-icon></div>
-                    <div class="list-item-content">
-                      <div class="toggle-text">${t('custom_kb_url', 'URL or Path')}</div>
-                      <span class="supporting-text">${t('custom_kb_desc', 'Paste a download URL or enter a device path')}</span>
-                    </div>
-                  </div>
-                  <div class="subpage-text-input-wrap">
-                    <input
-                      type="text"
-                      id="kb-url-input"
-                      class="subpage-full-input"
-                      placeholder="${t('kb_url_placeholder', 'https://example.com/keybox.xml or /sdcard/keybox.xml')}"
-                      value="${selectedFilePath}"
-                      aria-label="${t('custom_kb_url', 'URL or Path')}"
-                    />
-                    <md-icon-button id="kb-paste-btn" aria-label="${t('kb_paste_aria', 'Paste from clipboard')}">
-                      <md-icon aria-hidden="true">content_paste</md-icon>
-                    </md-icon-button>
-                  </div>
-                </div>
-              `;
-
-              urlInputEl = container.querySelector('#kb-url-input');
-              const pasteBtn = container.querySelector('#kb-paste-btn');
-
-              urlInputEl?.addEventListener('input', () => {
-                selectedFilePath = urlInputEl?.value.trim() || '';
-                updateFileUI(selectedFilePath);
-              });
-
-              pasteBtn?.addEventListener('click', async () => {
-                try {
-                  const text = await navigator.clipboard.readText();
-                  if (text && urlInputEl) {
-                    urlInputEl.value = text.trim();
-                    selectedFilePath = text.trim();
-                    updateFileUI(selectedFilePath);
-                  }
-                } catch (e) {
-                  console.warn('Clipboard read failed:', e);
-                }
-              });
-            },
-          },
-        ],
-      },
-      {
-        items: [
-          {
-            id: 'kb-private-switch',
-            key: 'keybox_private',
-            defaultVal: '0',
-            icon: 'lock',
-            title: t('custom_kb_private_toggle', 'Private Keybox'),
-            description: t('custom_kb_private_desc', 'Hide certificate subject and serial in keybox information'),
           },
         ],
       },
     ],
-    fab: (container, instance) => {
+    headerAction: (container) => {
       container.innerHTML = `
-        <md-fab id="kb-apply" class="subpage-fab" label="${t('custom_kb_apply', 'Apply')}">
-          <md-icon slot="icon">check</md-icon>
+        <md-icon-button id="kb-refresh" aria-label="${t('kb_refresh_btn', 'Refresh')}">
+          <md-icon aria-hidden="true">refresh</md-icon>
+        </md-icon-button>
+      `;
+      refreshButton = container.querySelector('#kb-refresh');
+    },
+    fab: (container) => {
+      container.innerHTML = `
+        <md-fab variant="primary" class="subpage-fab" id="kb-fab" label="${t('kb_catalog_install', 'Install')}" disabled>
+          <md-icon slot="icon" aria-hidden="true">download</md-icon>
         </md-fab>
       `;
-
-      const applyBtn = container.querySelector('#kb-apply') as any;
-      applyBtn?.addEventListener('click', async () => {
-        const text = urlInputEl?.value.trim() || selectedFilePath.trim();
-
-        if (!text) {
-          showToast(t('toast_enter_url', 'Enter a URL or device path'), { icon: 'error', type: 'error', autoCloseDelay: 2500 });
+      fab = container.querySelector('#kb-fab');
+      fab?.addEventListener('click', async () => {
+        if (source === 'remote') {
+          await catalog?.install();
           return;
         }
-
-        applyBtn.disabled = true;
+        if (!local || !fab) return;
+        fab.disabled = true;
         try {
-          const pSwitch = instance.overlay.querySelector('#kb-private-switch') as MdSwitch | null;
-          if (pSwitch?.selected) {
-            cfgSet('keybox_private', 'true');
-          } else {
-            cfgSet('keybox_private', '');
-          }
-
-          if (text.startsWith('http://') || text.startsWith('https://')) {
-            cfgSet('keybox_custom_type', 'url');
-          } else {
-            cfgSet('keybox_custom_type', 'path');
-          }
-          cfgSet('keybox_custom_value', text);
-
-          const moddir = getModuleDir();
-          const result: any = await exec(`sh ${shellEscape(moddir + '/features/keybox.sh')}`);
-          if (result.code === 0) {
-            showToast(t('custom_kb_installed', 'Custom keybox installed'), { icon: 'check_circle', type: 'success', autoCloseDelay: 3000 });
-            await exec(`sh ${shellEscape(moddir + '/features/keybox_info.sh')}`).catch(() => {});
-            await exec(`sh ${shellEscape(moddir + '/refresh_desc.sh')}`).catch(() => {});
-            await refreshKeyboxStatus();
-            instance.close();
-          } else {
-            showToast(t('custom_kb_install_failed', 'Install failed'), { icon: 'error', type: 'error', autoCloseDelay: 5000 });
-          }
+          await local.apply();
         } finally {
-          applyBtn.disabled = false;
+          if (fab) fab.disabled = false;
         }
       });
     },
   });
+
+  const remoteContent = page.overlay.querySelector('#kb-remote-content') as HTMLElement;
+  const localContent = page.overlay.querySelector('#kb-local-content') as HTMLElement;
+
+  catalog = mountKeyboxCatalog(remoteContent, {
+    refreshButton,
+    onStateChange: () => applySource(),
+    onInstalled: () => page?.close(),
+  });
+  local = await mountLocalKeyboxForm(localContent, {
+    onInstalled: () => page?.close(),
+  });
+
+  applySource();
+  void catalog.load();
 }

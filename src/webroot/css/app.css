@@ -604,8 +604,22 @@ code, pre {
 }
 
 .list-title[hidden],
-.list-container[hidden] {
+.list-container[hidden],
+md-icon-button[hidden] {
   display: none !important;
+}
+
+.kb-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.kb-source-switch {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
 .list-item {

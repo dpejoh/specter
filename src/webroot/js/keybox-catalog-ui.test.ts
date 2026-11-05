@@ -1,26 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { openSubPage, fetchJson, runAction, refreshKeyboxStatus, exec } = vi.hoisted(() => ({
-  openSubPage: vi.fn(async (config: {
-    groups: { items: { type?: string; render?: (container: HTMLElement, isEnabled: () => boolean, posClass?: string) => void }[] }[];
-  }) => {
-    const overlay = document.createElement('div');
-    const container = document.createElement('div');
-    overlay.appendChild(container);
-    for (const group of config.groups) {
-      for (const item of group.items) {
-        if (item.type === 'custom') item.render?.(container, () => true, '');
-      }
-    }
-    return { overlay, close: vi.fn(), isMasterEnabled: () => true };
-  }),
+const { fetchJson, runAction, refreshKeyboxStatus, exec } = vi.hoisted(() => ({
   fetchJson: vi.fn(),
   runAction: vi.fn(async () => 0),
   refreshKeyboxStatus: vi.fn(async () => {}),
   exec: vi.fn(async (_command: string) => ({ stdout: '', stderr: '', code: 0 })),
 }));
 
-vi.mock('./subpage.js', () => ({ openSubPage }));
 vi.mock('./utils.js', async importOriginal => {
   const actual = await importOriginal<typeof import('./utils.js')>();
   return { ...actual, fetchJson };
@@ -29,7 +15,8 @@ vi.mock('./actions.js', () => ({ runAction }));
 vi.mock('./device.js', () => ({ refreshKeyboxStatus }));
 vi.mock('./bridge.js', () => ({ exec, getModuleDir: () => '/data/adb/modules/specter' }));
 
-import { openKeyboxCatalogPage } from './keybox-catalog-ui.js';
+import { mountKeyboxCatalog } from './keybox-catalog-ui.js';
+import { cfgInvalidate } from './cfg.js';
 
 const CATALOG = {
   entries: [
@@ -42,9 +29,16 @@ const CATALOG = {
   ],
 };
 
-describe('keybox catalog page', () => {
+function makeContainer(): HTMLElement {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  return container;
+}
+
+describe('keybox catalog', () => {
   beforeEach(() => {
-    openSubPage.mockClear();
+    document.body.innerHTML = '';
+    cfgInvalidate();
     fetchJson.mockReset();
     fetchJson.mockResolvedValue(CATALOG);
     runAction.mockClear();
@@ -54,15 +48,9 @@ describe('keybox catalog page', () => {
   });
 
   it('lists only active keyboxes and an automatic option', async () => {
-    await openKeyboxCatalogPage();
-
-    const config = openSubPage.mock.calls[0]![0] as unknown as {
-      title: string;
-    };
-    const instance = await openSubPage.mock.results[0]!.value as { overlay: HTMLElement };
-    const container = instance.overlay.firstElementChild as HTMLElement;
-
-    expect(config.title).toBe('Install Keybox');
+    const container = makeContainer();
+    const catalog = mountKeyboxCatalog(container);
+    await catalog.load();
 
     const list = container.querySelector('#kb-catalog-list');
     const rows = list ? [...list.querySelectorAll('.list-item')] : [];
@@ -90,10 +78,10 @@ describe('keybox catalog page', () => {
   });
 
   it('shows inactive keyboxes when the Active filter is turned off', async () => {
-    await openKeyboxCatalogPage();
+    const container = makeContainer();
+    const catalog = mountKeyboxCatalog(container);
+    await catalog.load();
 
-    const instance = await openSubPage.mock.results[0]!.value as { overlay: HTMLElement };
-    const container = instance.overlay.firstElementChild as HTMLElement;
     const activeChip = [...container.querySelectorAll('md-filter-chip')]
       .find(chip => (chip as HTMLElement & { label: string }).label === 'Active') as HTMLElement;
 
@@ -129,13 +117,27 @@ describe('keybox catalog page', () => {
     fetchJson.mockResolvedValue(null);
     exec.mockResolvedValue({ stdout: JSON.stringify(CATALOG), stderr: '', code: 0 });
 
-    await openKeyboxCatalogPage();
+    const container = makeContainer();
+    const catalog = mountKeyboxCatalog(container);
+    await catalog.load();
 
-    const instance = await openSubPage.mock.results[0]!.value as { overlay: HTMLElement };
-    const container = instance.overlay.firstElementChild as HTMLElement;
     const rows = container.querySelectorAll('#kb-catalog-list .list-item');
-
     expect(exec.mock.calls[0]![0]).toContain('busybox wget');
     expect(rows).toHaveLength(4);
+  });
+
+  it('installs the selected catalog entry', async () => {
+    const container = makeContainer();
+    const onInstalled = vi.fn();
+    const catalog = mountKeyboxCatalog(container, { onInstalled });
+    await catalog.load();
+
+    const row = [...container.querySelectorAll('#kb-catalog-list .list-item')]
+      .find(el => el.querySelector('.toggle-text')?.textContent?.includes('rkp r4')) as HTMLElement;
+    row.click();
+    await catalog.install();
+
+    expect(runAction).toHaveBeenCalledWith('keybox.sh');
+    expect(onInstalled).toHaveBeenCalled();
   });
 });
