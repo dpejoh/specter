@@ -17,7 +17,8 @@
 #   - chowns the file back to system:system (issue #158)
 
 HMAOSS_PKG="org.frknkrc44.hma_oss"
-HMAOSS_TEMPLATE="HIDE MY CUSTOM APP"
+HMAOSS_TEMPLATE="Hide List"
+HMAOSS_LEGACY_TEMPLATE="HIDE MY CUSTOM APP"
 HMAOSS_HIDE_LIST="hma-hide-list.txt"
 : "${HMAOSS_CMD_TIMEOUT:=20}"
 : "${HMAOSS_MERGE_TIMEOUT:=45}"
@@ -168,7 +169,7 @@ _hma_build_scope() {
 _hma_merge_config() {
   _hmc_base="$1" _hmc_apps="$2" _hmc_scope="$3" _hmc_default="$4" _hmc_out="$5" _hmc_skip="${6:-}"
   _hmc_timeout="${7:-$HMAOSS_MERGE_TIMEOUT}"
-  _hma_timeout "$_hmc_timeout" awk -v cfg="$_hmc_base" -v tpl="$HMAOSS_TEMPLATE" -v applist="$_hmc_apps" \
+  _hma_timeout "$_hmc_timeout" awk -v cfg="$_hmc_base" -v tpl="$HMAOSS_TEMPLATE" -v legacytpl="$HMAOSS_LEGACY_TEMPLATE" -v applist="$_hmc_apps" \
       -v scopefile="$_hmc_scope" -v deffile="$_hmc_default" -v skiptpl="$_hmc_skip" '
 function jesc(s) { gsub(/\\/, "\\\\", s); gsub(/"/, "\\\"", s); return s }
 
@@ -262,6 +263,11 @@ BEGIN {
   close(cfg)
   RS = "\n"
   if (raw == "") raw = "{}"
+
+  # Rename the legacy Specter template and every reference to it in place.
+  if (legacytpl != "" && legacytpl != tpl) {
+    gsub("\"" jesc(legacytpl) "\"", "\"" jesc(tpl) "\"", raw)
+  }
 
   tokenize(raw)
   if (tn < 2 || tk[1] != "{") exit 3

@@ -36,7 +36,7 @@ printf 'com.keep.app\t{"old":"keep"}\ncom.new.app\t{"std":"scope"}\n' > "$_hm_sc
 
 _hm_base="$TEST_ROOT/base1.json"
 cat > "$_hm_base" << 'EOF'
-{"configVersion":93,"detailLog":true,"templates":{"USER TPL":{"isWhitelist":true,"appList":["a"]},"HIDE MY CUSTOM APP":{"isWhitelist":true,"appList":["old"]}},"scope":{"com.keep.app":{"useWhitelist":true,"extraAppList":["x"]}},"defaultConfig":null,"xFuture":{"deep":[1,2,{"k":"v"}]}}
+{"configVersion":93,"detailLog":true,"templates":{"USER TPL":{"isWhitelist":true,"appList":["a"]},"Hide List":{"isWhitelist":true,"appList":["old"]}},"scope":{"com.keep.app":{"useWhitelist":true,"extraAppList":["x"]}},"defaultConfig":null,"xFuture":{"deep":[1,2,{"k":"v"}]}}
 EOF
 _hma_merge_config "$_hm_base" "$_hm_applist" "$_hm_scope" "$_hm_default" "$TEST_ROOT/merged1.json"
 assert_exit_code "merge: existing config succeeds" 0 "$?"
@@ -46,7 +46,7 @@ assert_contains "merge: user global preserved" "$_hm_out" '"detailLog":true'
 assert_contains "merge: user template preserved" "$_hm_out" '"USER TPL"'
 assert_contains "merge: unknown member preserved" "$_hm_out" '"xFuture":{"deep":[1,2,{"k":"v"}]}'
 assert_not_contains "merge: old template list replaced" "$_hm_out" '["old"]'
-assert_contains "merge: template rewritten" "$_hm_out" '"HIDE MY CUSTOM APP":{"isWhitelist":false,"appList":["me.weishu.kernelsu","com.topjohnwu.magisk"]}'
+assert_contains "merge: template rewritten" "$_hm_out" '"Hide List":{"isWhitelist":false,"appList":["me.weishu.kernelsu","com.topjohnwu.magisk"]}'
 assert_contains "merge: existing scope entry untouched" "$_hm_out" '"com.keep.app":{"useWhitelist":true,"extraAppList":["x"]}'
 assert_contains "merge: new scope entry added" "$_hm_out" '"com.new.app":{"std":"scope"}'
 assert_contains "merge: defaultConfig replaced" "$_hm_out" '"defaultConfig":{"std":"default"}'
@@ -56,13 +56,23 @@ assert_eq "merge: kept app not duplicated" "1" "$_hm_dup"
 assert_eq "merge: parses as JSON" "defaultConfig,detailLog,scope,templates,xFuture" "$(_hma_pyval "$TEST_ROOT/merged1.json" "','.join(sorted(d.keys()))")"
 assert_eq "merge: scope keys exact" "com.keep.app,com.new.app" "$(_hma_pyval "$TEST_ROOT/merged1.json" "','.join(sorted(d['scope'].keys()))")"
 
+# ---------- merge: legacy template name is migrated ----------
+printf '%s' '{"templates":{"HIDE MY CUSTOM APP":{"isWhitelist":false,"appList":["old"]}},"scope":{"com.legacy":{"applyTemplates":["HIDE MY CUSTOM APP"]}},"defaultConfig":{"applyTemplates":["HIDE MY CUSTOM APP"]}}' > "$TEST_ROOT/base11.json"
+_hma_merge_config "$TEST_ROOT/base11.json" "$_hm_applist" "$_hm_scope" "$_hm_default" "$TEST_ROOT/merged11.json"
+assert_exit_code "merge: legacy template migration succeeds" 0 "$?"
+_hm_legacy=$(cat "$TEST_ROOT/merged11.json")
+assert_contains "merge: legacy template renamed" "$_hm_legacy" '"Hide List":'
+assert_not_contains "merge: legacy template name removed" "$_hm_legacy" 'HIDE MY CUSTOM APP'
+assert_contains "merge: legacy scope reference migrated" "$_hm_legacy" '"applyTemplates":["Hide List"]'
+assert_contains "merge: legacy default reference migrated" "$_hm_legacy" '"defaultConfig":{"applyTemplates":["Hide List"]}'
+
 # ---------- merge: fresh empty base ----------
 printf '{}' > "$TEST_ROOT/base2.json"
 _hma_merge_config "$TEST_ROOT/base2.json" "$_hm_applist" "$_hm_scope" "$_hm_default" "$TEST_ROOT/merged2.json"
 assert_exit_code "merge: empty base succeeds" 0 "$?"
 assert_eq "merge: fresh keys" "defaultConfig,scope,templates" "$(_hma_pyval "$TEST_ROOT/merged2.json" "','.join(sorted(d.keys()))")"
 assert_eq "merge: fresh scope keys" "com.keep.app,com.new.app" "$(_hma_pyval "$TEST_ROOT/merged2.json" "','.join(sorted(d['scope'].keys()))")"
-assert_eq "merge: fresh template apps" "me.weishu.kernelsu,com.topjohnwu.magisk" "$(_hma_pyval "$TEST_ROOT/merged2.json" "','.join(d['templates']['HIDE MY CUSTOM APP']['appList'])")"
+assert_eq "merge: fresh template apps" "me.weishu.kernelsu,com.topjohnwu.magisk" "$(_hma_pyval "$TEST_ROOT/merged2.json" "','.join(d['templates']['Hide List']['appList'])")"
 
 # ---------- merge: configVersion first / middle / last / only ----------
 printf '{"configVersion":1,"a":2}' > "$TEST_ROOT/base3.json"
@@ -83,16 +93,16 @@ _hma_merge_config "$TEST_ROOT/base6.json" "$_hm_applist" "$_hm_scope" "$_hm_defa
 assert_eq "merge: user defaultConfig kept" "{'mine': True}" "$(_hma_pyval "$TEST_ROOT/merged6.json" "str(d['defaultConfig'])")"
 
 # ---------- merge: empty hide list keeps the existing template ----------
-printf '{"templates":{"HIDE MY CUSTOM APP":{"isWhitelist":false,"appList":["keepme"]}}}' > "$TEST_ROOT/base9.json"
+printf '{"templates":{"Hide List":{"isWhitelist":false,"appList":["keepme"]}}}' > "$TEST_ROOT/base9.json"
 : > "$TEST_ROOT/apps-empty.txt"
 _hma_merge_config "$TEST_ROOT/base9.json" "$TEST_ROOT/apps-empty.txt" "$_hm_scope" "$_hm_default" "$TEST_ROOT/merged9.json" "1"
 assert_exit_code "merge: empty hide list succeeds" 0 "$?"
-assert_eq "merge: empty hide list keeps template" "['keepme']" "$(_hma_pyval "$TEST_ROOT/merged9.json" "str(d['templates']['HIDE MY CUSTOM APP']['appList'])")"
+assert_eq "merge: empty hide list keeps template" "['keepme']" "$(_hma_pyval "$TEST_ROOT/merged9.json" "str(d['templates']['Hide List']['appList'])")"
 assert_eq "merge: empty hide list still adds scope" "True" "$(_hma_pyval "$TEST_ROOT/merged9.json" "'com.new.app' in d['scope']")"
 
 # ---------- merge: value straddling the 1 KB tokenizer chunk boundary ----------
 _hm_pad=$(printf '%*s' 1200 '' | tr ' ' 'x')
-printf '{"templates":{"HIDE MY CUSTOM APP":{"appList":[]}},"note":"%s","k":1}' "$_hm_pad" > "$TEST_ROOT/base10.json"
+printf '{"templates":{"Hide List":{"appList":[]}},"note":"%s","k":1}' "$_hm_pad" > "$TEST_ROOT/base10.json"
 _hma_merge_config "$TEST_ROOT/base10.json" "$_hm_applist" "$_hm_scope" "$_hm_default" "$TEST_ROOT/merged10.json"
 assert_exit_code "merge: 1 KB boundary succeeds" 0 "$?"
 assert_eq "merge: long value preserved" "1200" "$(_hma_pyval "$TEST_ROOT/merged10.json" "len(d['note'])")"
@@ -102,7 +112,7 @@ assert_eq "merge: boundary output valid" "1" "$(_hma_pyval "$TEST_ROOT/merged10.
 cat > "$TEST_ROOT/base7.json" << 'EOF'
 {
   "templates": {
-    "HIDE MY CUSTOM APP": {"isWhitelist": true, "appList": ["x"]},
+    "Hide List": {"isWhitelist": true, "appList": ["x"]},
     "T2": {"isWhitelist": false, "appList": ["y"]}
   },
   "note": "keep \"quotes\" and \\ backslash",
@@ -154,7 +164,7 @@ assert_file_exists "feature: backup written" "${_hm_cfg}.specter.bak"
 assert_eq "feature: preexisting kept" "{'useWhitelist': True, 'extraAppList': ['z']}" "$(_hma_pyval "$_hm_cfg" "str(d['scope']['com.preexisting'])")"
 assert_eq "feature: new app targeted" "True" "$(_hma_pyval "$_hm_cfg" "'com.newapp' in d['scope']")"
 assert_eq "feature: hma app not targeted" "False" "$(_hma_pyval "$_hm_cfg" "'org.frknkrc44.hma_oss' in d['scope']")"
-assert_eq "feature: hidden template filtered" "['me.weishu.kernelsu']" "$(_hma_pyval "$_hm_cfg" "d['templates']['HIDE MY CUSTOM APP']['appList']")"
+assert_eq "feature: hidden template filtered" "['me.weishu.kernelsu']" "$(_hma_pyval "$_hm_cfg" "d['templates']['Hide List']['appList']")"
 assert_eq "feature: configVersion absent" "False" "$(_hma_pyval "$_hm_cfg" "'configVersion' in d")"
 assert_eq "feature: defaultConfig set" "False" "$(_hma_pyval "$_hm_cfg" "d['defaultConfig'] is None")"
 
