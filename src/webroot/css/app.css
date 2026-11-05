@@ -3252,13 +3252,14 @@ md-filled-tonal-button {
 .list-item--radio {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 24px;
+  padding-inline: 30px;
   cursor: pointer;
 }
 
 .list-item--radio md-radio {
   flex-shrink: 0;
-  margin-left: -4px;
+  margin-inline-start: -4px;
 }
 
 .subpage-radio-badge {
@@ -3488,6 +3489,10 @@ md-filled-tonal-button {
 
 .subpage-options-wrapper .list-container .list-item {
   padding: 14px 16px;
+}
+
+.subpage-options-wrapper .list-container .list-item.list-item--radio {
+  padding-inline: 30px;
 }
 
 .subpage-options-wrapper .list-container .list-item:only-child:not(.list-item--first):not(.list-item--middle):not(.list-item--last) {
