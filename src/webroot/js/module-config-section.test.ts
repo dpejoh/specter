@@ -1,0 +1,89 @@
+import { describe, expect, it, beforeEach, vi } from 'vitest'
+import { readFileSync } from 'fs'
+import { resolve } from 'path'
+
+vi.mock('./modules.js', () => ({
+  isAnyModuleInstalled: vi.fn(),
+}))
+
+import { isAnyModuleInstalled } from './modules.js'
+import { updateModuleConfigSectionVisibility } from './module-config-section.js'
+
+beforeEach(() => {
+  vi.mocked(isAnyModuleInstalled).mockReset()
+  document.body.innerHTML = `
+    <h2 id="module-config-title" hidden>Module Configs</h2>
+    <div id="module-config-section" hidden>
+      <div id="module-config-hma" hidden></div>
+      <div id="module-config-zygisk-next" hidden></div>
+    </div>
+  `
+})
+
+function visible(id: string): boolean | null {
+  return document.getElementById(id)?.hidden === false
+}
+
+describe('updateModuleConfigSectionVisibility', () => {
+  it('shows only the HMA row when HMA-OSS is installed', async () => {
+    vi.mocked(isAnyModuleInstalled).mockImplementation(async ids =>
+      ids.includes('hma_oss_zygisk')
+    )
+    await updateModuleConfigSectionVisibility()
+    expect(visible('module-config-hma')).toBe(true)
+    expect(visible('module-config-zygisk-next')).toBe(false)
+    expect(visible('module-config-title')).toBe(true)
+    expect(visible('module-config-section')).toBe(true)
+  })
+
+  it('shows only the Zygisk Next row when Zygisk Next is installed', async () => {
+    vi.mocked(isAnyModuleInstalled).mockImplementation(async ids =>
+      ids.includes('zygisksu')
+    )
+    await updateModuleConfigSectionVisibility()
+    expect(visible('module-config-hma')).toBe(false)
+    expect(visible('module-config-zygisk-next')).toBe(true)
+    expect(visible('module-config-title')).toBe(true)
+    expect(visible('module-config-section')).toBe(true)
+  })
+
+  it('shows both rows when both modules are installed', async () => {
+    vi.mocked(isAnyModuleInstalled).mockResolvedValue(true)
+    await updateModuleConfigSectionVisibility()
+    expect(visible('module-config-hma')).toBe(true)
+    expect(visible('module-config-zygisk-next')).toBe(true)
+  })
+
+  it('hides the whole section when neither module is installed', async () => {
+    vi.mocked(isAnyModuleInstalled).mockResolvedValue(false)
+    await updateModuleConfigSectionVisibility()
+    expect(visible('module-config-hma')).toBe(false)
+    expect(visible('module-config-zygisk-next')).toBe(false)
+    expect(visible('module-config-title')).toBe(false)
+    expect(visible('module-config-section')).toBe(false)
+  })
+
+  it('hides the whole section when detection fails', async () => {
+    vi.mocked(isAnyModuleInstalled).mockRejectedValue(new Error('no-bridge'))
+    await updateModuleConfigSectionVisibility()
+    expect(visible('module-config-title')).toBe(false)
+    expect(visible('module-config-section')).toBe(false)
+  })
+})
+
+describe('Tools markup', () => {
+  it('ships Module Configs and both rows hidden by default', () => {
+    const doc = new DOMParser().parseFromString(
+      readFileSync(resolve(__dirname, '../index.html'), 'utf8'),
+      'text/html'
+    )
+    for (const id of [
+      'module-config-title',
+      'module-config-section',
+      'module-config-hma',
+      'module-config-zygisk-next',
+    ]) {
+      expect(doc.getElementById(id)?.hasAttribute('hidden')).toBe(true)
+    }
+  })
+})

@@ -603,6 +603,11 @@ code, pre {
   overflow: clip;
 }
 
+.list-title[hidden],
+.list-container[hidden] {
+  display: none !important;
+}
+
 .list-item {
   min-height: 56px;
   display: flex;

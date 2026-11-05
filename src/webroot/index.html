@@ -331,8 +331,8 @@
 
           </div>
 
-          <h2 class="list-title" data-i18n="menu_pif_title">Play Integrity</h2>
-          <div class="list-container list-container--pif">
+          <h2 class="list-title" id="pif-tools-title" data-i18n="menu_pif_title" hidden>Play Integrity</h2>
+          <div class="list-container list-container--pif" id="pif-tools-section" hidden>
             <div class="list-item" data-script="pif.sh">
               <div class="li-icon"><md-icon aria-hidden="true">refresh</md-icon></div>
               <div class="list-item-content">
@@ -355,9 +355,9 @@
             </div>
           </div>
 
-          <h2 class="list-title" data-i18n="advance_menu_title_config">Module Configs</h2>
-          <div class="list-container list-container--config">
-            <div class="list-item" data-script="hma.sh">
+          <h2 class="list-title" id="module-config-title" data-i18n="advance_menu_title_config" hidden>Module Configs</h2>
+          <div class="list-container list-container--config" id="module-config-section" hidden>
+            <div class="list-item" id="module-config-hma" data-script="hma.sh" hidden>
               <div class="li-icon"><md-icon aria-hidden="true">cloud_download</md-icon></div>
               <div class="list-item-content">
                 <div class="toggle-text" data-i18n="advance_set_hma-oss_configs">Set HMA-OSS Configs</div>
@@ -368,7 +368,7 @@
               <md-ripple></md-ripple>
             </div>
 
-            <div class="list-item" data-script="zygisk_next.sh">
+            <div class="list-item" id="module-config-zygisk-next" data-script="zygisk_next.sh" hidden>
               <div class="li-icon"><md-icon aria-hidden="true">tune</md-icon></div>
               <div class="list-item-content">
                 <div class="toggle-text" data-i18n="advance_set_zygisk_next_configs">Set Zygisk Next Configs</div>
