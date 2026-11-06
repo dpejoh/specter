@@ -2139,7 +2139,7 @@ md-filled-tonal-button {
 .hero-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
   max-width: 800px;
   margin: 0 auto;
