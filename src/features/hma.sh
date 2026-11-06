@@ -5,11 +5,35 @@ set -e
 MODDIR=${0%/*}
 . "$MODDIR/../lib/common.sh"
 
-_HMA_ROOT="${MODDIR%/*}"
+_HMA_LOCK="$SPECTER_DIR/.hma.lock"
+# Serialize config writes across the watcher, scheduler, action and WebUI.
+if ! mkdir "$_HMA_LOCK" 2>/dev/null; then
+  _hma_lock_pid=$(cat "$_HMA_LOCK/pid" 2>/dev/null || echo "")
+  if [ -n "$_hma_lock_pid" ] && [ -d "/proc/$_hma_lock_pid" ]; then
+    exit 0
+  fi
+  rm -rf "$_HMA_LOCK" 2>/dev/null || true
+  mkdir "$_HMA_LOCK" 2>/dev/null || exit 0
+fi
+printf '%s' "$$" > "$_HMA_LOCK/pid" 2>/dev/null || true
+
 _HMA_TMP_BASE=$(_hma_tmp_base)
 _HMA_TMP="$_HMA_TMP_BASE/specter_hma.$$"
 mkdir -p "$_HMA_TMP" 2>/dev/null || true
-trap 'rm -rf "$_HMA_TMP" 2>/dev/null || true' EXIT
+trap 'rm -rf "$_HMA_TMP" "$_HMA_LOCK" 2>/dev/null || true' EXIT
+
+# The install watcher can fire several times for one package event. Debounce
+# watcher-triggered runs; scheduler/action/WebUI runs are not debounced.
+if [ "${1:-}" = "--watch" ]; then
+  _hma_stamp="$SPECTER_DIR/scheduler_tasks/hma_watch_last"
+  _hma_now=$(date +%s 2>/dev/null || echo 0)
+  _hma_last=$(cat "$_hma_stamp" 2>/dev/null || echo 0)
+  case "$_hma_last" in ''|*[!0-9]*) _hma_last=0 ;; esac
+  if [ "$_hma_now" -gt 0 ] && [ $((_hma_now - _hma_last)) -lt 60 ]; then
+    exit 0
+  fi
+  printf '%s' "$_hma_now" > "$_hma_stamp" 2>/dev/null || true
+fi
 
 # The WebUI drops its output callback at 60s, so the run gets one budget
 # instead of a per-call cap. Each phase can only use what is left.
@@ -39,22 +63,30 @@ if [ -z "$_hma_dir" ]; then
 fi
 
 _hma_cache_file=$(_hma_find_preset_cache "$_hma_dir")
-if [ -z "$_hma_cache_file" ]; then
-  log_w "HMA" "HMA-OSS preset cache missing — open HMA-OSS once to build cache, then re-run"
-  exit 0
-fi
-
 _hma_preset_apps="$_HMA_TMP/preset-apps"
-HMAOSS_CMD_TIMEOUT=$(_hma_budget 20)
-_hma_preset_cache_apps "$_hma_cache_file" "$_hma_preset_apps"
+_hma_detectors="$_HMA_TMP/detector-apps"
+: > "$_hma_preset_apps"
+: > "$_hma_detectors"
+if [ -n "$_hma_cache_file" ]; then
+  _hma_cache_copy="$_HMA_TMP/preset_cache_v2.json"
+  HMAOSS_CMD_TIMEOUT=$(_hma_budget 20)
+  if _hma_copy_config "$_hma_cache_file" "$_hma_cache_copy" && [ -s "$_hma_cache_copy" ]; then
+    HMAOSS_CMD_TIMEOUT=$(_hma_budget 20)
+    _hma_preset_cache_apps "$_hma_cache_copy" "$_hma_preset_apps" "$_hma_detectors"
+  else
+    log_w "HMA" "HMA-OSS preset cache unreadable — continuing without preset exclusions"
+  fi
+else
+  log_w "HMA" "HMA-OSS preset cache missing — continuing without preset exclusions"
+fi
 if [ ! -s "$_hma_preset_apps" ]; then
-  log_w "HMA" "HMA-OSS preset cache is empty — open HMA-OSS once to build cache, then re-run"
-  exit 0
+  log_i "HMA" "no preset cache apps to exclude"
 fi
 
 _hma_user="$_HMA_TMP/user-apps"
 _hma_scope="$_HMA_TMP/scope-entries"
 _hma_default="$_HMA_TMP/default.json"
+_hma_default6="$_HMA_TMP/default-no-detectors.json"
 _hma_base="$_HMA_TMP/base.json"
 _hma_merged="$_HMA_TMP/merged.json"
 
@@ -73,28 +105,18 @@ else
 fi
 unset _hma_probe
 
-# Apps that are invisible in existing blacklist templates and sensitive apps
-# detected across HMA-OSS built-in presets (excluding detector apps, which must
-# remain in scope for testing/hiding) must never have hiding enabled on themselves.
-_hma_exclude="$_HMA_TMP/exclude-targets"
-_hma_template_targets "$_hma_base" "$_hma_exclude" "$HMAOSS_TEMPLATE"
-cat "$_hma_preset_apps" >> "$_hma_exclude"
-awk 'NF && !seen[$0]++' "$_hma_exclude" > "${_hma_exclude}.dedup" && \
-  mv -f "${_hma_exclude}.dedup" "$_hma_exclude"
+# Sensitive apps detected across HMA-OSS built-in presets (excluding detector
+# apps, which must remain in scope for testing/hiding) must never have hiding
+# enabled on themselves.
+_hma_exclude="$_hma_preset_apps"
 
-_hma_appconfig_json "" > "$_hma_default"
-_hma_prune=0
-if [ "$(cfg_get toggle_hma_target_user_apps 1)" = "1" ]; then
-  _hma_prune=1
-  _hma_user_apps "$_hma_exclude" > "$_hma_user"
-  _hma_build_scope "$_hma_user" "" "$_hma_scope" "$_hma_default"
-else
-  : > "$_hma_scope"
-fi
+_hma_appconfig_json > "$_hma_default"
+_hma_appconfig_json no-detectors > "$_hma_default6"
+_hma_user_apps "$_hma_exclude" > "$_hma_user"
+_hma_build_scope "$_hma_user" "$_hma_scope" "$_hma_default" "$_hma_default6" "$_hma_detectors"
 
 _hmc_rc=0
-# Skip standalone template generation (_hmc_skip=1); HMA-OSS presets handle all detection dynamically.
-_hma_merge_config "$_hma_base" "" "$_hma_scope" "$_hma_default" "$_hma_merged" "1" "$(_hma_budget 30)" "$_hma_prune" "$_hma_exclude" || _hmc_rc=$?
+_hma_merge_config "$_hma_base" "$_hma_scope" "$_hma_default" "$_hma_merged" "$(_hma_budget 30)" "$_hma_exclude" "$_hma_detectors" || _hmc_rc=$?
 if [ "$_hmc_rc" -ne 0 ]; then
   if [ "$_hmc_rc" -eq 124 ]; then
     log_e "HMA" "config too large to merge (timed out), existing config left untouched"
@@ -103,7 +125,6 @@ if [ "$_hmc_rc" -ne 0 ]; then
   fi
   exit 1
 fi
-unset _hma_prune
 
 HMAOSS_CMD_TIMEOUT=$(_hma_budget 20)
 _hma_backup "$_hma_cfg"
@@ -114,22 +135,10 @@ fi
 
 _hma_preset_n=$(wc -l < "$_hma_preset_apps" 2>/dev/null)
 _hma_preset_n=${_hma_preset_n##* }
+_hma_det_n=$(wc -l < "$_hma_detectors" 2>/dev/null)
+_hma_det_n=${_hma_det_n##* }
 _hma_added_n=$(wc -l < "$_hma_scope" 2>/dev/null)
 _hma_added_n=${_hma_added_n##* }
-log_i "HMA" "Preset apps: $_hma_preset_n | scope targets: $_hma_added_n"
-
-_hma_policy=$(_hma_launch_policy)
-if [ "$SPECTER_FIRST_BOOT" = "1" ] || [ "${SPECTER_HMA_NO_UI_RELOAD:-}" = "1" ]; then
-  log_i "HMA" "Config written; reboot or long-press HMA-OSS Home to apply"
-elif [ "$_hma_policy" = "skip" ]; then
-  log_i "HMA" "Config written; HMA-OSS launch skipped (auto-refuse)"
-elif [ "$_hma_policy" = "ask" ]; then
-  log_i "HMA" "Config written; no terminal to ask, reboot or open HMA-OSS to apply"
-elif [ "$(cfg_get toggle_hma_live_reload 1)" = "1" ] && [ "$(_hma_budget 20)" -ge 15 ] && _hma_request_reload "$_HMA_TMP"; then
-  log_i "HMA" "Live reload requested in HMA-OSS"
-elif [ "$(_hma_budget 20)" -ge 15 ] && _hma_open_ui; then
-  log_i "HMA" "HMA-OSS opened; long-press the status card to apply"
-else
-  log_w "HMA" "Config written; reboot or long-press HMA-OSS Home to apply"
-fi
+log_i "HMA" "Preset exclusions: $_hma_preset_n | detector targets: $_hma_det_n | scope targets: $_hma_added_n"
+log_i "HMA" "Config written; HMA-OSS applies it automatically on oss-175+"
 exit 0
