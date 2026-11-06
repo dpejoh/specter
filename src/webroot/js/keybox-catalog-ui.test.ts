@@ -88,7 +88,7 @@ describe('keybox catalog', () => {
     (statusFilter.querySelector('.filter-trigger') as HTMLButtonElement).click();
     const statusLabels = [...statusFilter.querySelectorAll('.filter-option span')]
       .map(option => option.textContent?.trim());
-    expect(statusLabels).toEqual(['Active', 'All']);
+    expect(statusLabels).toEqual(['Active', 'Softbanned', 'Revoked', 'All']);
 
     (providerFilter.querySelector('.filter-trigger') as HTMLButtonElement).click();
     const providerLabels = [...providerFilter.querySelectorAll('.filter-option span')]
@@ -148,6 +148,33 @@ describe('keybox catalog', () => {
     expect(revoked?.classList.contains('kb-catalog-row--disabled')).toBe(true);
     expect(revoked?.querySelector('md-radio')?.hasAttribute('disabled')).toBe(true);
   });
+
+
+  it('filters softbanned and revoked entries by status', async () => {
+    const container = makeContainer();
+    const catalog = mountKeyboxCatalog(container);
+    await catalog.load();
+
+    const statusFilter = container.querySelector('[data-filter-id="kb-status-filter"]') as HTMLElement;
+    const choose = (label: string) => {
+      (statusFilter.querySelector('.filter-trigger') as HTMLButtonElement).click();
+      const option = [...statusFilter.querySelectorAll('.filter-option')]
+        .find(o => o.querySelector('span')?.textContent?.trim() === label) as HTMLButtonElement;
+      option.click();
+    };
+
+    choose('Softbanned');
+    expect([...container.querySelectorAll('#kb-catalog-list .toggle-text')]
+      .map(el => el.textContent?.trim())).toEqual(['TAKR v35']);
+
+    choose('Revoked');
+    expect([...container.querySelectorAll('#kb-catalog-list .toggle-text')]
+      .map(el => el.textContent?.trim())).toEqual(['TAKR v34']);
+
+    choose('Active');
+    expect([...container.querySelectorAll('#kb-catalog-list .toggle-text')]
+      .map(el => el.textContent?.trim())).toContain('TAKR v36');
+  })
 
   it('filters by provider independently of status', async () => {
     const container = makeContainer();

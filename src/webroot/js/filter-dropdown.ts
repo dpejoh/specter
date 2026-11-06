@@ -38,6 +38,7 @@ export function createFilterDropdown(config: FilterDropdownConfig): FilterDropdo
   trigger.className = 'filter-trigger';
   trigger.setAttribute('aria-haspopup', 'listbox');
   trigger.setAttribute('aria-expanded', 'false');
+  trigger.setAttribute('aria-controls', `${config.id}-menu`);
 
   const triggerLabel = document.createElement('span');
   triggerLabel.className = 'filter-trigger-label';
@@ -50,6 +51,7 @@ export function createFilterDropdown(config: FilterDropdownConfig): FilterDropdo
 
   const menu = document.createElement('div');
   menu.className = 'filter-menu';
+  menu.id = `${config.id}-menu`;
   menu.setAttribute('role', 'listbox');
   menu.hidden = true;
 
@@ -84,7 +86,9 @@ export function createFilterDropdown(config: FilterDropdownConfig): FilterDropdo
   const focusOption = (index: number) => {
     const buttons = optionButtons();
     if (buttons.length === 0) return;
-    buttons[Math.max(0, Math.min(index, buttons.length - 1))]?.focus();
+    const clamped = Math.max(0, Math.min(index, buttons.length - 1));
+    buttons.forEach((button, i) => { button.tabIndex = i === clamped ? 0 : -1; });
+    buttons[clamped]?.focus();
   };
 
   const renderMenu = () => {
@@ -97,6 +101,7 @@ export function createFilterDropdown(config: FilterDropdownConfig): FilterDropdo
       button.dataset.value = option.value;
       button.setAttribute('role', 'option');
       button.setAttribute('aria-selected', selected ? 'true' : 'false');
+      button.tabIndex = selected ? 0 : -1;
       if (selected) button.classList.add('filter-option--selected');
 
       if (selected) {
@@ -111,14 +116,16 @@ export function createFilterDropdown(config: FilterDropdownConfig): FilterDropdo
       text.textContent = option.label;
       button.appendChild(text);
 
-      button.addEventListener('click', () => {
+      const selectOption = () => {
         const changed = option.value !== value;
         value = option.value;
         syncTrigger();
         if (changed) config.onChange(value);
         close();
         trigger.focus();
-      });
+      };
+
+      button.addEventListener('click', selectOption);
 
       button.addEventListener('keydown', (event) => {
         const buttons = optionButtons();
@@ -179,10 +186,16 @@ export function createFilterDropdown(config: FilterDropdownConfig): FilterDropdo
     }
   });
 
-  root.addEventListener('focusout', () => {
-    queueMicrotask(() => {
-      if (open && !root.contains(document.activeElement)) close();
-    });
+  // Close only when focus genuinely moves to another control. Touch taps often
+  // produce focusout with relatedTarget=null; closing on that would hide the
+  // menu before the option's click handler runs.
+  root.addEventListener('focusout', (event) => {
+    const next = (event as FocusEvent).relatedTarget as Node | null;
+    if (open && next && !root.contains(next)) close();
+  });
+
+  root.addEventListener('keydown', (event) => {
+    if (open && event.key === 'Tab') close();
   });
 
   const setOptions = (next: FilterOption[]) => {

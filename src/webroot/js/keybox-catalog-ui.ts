@@ -82,7 +82,8 @@ async function fetchCatalog(): Promise<CatalogJson | null> {
 
 export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalogOptions = {}): KeyboxCatalogHandle {
   const { refreshButton = null, onStateChange, onInstalled } = options;
-  let statusFilter: 'active' | 'all' = 'active';
+  type StatusFilter = 'active' | 'softbanned' | 'revoked' | 'all';
+  let statusFilter: StatusFilter = 'active';
   let providerFilter = 'all';
   let entries: CatalogEntry[] = [];
   let selectedKey = AUTO_KEY;
@@ -95,6 +96,9 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
 
   const visibleEntries = () => entries.filter(entry => {
     if (statusFilter === 'active' && !isActiveEntry(entry)) return false;
+    // Revoked wins over softbanned, matching entryStatus().
+    if (statusFilter === 'softbanned' && (!entry.softbanned || entry.revoked)) return false;
+    if (statusFilter === 'revoked' && !entry.revoked) return false;
     if (providerFilter !== 'all' && entry.source !== providerFilter) return false;
     return true;
   });
@@ -200,6 +204,8 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
     const sources = [...new Set(entries.map(entry => entry.source))].sort();
     const statusOptions: FilterOption[] = [
       { value: 'active', label: t('custom_kb_active', 'Active') },
+      { value: 'softbanned', label: t('custom_kb_softbanned', 'Softbanned') },
+      { value: 'revoked', label: t('custom_kb_revoked', 'Revoked') },
       { value: 'all', label: t('ta_filter_all', 'All') },
     ];
     const providerOptions: FilterOption[] = [
@@ -349,10 +355,14 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
     value: statusFilter,
     options: [
       { value: 'active', label: t('custom_kb_active', 'Active') },
+      { value: 'softbanned', label: t('custom_kb_softbanned', 'Softbanned') },
+      { value: 'revoked', label: t('custom_kb_revoked', 'Revoked') },
       { value: 'all', label: t('ta_filter_all', 'All') },
     ],
     onChange: (next) => {
-      statusFilter = next === 'all' ? 'all' : 'active';
+      statusFilter = (['active', 'softbanned', 'revoked', 'all'] as const).includes(next as StatusFilter)
+        ? next as StatusFilter
+        : 'active';
       renderCatalog();
       updateFab();
     },

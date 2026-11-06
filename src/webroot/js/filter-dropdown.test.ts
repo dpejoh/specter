@@ -51,6 +51,39 @@ describe('filter dropdown', () => {
     expect(onChange).toHaveBeenCalledWith('all')
     expect(trigger.textContent).toContain('All')
     expect((dropdown.element.querySelector('.filter-menu') as HTMLElement).hidden).toBe(true)
+    dropdown.dispose()
+  })
+
+
+  it('does not close on touch-style focusout and still selects on click', () => {
+    const { dropdown, onChange } = makeDropdown()
+    const trigger = dropdown.element.querySelector('.filter-trigger') as HTMLButtonElement
+    trigger.click()
+
+    const menu = dropdown.element.querySelector('.filter-menu') as HTMLElement
+    const all = [...dropdown.element.querySelectorAll('.filter-option')]
+      .find(option => option.textContent?.includes('All')) as HTMLButtonElement
+
+    all.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: null }))
+    expect(menu.hidden).toBe(false)
+    expect(onChange).not.toHaveBeenCalled()
+
+    all.click()
+    expect(onChange).toHaveBeenCalledWith('all')
+    expect(trigger.textContent).toContain('All')
+    expect(menu.hidden).toBe(true)
+    dropdown.dispose()
+  })
+
+  it('closes on Tab without trapping focus', () => {
+    const { dropdown } = makeDropdown()
+    const trigger = dropdown.element.querySelector('.filter-trigger') as HTMLButtonElement
+    trigger.click()
+    const menu = dropdown.element.querySelector('.filter-menu') as HTMLElement
+    const first = dropdown.element.querySelector('.filter-option') as HTMLButtonElement
+    first.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }))
+    expect(menu.hidden).toBe(true)
+    dropdown.dispose()
   })
 
   it('updates options and value without losing the selected state', () => {
