@@ -50,7 +50,7 @@ export function openAutoHmaDialog() {
       title: t('auto_hma_info_title', 'Background Updates'),
       text: t(
         'auto_hma_info_text',
-        'Background updates only write the HMA-OSS config. Open HMA-OSS or reboot to apply the new profile. If the config is missing or empty, the action button regenerates it. Enable Always Re-Generate HMA-OSS Config in the HMA-OSS Configs page to force regeneration on every action run.'
+        'Background updates regenerate the HMA-OSS config after app installs/updates and on the configured schedule; HMA-OSS reloads it while its service is running. If it does not pick it up, reboot or long-press the HMA-OSS Home status card. If the config is missing or empty, the action button regenerates it. Enable Always Re-Generate HMA-OSS Config in the HMA-OSS Configs page to force regeneration on every action run.'
       ),
     },
   });
