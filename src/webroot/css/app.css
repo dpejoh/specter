@@ -2149,6 +2149,7 @@ md-filled-tonal-button {
 .kb-hero-card {
   --md-filled-card-container-color: var(--md-sys-color-primary-container);
   --md-filled-card-container-color: color-mix(in srgb, var(--md-sys-color-primary-container) 55%, var(--md-sys-color-surface));
+  --md-filled-card-container-shape: 24px;
   padding: 16px;
   position: relative;
   display: flex;
@@ -2171,6 +2172,7 @@ md-filled-tonal-button {
   align-items: baseline;
   gap: 6px;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .kb-hero-keybox-name {
@@ -2182,6 +2184,7 @@ md-filled-tonal-button {
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 140px;
+  min-width: 0;
 }
 
 .kb-hero-keybox-name--neutral {
@@ -2204,6 +2207,7 @@ md-filled-tonal-button {
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 120px;
+  min-width: 0;
 }
 
 .kb-hero-provider-version {
@@ -2310,6 +2314,7 @@ md-filled-tonal-button {
 .sp-hero-card {
   --md-filled-card-container-color: var(--md-sys-color-secondary-container);
   --md-filled-card-container-color: color-mix(in srgb, var(--md-sys-color-secondary-container) 55%, var(--md-sys-color-surface));
+  --md-filled-card-container-shape: 24px;
   padding: 16px;
   position: relative;
   display: flex;
@@ -2337,7 +2342,8 @@ md-filled-tonal-button {
   text-overflow: ellipsis;
   white-space: nowrap;
   display: block;
-  max-width: 120px;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .hero-clip {
@@ -2405,6 +2411,7 @@ md-filled-tonal-button {
 
 .recent-activity-card {
   --md-filled-card-container-color: var(--md-sys-color-surface-container-high);
+  --md-filled-card-container-shape: 24px;
   width: 100%;
   max-width: 800px;
   margin: 0 auto;
@@ -2417,15 +2424,13 @@ md-filled-tonal-button {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 14px;
-  border-bottom: 1px solid var(--md-sys-color-outline-variant);
-  border-bottom: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 40%, transparent);
+  padding: 12px 16px 12px;
   user-select: none;
 }
 
 .recent-activity-title {
-  font-size: 0.9375rem;
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 500;
   color: var(--md-sys-color-on-surface);
 }
 
@@ -2436,25 +2441,27 @@ md-filled-tonal-button {
 }
 
 .recent-activity-list {
-  padding: 0 14px;
+  padding: 0 8px 8px;
 }
+
 
 .recent-activity-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 0;
+  gap: 14px;
+  padding: 10px 8px;
   user-select: none;
 }
 
 .recent-activity-item + .recent-activity-item {
-  border-top: 1px solid var(--md-sys-color-outline-variant);
   border-top: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 30%, transparent);
+  margin-inline: 8px;
+  padding-inline: 0;
 }
 
 .recent-activity-item-icon {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -2526,7 +2533,7 @@ md-filled-tonal-button {
   background: none;
   font-family: inherit;
   text-align: center;
-  padding: 14px 8px;
+  padding: 12px 8px;
   font-size: 0.9375rem;
   font-weight: 500;
   color: var(--md-sys-color-primary);
