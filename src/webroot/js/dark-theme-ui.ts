@@ -2,6 +2,7 @@ import { t } from './i18n.js';
 import { cfgGet, cfgSet } from './cfg.js';
 import { applyMode } from './theme.js';
 import { openSubPage } from './subpage.js';
+import { wireRowDialog } from './toggles.js';
 
 
 function isDarkActive(): boolean {
@@ -86,7 +87,7 @@ export async function openDarkThemeDialog() {
             title: t('settings_dark_amoled', 'AMOLED (Pure Black)'),
             description: t(
               'settings_dark_amoled_desc',
-              'Pure black #000000 background for AMOLED screens to save battery and increase contrast'
+              'Pure black background for AMOLED screens.'
             ),
             selected: darkVariant === 'amoled',
             onSelect: () => {
@@ -125,13 +126,6 @@ export async function openDarkThemeDialog() {
         ],
       },
     ],
-    infoCard: {
-      icon: 'info',
-      text: t(
-        'settings_dark_theme_note',
-        'If you experience issues with the AMOLED option, use the standard option.'
-      ),
-    },
     onClose: () => {
       updateDarkThemeSummary();
     },
@@ -139,7 +133,6 @@ export async function openDarkThemeDialog() {
 }
 
 export function wireDarkTheme() {
-  const row = document.getElementById('dark-theme-row');
   const sw = document.getElementById('dark-theme-switch') as MdSwitch | null;
 
   if (sw) {
@@ -155,12 +148,14 @@ export function wireDarkTheme() {
     });
   }
 
-  if (row) {
-    row.addEventListener('click', (e) => {
-      if (e.composedPath().some(n => n instanceof Element && n.localName === 'md-switch')) return;
-      openDarkThemeDialog();
-    });
-  }
+  document
+    .querySelector<HTMLElement>('#dark-theme-row [data-config]')
+    ?.setAttribute(
+      'aria-label',
+      `${t('control_configure', 'Configure')} ${t('settings_theme_mode', 'Dark theme')}`,
+    );
+
+  wireRowDialog('dark-theme-row', () => { void openDarkThemeDialog(); });
 
   updateDarkThemeSummary();
 }
