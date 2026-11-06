@@ -596,6 +596,90 @@ button.list-item {
   pointer-events: none;
 }
 
+.list-item--value {
+  cursor: default;
+  align-items: flex-start;
+}
+
+.list-item--value:hover,
+.list-item--value:active {
+  background-color: var(--md-sys-color-surface-container-high);
+  transform: none;
+}
+
+.value-text {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+.value-text--mono {
+  font-family: var(--sp-font-mono, 'JetBrains Mono Variable', monospace);
+  font-size: 0.8125rem;
+}
+
+.value-text--error {
+  color: var(--md-sys-color-error);
+}
+
+.value-text--warning {
+  color: var(--md-sys-color-tertiary);
+}
+
+.value-copy-btn {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.value-copy-btn:hover {
+  background: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface);
+}
+
+.value-copy-btn:focus-visible {
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: 2px;
+}
+
+.value-copy-btn md-icon {
+  font-size: 20px;
+}
+
+.list-container.info-page-container {
+  overflow: visible;
+}
+
+.keybox-info-page,
+.setup-info-page {
+  width: 100%;
+}
+
+.info-page-actions {
+  width: 100%;
+  max-width: 800px;
+  margin: 16px auto 0;
+  padding: 0 20px;
+  box-sizing: border-box;
+}
+
+.info-page-actions md-filled-button,
+.info-page-actions md-filled-tonal-button {
+  width: 100%;
+  min-height: 52px;
+  --md-filled-button-container-shape: 9999px;
+  --md-filled-tonal-button-container-shape: 9999px;
+}
+
 .list-item[data-destructive] .li-icon {
   background: var(--md-sys-color-error-container);
 }
@@ -2144,6 +2228,48 @@ md-filled-tonal-button {
   max-width: 800px;
   margin: 0 auto;
   box-sizing: border-box;
+}
+
+.hero-card-shell {
+  position: relative;
+  min-width: 0;
+  display: flex;
+}
+
+.hero-card-shell > md-filled-card {
+  width: 100%;
+  /* Keep the card from creating a stacking context so its refresh control can
+     sit above the full-card hit button. */
+  z-index: auto;
+}
+
+.hero-card-hit {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  border-radius: 24px;
+  cursor: pointer;
+  appearance: none;
+  font: inherit;
+  color: inherit;
+}
+
+.hero-card-hit:focus-visible {
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: 2px;
+}
+
+.hero-card-hit:active {
+  background: color-mix(in srgb, var(--md-sys-color-on-surface) 6%, transparent);
+}
+
+.hero-card-shell #kb-refresh-btn,
+.hero-card-shell .hero-clip {
+  position: relative;
+  z-index: 2;
 }
 
 .kb-hero-card {

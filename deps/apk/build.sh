@@ -21,6 +21,7 @@ mkdir -p "$BUILD_TMP/classes"
 javac -cp "$PLATFORM_JAR" -d "$BUILD_TMP/classes" \
   "$SCRIPT_DIR"/app/src/main/java/com/dpejoh/specter/Main.java \
   "$SCRIPT_DIR"/app/src/main/java/com/dpejoh/specter/XposedProbe.java \
+  "$SCRIPT_DIR"/app/src/main/java/com/dpejoh/specter/SetupProbe.java \
   "$SCRIPT_DIR"/app/src/main/java/com/dpejoh/specter/attestation/*.java
 
 "$D8" --output "$BUILD_TMP" \

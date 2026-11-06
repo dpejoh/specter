@@ -10,7 +10,49 @@ export interface ModulePaths { MODDIR: string; SPECTER_DIR?: string; }
 
 export interface InfoJson { android?: string; kernel?: string; root?: string; root_sol?: string; version?: string; security_patch?: string; build_patch?: string; pif_model?: string; }
 
-export interface KeyboxInfoJson { installed: boolean; source?: string; source_version?: string; text?: string; up_to_date?: boolean; revoked?: boolean; softbanned?: boolean; serial?: string; is_private?: boolean; rkp?: boolean; expires_at?: string | null; expired?: boolean; }
+export interface KeyboxInfoJson {
+  installed: boolean;
+  source?: string;
+  source_version?: string;
+  text?: string;
+  up_to_date?: boolean;
+  latest_version?: string;
+  revoked?: boolean;
+  softbanned?: boolean;
+  serial?: string;
+  is_private?: boolean;
+  rkp?: boolean;
+  expires_at?: string | null;
+  expired?: boolean;
+  checked_at?: string;
+  revocation_status?: string;
+  revocation_reason?: string;
+  revocation_source?: string;
+  revocation_checked_at?: string;
+  file_path?: string;
+  file_size?: number;
+  file_modified?: string;
+}
+
+export interface SetupInfoRow {
+  label: string;
+  value: string;
+}
+
+export interface SetupInfoModule {
+  id: string;
+  name: string;
+  version?: string;
+  rows: SetupInfoRow[];
+}
+
+export interface SetupInfoJson {
+  generated_at?: string;
+  device?: Record<string, string>;
+  modules?: SetupInfoModule[];
+  features?: SetupInfoRow[];
+  warnings?: string[];
+}
 
 export interface KeystoreManagerJson { id: string; name?: string; format?: string; dir?: string; targets?: string; config?: string; perAppModes?: boolean; }
 
