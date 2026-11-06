@@ -1,8 +1,7 @@
-import { getTranslation } from './i18n.js';
+import { t } from './i18n.js';
 import { wireRowDialog } from './toggles.js';
 import { openSubPage } from './subpage.js';
 
-const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
 export function openAdbDisablerDialog() {
   openSubPage({

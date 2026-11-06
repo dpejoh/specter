@@ -72,26 +72,6 @@ export async function initTheme(savedMode: string) {
   });
 }
 
-export async function initThemeUI() {
-  const preset = currentPreset;
-
-  if (customElements.get('md-filter-chip')) {
-    document.querySelectorAll('.preset-chip').forEach(chip => {
-      (chip as HTMLElement & { selected: boolean }).selected = (chip as HTMLElement).dataset.preset === preset;
-    });
-  }
-
-  if (customElements.get('md-outlined-segmented-button')) {
-    const mode = await cfgGet('theme', 'dark') || 'dark';
-    const group = document.getElementById('theme-mode-group');
-    if (group) {
-      group.querySelectorAll('md-outlined-segmented-button').forEach(btn => {
-        (btn as HTMLElement & { selected: boolean }).selected = btn.getAttribute('value') === mode;
-      });
-    }
-  }
-}
-
 function resolveMode(mode: string): string {
   if (mode === 'amoled') return 'dark';
   return mode === 'auto'
@@ -298,9 +278,6 @@ export function applyPreset(preset: string) {
     cfgSet('theme_fixed_preset', preset);
   }
   document.documentElement.setAttribute('data-theme-preset', preset);
-  document.querySelectorAll('.preset-chip').forEach(chip => {
-    (chip as HTMLElement & { selected: boolean }).selected = (chip as HTMLElement).dataset.preset === preset;
-  });
   if (preset === 'monet') {
     clearMonetCache();
     applyMonetPreset(document.documentElement.getAttribute('data-theme') || 'dark', true);
@@ -328,18 +305,6 @@ function applyNamedPreset(name: string, isDark: boolean) {
 }
 
 function wireThemeControls() {
-  const modeGroup = document.getElementById('theme-mode-group');
-  if (!modeGroup) return;
-  modeGroup.addEventListener('segmented-button-set-selection', (e: Event) => {
-    const idx = (e as CustomEvent).detail.index;
-    const btn = modeGroup.querySelectorAll('md-outlined-segmented-button')[idx];
-    if (btn) applyMode(btn.getAttribute('value') || 'dark');
-  });
-
-  document.querySelectorAll('.preset-chip').forEach(chip => {
-    chip.addEventListener('click', async () => applyPreset((chip as HTMLElement).dataset.preset || ''));
-  });
-
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e: MediaQueryListEvent) => {
     const mode = document.documentElement.getAttribute('data-theme');
     if (mode === 'auto') {

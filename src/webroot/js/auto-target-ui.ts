@@ -1,10 +1,9 @@
 import { cfgGet, cfgSet } from './cfg.js';
-import { getTranslation } from './i18n.js';
+import { t } from './i18n.js';
 import { wireRowDialog } from './toggles.js';
 import { openSubPage } from './subpage.js';
 import { updateListContainerCorners } from './utils.js';
 
-const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
 const DEFAULT_INTERVAL_MINUTES = 5;
 const MIN_INTERVAL_MINUTES = 1;

@@ -1,9 +1,12 @@
 import { shellEscape, escapeHtml } from './utils.js';
-import { getTranslation } from './i18n.js';
+import { t } from './i18n.js';
 import { exec } from './bridge.js';
 import '@material/web/menu/menu.js';
 import '@material/web/menu/menu-item.js';
 import type { MdMenu } from '@material/web/menu/menu.js';
+import { setupOverlayA11y } from './overlay-a11y.js';
+import { closeMenu, wireMenuTrigger } from './menu-utils.js';
+import { overlayHeader } from './ui-overlay.js';
 
 interface FsEntry {
   name: string;
@@ -16,8 +19,7 @@ interface FsEntry {
 interface FileVisual {
   icon: string;
   typeLabel: string;
-  bgStyle: string;
-  iconStyle: string;
+  tone: string;
 }
 
 function formatFileSize(bytes: number): string {
@@ -62,16 +64,14 @@ function getFileVisual(name: string): FileVisual {
     return {
       icon: 'vpn_key',
       typeLabel: 'XML Key Provider',
-      bgStyle: 'background: #441a33;',
-      iconStyle: 'color: #f48fb1;',
+      tone: 'fb-icon--key',
     };
   }
   if (lower.endsWith('.key') || lower.endsWith('.pem') || lower.endsWith('.crt') || lower.endsWith('.cer') || lower.endsWith('.der')) {
     return {
       icon: 'key',
       typeLabel: 'Certificate / Key',
-      bgStyle: 'background: #441a33;',
-      iconStyle: 'color: #f48fb1;',
+      tone: 'fb-icon--key',
     };
   }
 
@@ -81,8 +81,7 @@ function getFileVisual(name: string): FileVisual {
     return {
       icon: 'folder_zip',
       typeLabel: 'Archive',
-      bgStyle: 'background: #4a2912;',
-      iconStyle: 'color: #ffb74d;',
+      tone: 'fb-icon--archive',
     };
   }
 
@@ -91,8 +90,7 @@ function getFileVisual(name: string): FileVisual {
     return {
       icon: 'android',
       typeLabel: 'Android Package',
-      bgStyle: 'background: #194022;',
-      iconStyle: 'color: #81c784;',
+      tone: 'fb-icon--apk',
     };
   }
 
@@ -101,16 +99,14 @@ function getFileVisual(name: string): FileVisual {
     return {
       icon: 'terminal',
       typeLabel: 'Shell Script',
-      bgStyle: 'background: #1d2b3a;',
-      iconStyle: 'color: #64b5f6;',
+      tone: 'fb-icon--code',
     };
   }
   if (lower.endsWith('.js') || lower.endsWith('.ts') || lower.endsWith('.py') || lower.endsWith('.c') || lower.endsWith('.cpp')) {
     return {
       icon: 'code',
       typeLabel: 'Source Code',
-      bgStyle: 'background: #1d2b3a;',
-      iconStyle: 'color: #64b5f6;',
+      tone: 'fb-icon--code',
     };
   }
 
@@ -119,16 +115,14 @@ function getFileVisual(name: string): FileVisual {
     return {
       icon: 'tune',
       typeLabel: 'Build Properties',
-      bgStyle: 'background: #19383b;',
-      iconStyle: 'color: #80cbc4;',
+      tone: 'fb-icon--config',
     };
   }
   if (lower.endsWith('.json') || lower.endsWith('.toml') || lower.endsWith('.yaml') || lower.endsWith('.yml')) {
     return {
       icon: 'data_object',
       typeLabel: 'Structured Config',
-      bgStyle: 'background: #19383b;',
-      iconStyle: 'color: #80cbc4;',
+      tone: 'fb-icon--config',
     };
   }
 
@@ -137,24 +131,21 @@ function getFileVisual(name: string): FileVisual {
     return {
       icon: 'image',
       typeLabel: 'Image',
-      bgStyle: 'background: #1e3629;',
-      iconStyle: 'color: #a5d6a7;',
+      tone: 'fb-icon--image',
     };
   }
   if (lower.endsWith('.mp3') || lower.endsWith('.ogg') || lower.endsWith('.flac') || lower.endsWith('.wav') || lower.endsWith('.m4a') || lower.endsWith('.aac')) {
     return {
       icon: 'audio_file',
       typeLabel: 'Audio',
-      bgStyle: 'background: #371e3d;',
-      iconStyle: 'color: #ce93d8;',
+      tone: 'fb-icon--audio',
     };
   }
   if (lower.endsWith('.mp4') || lower.endsWith('.mkv') || lower.endsWith('.webm') || lower.endsWith('.avi') || lower.endsWith('.mov')) {
     return {
       icon: 'video_file',
       typeLabel: 'Video',
-      bgStyle: 'background: #3e1b1b;',
-      iconStyle: 'color: #ef9a9a;',
+      tone: 'fb-icon--video',
     };
   }
 
@@ -163,32 +154,28 @@ function getFileVisual(name: string): FileVisual {
     return {
       icon: 'picture_as_pdf',
       typeLabel: 'PDF Document',
-      bgStyle: 'background: #421b1d;',
-      iconStyle: 'color: #e57373;',
+      tone: 'fb-icon--pdf',
     };
   }
   if (lower.endsWith('.txt') || lower.endsWith('.log') || lower.endsWith('.md')) {
     return {
       icon: 'article',
       typeLabel: 'Text Document',
-      bgStyle: 'background: #2b2b35;',
-      iconStyle: 'color: #b0bec5;',
+      tone: 'fb-icon--text',
     };
   }
   if (lower.endsWith('.bak')) {
     return {
       icon: 'history',
       typeLabel: 'Backup File',
-      bgStyle: 'background: #282833;',
-      iconStyle: 'color: #9e9e9e;',
+      tone: 'fb-icon--backup',
     };
   }
 
   return {
     icon: 'description',
     typeLabel: 'File',
-    bgStyle: 'background: #28272e;',
-    iconStyle: 'color: #c7c5d0;',
+    tone: 'fb-icon--file',
   };
 }
 
@@ -262,12 +249,13 @@ export async function openFileBrowser(
   onSelect: (path: string) => void,
   opts?: { extensions?: string[]; emptyLabel?: string; title?: string }
 ): Promise<void> {
-  const t = (key: string, fallback: string) => getTranslation(key) || fallback;
+  if (document.querySelector('.subpage-overlay--file-browser')) return;
   let currentPath = '/sdcard';
   let entries: FsEntry[] = [];
   let allFiles = savedAllFilesFilter;
   let closed = false;
   let historySteps = 1;
+  let keyboardNav = false;
   const extensions = opts?.extensions || ['.xml', '.bak'];
   const pageTitle = opts?.title || t('fb_internal_storage', 'Internal storage');
 
@@ -295,31 +283,30 @@ export async function openFileBrowser(
 
     overlay.innerHTML = `
       <div class="subpage-inner">
-        <header class="subpage-header">
-          <button type="button" class="subpage-back-btn" id="fb-back" aria-label="${t('dialog_cancel', 'Back')}">
-            <md-icon aria-hidden="true">arrow_back</md-icon>
-            <md-ripple></md-ripple>
-          </button>
-          <div class="subpage-header-title-wrap">
-            <h1 class="subpage-title">${pageTitle}</h1>
-          </div>
-          <div style="position: relative;">
-            <button type="button" class="subpage-action-btn" id="fb-menu-btn" aria-label="${t('ta_menu_more', 'More options')}">
+        ${overlayHeader({
+          className: 'subpage-header',
+          back: { id: 'fb-back', className: 'subpage-back-btn', label: t('common_back', 'Back') },
+          title: pageTitle,
+          titleTag: 'h1',
+          titleClass: 'subpage-title',
+          titleId: 'fb-title',
+          actions: `<div class="fb-menu-wrap">
+            <button type="button" class="subpage-action-btn" id="fb-menu-btn" aria-label="${escapeHtml(t('ta_menu_more', 'More options'))}">
               <md-icon aria-hidden="true">more_vert</md-icon>
               <md-ripple></md-ripple>
             </button>
             <md-menu id="fb-menu" class="fb-menu" anchor="fb-menu-btn" positioning="fixed">
               <md-menu-item id="fb-menu-filter-primary" class="first">
-                <md-icon slot="start" aria-hidden="true" style="${!allFiles ? 'color: var(--md-sys-color-primary);' : 'visibility: hidden;'}">check</md-icon>
-                <div slot="headline">${filterLabel}</div>
+                <md-icon slot="start" aria-hidden="true" class="fb-menu-check ${!allFiles ? 'fb-menu-check--visible' : ''}">check</md-icon>
+                <div slot="headline">${escapeHtml(filterLabel)}</div>
               </md-menu-item>
               <md-menu-item id="fb-menu-filter-all" class="last">
-                <md-icon slot="start" aria-hidden="true" style="${allFiles ? 'color: var(--md-sys-color-primary);' : 'visibility: hidden;'}">check</md-icon>
-                <div slot="headline">${t('fb_all_files', 'All Files')}</div>
+                <md-icon slot="start" aria-hidden="true" class="fb-menu-check ${allFiles ? 'fb-menu-check--visible' : ''}">check</md-icon>
+                <div slot="headline">${escapeHtml(t('fb_all_files', 'All Files'))}</div>
               </md-menu-item>
             </md-menu>
-          </div>
-        </header>
+          </div>`,
+        })}
 
         <div class="fb-breadcrumbs-wrap">
           <nav class="fb-breadcrumbs" id="fb-breadcrumbs" aria-label="Breadcrumb">
@@ -333,9 +320,9 @@ export async function openFileBrowser(
               ${dirs.map(d => {
                 const dateStr = formatDate(d.mtime);
                 return `
-                <div class="fb-row" data-path="${escapeHtml(d.path)}">
-                  <div class="fb-icon" style="background: #393552;">
-                    <md-icon style="color: #d0bcff;" aria-hidden="true">folder</md-icon>
+                <div class="fb-row" role="button" tabindex="0" data-path="${escapeHtml(d.path)}">
+                  <div class="fb-icon fb-icon--folder">
+                    <md-icon aria-hidden="true">folder</md-icon>
                   </div>
                   <div class="fb-text-col">
                     <div class="fb-name">${escapeHtml(d.name)}</div>
@@ -354,9 +341,9 @@ export async function openFileBrowser(
                 const sizeStr = formatFileSize(f.size);
                 const dateStr = formatDate(f.mtime);
                 return `
-                <div class="fb-row" data-path="${escapeHtml(f.path)}" data-is-file="true">
-                  <div class="fb-icon" style="${visual.bgStyle}">
-                    <md-icon style="${visual.iconStyle}" aria-hidden="true">${visual.icon}</md-icon>
+                <div class="fb-row" role="button" tabindex="0" data-path="${escapeHtml(f.path)}" data-is-file="true">
+                  <div class="fb-icon ${visual.tone}">
+                    <md-icon aria-hidden="true">${visual.icon}</md-icon>
                   </div>
                   <div class="fb-text-col">
                     <div class="fb-name">${escapeHtml(f.name)}</div>
@@ -396,15 +383,12 @@ export async function openFileBrowser(
     }
 
     // Wire 3-dots menu
-    const menuBtn = overlay.querySelector('#fb-menu-btn');
+    const menuBtn = overlay.querySelector('#fb-menu-btn') as HTMLElement | null;
     const menu = overlay.querySelector('#fb-menu') as MdMenu | null;
-    menuBtn?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (menu) menu.open = !menu.open;
-    });
+    wireMenuTrigger(menuBtn, menu);
 
     overlay.querySelector('#fb-menu-filter-primary')?.addEventListener('click', () => {
-      if (menu) menu.open = false;
+      closeMenu(menu);
       if (allFiles) {
         allFiles = false;
         savedAllFilesFilter = false;
@@ -413,7 +397,7 @@ export async function openFileBrowser(
     });
 
     overlay.querySelector('#fb-menu-filter-all')?.addEventListener('click', () => {
-      if (menu) menu.open = false;
+      closeMenu(menu);
       if (!allFiles) {
         allFiles = true;
         savedAllFilesFilter = true;
@@ -421,9 +405,9 @@ export async function openFileBrowser(
       }
     });
 
-    // Wire folder and file row clicks
+    // Wire folder and file row activation (pointer + keyboard)
     overlay.querySelectorAll('.fb-row[data-path]').forEach(el => {
-      el.addEventListener('click', () => {
+      const activate = () => {
         const path = (el as HTMLElement).dataset.path;
         if (!path) return;
         const isFile = (el as HTMLElement).dataset.isFile === 'true';
@@ -434,6 +418,14 @@ export async function openFileBrowser(
         } else {
           loadDir(path);
         }
+      };
+      el.addEventListener('click', activate);
+      el.addEventListener('keydown', (e) => {
+        const key = (e as KeyboardEvent).key;
+        if (key !== 'Enter' && key !== ' ') return;
+        e.preventDefault();
+        keyboardNav = true;
+        activate();
       });
     });
 
@@ -445,11 +437,20 @@ export async function openFileBrowser(
         closeOverlay(true);
       }
     });
+
+    if (keyboardNav) {
+      keyboardNav = false;
+      const next = overlay.querySelector<HTMLElement>('.fb-row[data-path]')
+        || overlay.querySelector<HTMLElement>('#fb-back');
+      next?.focus();
+    }
   }
 
+  let cleanupA11y = () => {};
   function closeOverlay(popHistory = true) {
     if (closed) return;
     closed = true;
+    cleanupA11y();
     window.removeEventListener('popstate', onPopState);
     overlay.classList.remove('subpage-overlay--open');
 
@@ -487,15 +488,14 @@ export async function openFileBrowser(
 
     overlay.innerHTML = `
       <div class="subpage-inner">
-        <header class="subpage-header">
-          <button type="button" class="subpage-back-btn" id="fb-back" aria-label="${t('dialog_cancel', 'Back')}">
-            <md-icon aria-hidden="true">arrow_back</md-icon>
-            <md-ripple></md-ripple>
-          </button>
-          <div class="subpage-header-title-wrap">
-            <h1 class="subpage-title">${pageTitle}</h1>
-          </div>
-        </header>
+        ${overlayHeader({
+          className: 'subpage-header',
+          back: { id: 'fb-back', className: 'subpage-back-btn', label: t('common_back', 'Back') },
+          title: pageTitle,
+          titleTag: 'h1',
+          titleClass: 'subpage-title',
+          titleId: 'fb-title',
+        })}
         <div class="fb-breadcrumbs-wrap">
           <nav class="fb-breadcrumbs" id="fb-breadcrumbs" aria-label="Breadcrumb">
             ${renderBreadcrumbsHtml(path, t('fb_internal_storage', 'Internal storage'))}
@@ -566,6 +566,12 @@ export async function openFileBrowser(
   window.addEventListener('popstate', onPopState);
 
   await loadDir(currentPath, false);
+
+  cleanupA11y = setupOverlayA11y(overlay, {
+    titleId: 'fb-title',
+    onClose: () => closeOverlay(true),
+    initialFocus: overlay.querySelector('#fb-back'),
+  });
 }
 
 

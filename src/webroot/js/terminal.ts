@@ -1,9 +1,8 @@
 import { showToast } from './toast.js';
-import { getTranslation } from './i18n.js';
+import { t } from './i18n.js';
 import { exec, getDataDir } from './bridge.js';
 import { shellEscape } from './utils.js';
 
-const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
 export interface LogEntry {
   content: string;
@@ -75,11 +74,15 @@ async function fetchEntriesForTab(tab: LogTab): Promise<LogEntry[]> {
   return [...liveHistory];
 }
 
+let renderSeq = 0;
+
 async function renderCurrentLog() {
   if (!activeViewportEl) return;
+  const seq = ++renderSeq;
   activeViewportEl.innerHTML = '';
 
   const entries = await fetchEntriesForTab(currentLogType);
+  if (seq !== renderSeq || !activeViewportEl) return;
   if (entries.length === 0) {
     if (activeEmptyEl) activeEmptyEl.style.display = 'flex';
   } else {

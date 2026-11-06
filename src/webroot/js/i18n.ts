@@ -47,7 +47,6 @@ export async function initI18n() {
   const saved = await cfgGet('lang', 'auto') || 'auto';
   _currentLangCode = saved;
   await applyLanguage(saved, false);
-  wireLanguageSelect(saved);
 }
 
 export async function applyLanguage(langCode: string, notify = true) {
@@ -56,11 +55,16 @@ export async function applyLanguage(langCode: string, notify = true) {
   let target = langCode;
   if (langCode === 'auto') {
     target = (navigator.language || '').slice(0, 2);
+    // Vietnamese is stored as `vn` for the existing language packs, but the
+    // browser reports the BCP-47 code `vi`.
+    if (target === 'vi') target = 'vn';
     if (!LANGUAGE_CODES.includes(target)) target = 'en';
   }
 
   // Set direction before any network work so RTL layouts don't flip later.
   document.documentElement.dir = target === 'ar' ? 'rtl' : 'ltr';
+  // `vn` is an internal pack name, not a valid BCP-47 language tag.
+  document.documentElement.lang = target === 'vn' ? 'vi' : target;
 
   if (target !== 'en') {
     let cached: Record<string, string> | null = null;
@@ -90,6 +94,11 @@ export function getTranslation(key: string): string | null {
   return currentStrings[key] || fallbackStrings[key] || null;
 }
 
+/** Translate with a literal fallback; the single shared helper for UI modules. */
+export function t(key: string, fallback = ''): string {
+  return getTranslation(key) || fallback;
+}
+
 export function applyTranslations() {
   for (const el of document.querySelectorAll('[data-i18n]')) {
     const key = (el as HTMLElement).dataset.i18n;
@@ -113,21 +122,4 @@ export function applyTranslations() {
     const val = currentStrings[(el as HTMLElement).dataset.i18nPlaceholder!] || fallbackStrings[(el as HTMLElement).dataset.i18nPlaceholder!];
     if (val) (el as HTMLInputElement).placeholder = val;
   }
-}
-
-function wireLanguageSelect(currentLang: string) {
-  const select = document.getElementById('language-select') as HTMLSelectElement | null;
-  if (!select) return;
-  select.innerHTML = '';
-  const langs: [string, string][] = [['auto', 'Auto'], ['en', 'English'], ['zh', '中文'], ['ru', 'Русский'], ['fr', 'Français'], ['es', 'Español'], ['ar', 'العربية'], ['pl', 'Polski'], ['tr', 'Türkçe'], ['id', 'Bahasa indonesia'], ['hu', 'Magyar'], ['vn', 'Tiếng Việt']];
-  for (const [code, name] of langs) {
-    const opt = document.createElement('option');
-    opt.value = code; opt.textContent = name; select.appendChild(opt);
-  }
-  select.value = currentLang;
-  select.addEventListener('change', () => applyLanguage(select.value));
-  document.addEventListener('languageChanged', () => {
-    const auto = select.querySelector('option[value="auto"]');
-    if (auto) auto.textContent = getTranslation('theme_mode_auto') || 'Auto';
-  });
 }

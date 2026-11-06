@@ -5,11 +5,13 @@ import { exec, getModuleDir } from './bridge.js';
 import { cfgSet } from './cfg.js';
 import { shellEscape } from './utils.js';
 import { showToast } from './toast.js';
-import { getTranslation } from './i18n.js';
+import { t } from './i18n.js';
 import { appendToOutput } from './terminal.js';
+import { showDialog } from './dialog.js';
+import { rowContent, rowIcon, rowShell } from './ui-row.js';
+import { escapeHtml } from './utils.js';
 import type { TargetApp, AppState } from './target-apps.js';
 
-const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
 export interface TargetDialogsContext {
   apps: TargetApp[];
@@ -25,23 +27,18 @@ export function openTeesimModeDialog() {
     const moddir = getModuleDir();
     if (!moddir) return;
     const scriptPath = shellEscape(moddir + '/features/teesim_mode.sh');
-    const d = document.createElement('md-dialog');
-    d.innerHTML = `
-      <div slot="headline">${t('ta_teesim_mode_title', 'Operation Mode')}</div>
-      <div slot="content" class="ta-mode-content">
-        <p class="supporting-text ta-mode-desc">${t('ta_teesim_mode_desc', 'Applies to all apps in the TEESimulator default profile')}</p>
+    const d = showDialog(
+      escapeHtml(t('ta_teesim_mode_title', 'Operation Mode')),
+      `<div class="ta-mode-content">
+        <p class="supporting-text ta-mode-desc">${escapeHtml(t('ta_teesim_mode_desc', 'Applies to all apps in the TEESimulator default profile'))}</p>
         <md-outlined-segmented-button-set id="ta-teesim-mode-set">
-          <md-outlined-segmented-button value="patch" selected label="${t('ta_teesim_mode_patch', 'Patch')}"></md-outlined-segmented-button>
-          <md-outlined-segmented-button value="generation" label="${t('ta_teesim_mode_generation', 'Generation')}"></md-outlined-segmented-button>
+          <md-outlined-segmented-button value="patch" selected label="${escapeHtml(t('ta_teesim_mode_patch', 'Patch'))}"></md-outlined-segmented-button>
+          <md-outlined-segmented-button value="generation" label="${escapeHtml(t('ta_teesim_mode_generation', 'Generation'))}"></md-outlined-segmented-button>
         </md-outlined-segmented-button-set>
-      </div>
-      <div slot="actions">
-        <md-text-button class="dialog-action-close">${t('dialog_cancel', 'Cancel')}</md-text-button>
-        <md-filled-button id="ta-teesim-mode-apply">${t('dialog_apply', 'Apply')}</md-filled-button>
-      </div>
-    `;
-    document.body.appendChild(d);
-    d.addEventListener('close', () => document.body.removeChild(d));
+      </div>`,
+      `<md-text-button class="dialog-action-close">${escapeHtml(t('dialog_cancel', 'Cancel'))}</md-text-button>
+       <md-filled-button id="ta-teesim-mode-apply">${escapeHtml(t('dialog_apply', 'Apply'))}</md-filled-button>`
+    );
 
     let _touched = false;
     exec(`sh ${scriptPath} --get 2>/dev/null || echo patch`).then(({ stdout }) => {
@@ -80,74 +77,55 @@ export function openTeesimModeDialog() {
       }
     });
     d.querySelector('.dialog-action-close')!.addEventListener('click', () => d.close());
-    d.show();
     paintSeg(d);
   }
 
 function paintSeg(root: HTMLElement): void {
     const rootStyle = document.documentElement.style;
-    const hex: Record<string, [string, string]> = {
+    const colors: Record<string, [string, string]> = {
       bare: [rootStyle.getPropertyValue('--md-sys-color-primary').trim(), rootStyle.getPropertyValue('--md-sys-color-on-primary').trim()],
       conditional: [rootStyle.getPropertyValue('--md-sys-color-tertiary').trim(), rootStyle.getPropertyValue('--md-sys-color-on-tertiary').trim()],
       force: [rootStyle.getPropertyValue('--md-sys-color-error').trim(), rootStyle.getPropertyValue('--md-sys-color-on-error').trim()],
       patch: [rootStyle.getPropertyValue('--md-sys-color-primary').trim(), rootStyle.getPropertyValue('--md-sys-color-on-primary').trim()],
       generation: [rootStyle.getPropertyValue('--md-sys-color-error').trim(), rootStyle.getPropertyValue('--md-sys-color-on-error').trim()],
     };
-    const inject = (btn: Element) => {
-      const sr = btn.shadowRoot;
-      if (!sr) { requestAnimationFrame(() => inject(btn)); return; }
+    root.querySelectorAll<HTMLElement>('md-outlined-segmented-button').forEach(btn => {
       const val = btn.getAttribute('value');
       if (!val) return;
-      const h = hex[val];
-      if (!h || !h[0] || !h[1]) return;
-      const [bg, fg] = h;
-      const sheet = new CSSStyleSheet();
-      sheet.replaceSync(`.md3-segmented-button--selected{background-color:${bg}}.md3-segmented-button.md3-segmented-button--selected:enabled .md3-segmented-button__label-text{color:${fg}}.md3-segmented-button.md3-segmented-button--selected:enabled:hover .md3-segmented-button__label-text{color:${fg}}.md3-segmented-button.md3-segmented-button--selected:enabled:focus .md3-segmented-button__label-text{color:${fg}}.md3-segmented-button.md3-segmented-button--selected:enabled:active .md3-segmented-button__label-text{color:${fg}}.md3-segmented-button--selected .md3-segmented-button__icon{color:${fg}}.md3-segmented-button--selected .md3-segmented-button__checkmark-path{stroke:${fg}}.md3-segmented-button--selected:hover .md3-segmented-button__checkmark-path{stroke:${fg}}.md3-segmented-button--selected:focus .md3-segmented-button__checkmark-path{stroke:${fg}}.md3-segmented-button--selected:active .md3-segmented-button__checkmark-path{stroke:${fg}}`);
-      sr.adoptedStyleSheets = [...sr.adoptedStyleSheets, sheet];
-    };
-    root.querySelectorAll('md-outlined-segmented-button').forEach(inject);
-
-    const set = root.querySelector('md-outlined-segmented-button-set');
-    if (set) {
-      const injectFlex = () => {
-        const sr = set.shadowRoot;
-        if (!sr) { requestAnimationFrame(injectFlex); return; }
-        const s = new CSSStyleSheet();
-        s.replaceSync('::slotted(md-outlined-segmented-button){flex:1;min-width:0}');
-        sr.adoptedStyleSheets = [...sr.adoptedStyleSheets, s];
-      };
-      injectFlex();
-    }
+      const pair = colors[val];
+      if (!pair || !pair[0] || !pair[1]) return;
+      const [bg, fg] = pair;
+      btn.classList.add('segmented-flex');
+      btn.style.setProperty('--md-outlined-segmented-button-selected-container-color', bg);
+      btn.style.setProperty('--md-outlined-segmented-button-selected-label-text-color', fg);
+      btn.style.setProperty('--md-outlined-segmented-button-selected-icon-color', fg);
+    });
   }
 
 export function openModeDialog(ctx: TargetDialogsContext) {
-    const d = document.createElement('md-dialog');
-    d.innerHTML = `
-      <div slot="headline">${t('ta_mode_settings', 'Default Mode')}</div>
-      <div slot="content" class="ta-mode-content">
-        <p class="supporting-text ta-mode-desc">${t('ta_mode_desc', 'Controls the default mode suffix added to new app targets in Tricky Store')}</p>
+    const overrideRow = rowShell({
+      className: 'list-item--toggle',
+      leading: rowIcon('compare_arrows'),
+      content: rowContent({
+        title: t('ta_mode_override_label', 'Override existing'),
+        description: t('ta_mode_override_desc', 'Apply this mode to all currently selected apps'),
+      }),
+      trailing: '<md-switch icons id="ta-mode-do-override"></md-switch>',
+    });
+    const d = showDialog(
+      escapeHtml(t('ta_mode_settings', 'Default Mode')),
+      `<div class="ta-mode-content">
+        <p class="supporting-text ta-mode-desc">${escapeHtml(t('ta_mode_desc', 'Controls the default mode suffix added to new app targets in Tricky Store'))}</p>
         <md-outlined-segmented-button-set>
-          <md-outlined-segmented-button value="bare"${ctx.getDefaultMode() === 'bare' ? ' selected' : ''} label="${t('ta_mode_bare', 'Auto')}"></md-outlined-segmented-button>
-          <md-outlined-segmented-button value="conditional"${ctx.getDefaultMode() === 'conditional' ? ' selected' : ''} label="? ${t('ta_mode_conditional', 'Leaf')}"></md-outlined-segmented-button>
-          <md-outlined-segmented-button value="force"${ctx.getDefaultMode() === 'force' ? ' selected' : ''} label="! ${t('ta_mode_force', 'Gen')}"></md-outlined-segmented-button>
+          <md-outlined-segmented-button value="bare"${ctx.getDefaultMode() === 'bare' ? ' selected' : ''} label="${escapeHtml(t('ta_mode_bare', 'Auto'))}"></md-outlined-segmented-button>
+          <md-outlined-segmented-button value="conditional"${ctx.getDefaultMode() === 'conditional' ? ' selected' : ''} label="? ${escapeHtml(t('ta_mode_conditional', 'Leaf'))}"></md-outlined-segmented-button>
+          <md-outlined-segmented-button value="force"${ctx.getDefaultMode() === 'force' ? ' selected' : ''} label="! ${escapeHtml(t('ta_mode_force', 'Gen'))}"></md-outlined-segmented-button>
         </md-outlined-segmented-button-set>
-        <div class="list-item list-item--toggle">
-          <div class="li-icon"><md-icon aria-hidden="true">compare_arrows</md-icon></div>
-          <div class="list-item-content">
-            <div class="toggle-text">${t('ta_mode_override_label', 'Override existing')}</div>
-            <span class="supporting-text">${t('ta_mode_override_desc', 'Apply this mode to all currently selected apps')}</span>
-          </div>
-          <div class="spacer"></div>
-          <md-switch icons id="ta-mode-do-override"></md-switch>
-        </div>
-      </div>
-      <div slot="actions">
-        <md-text-button class="dialog-action-close">${t('dialog_cancel', 'Cancel')}</md-text-button>
-        <md-filled-button id="ta-mode-apply">${t('dialog_apply', 'Apply')}</md-filled-button>
-      </div>
-    `;
-    document.body.appendChild(d);
-    d.addEventListener('close', () => document.body.removeChild(d));
+        ${overrideRow}
+      </div>`,
+      `<md-text-button class="dialog-action-close">${escapeHtml(t('dialog_cancel', 'Cancel'))}</md-text-button>
+       <md-filled-button id="ta-mode-apply">${escapeHtml(t('dialog_apply', 'Apply'))}</md-filled-button>`
+    );
 
     let _mode = ctx.getDefaultMode();
     d.querySelectorAll('md-outlined-segmented-button').forEach(b => {
@@ -156,7 +134,7 @@ export function openModeDialog(ctx: TargetDialogsContext) {
     d.querySelector('#ta-mode-apply')!.addEventListener('click', () => {
       ctx.setDefaultMode(_mode);
       cfgSet('target_default_mode', _mode);
-      const doOverride = (d.querySelector('#ta-mode-do-override') as any)?.selected;
+      const doOverride = (d.querySelector('#ta-mode-do-override') as HTMLElement & { selected: boolean })?.selected;
       let count = 0;
       if (doOverride) {
         for (const app of ctx.apps) {
@@ -175,24 +153,16 @@ export function openModeDialog(ctx: TargetDialogsContext) {
       }
     });
     d.querySelector('.dialog-action-close')!.addEventListener('click', () => d.close());
-    d.show();
     paintSeg(d);
   }
 
 export function openRegenerateDialog(ctx: TargetDialogsContext) {
-    const d = document.createElement('md-dialog');
-    d.innerHTML = `
-      <div slot="headline">${t('ta_regenerate', 'Regenerate')}</div>
-      <div slot="content">
-        <p class="supporting-text">${t('ta_regenerate_confirm', 'This will re-scan all installed apps and fully rebuild target.txt. Custom per-app states will be overwritten. A backup will be saved.')}</p>
-      </div>
-      <div slot="actions">
-        <md-text-button class="dialog-action-close">${t('dialog_cancel', 'Cancel')}</md-text-button>
-        <md-filled-button id="ta-regenerate-confirm">${t('ta_regenerate', 'Regenerate')}</md-filled-button>
-      </div>
-    `;
-    document.body.appendChild(d);
-    d.addEventListener('close', () => document.body.removeChild(d));
+    const d = showDialog(
+      escapeHtml(t('ta_regenerate', 'Regenerate')),
+      `<p class="supporting-text">${escapeHtml(t('ta_regenerate_confirm', 'This will re-scan all installed apps and fully rebuild target.txt. Custom per-app states will be overwritten. A backup will be saved.'))}</p>`,
+      `<md-text-button class="dialog-action-close">${escapeHtml(t('dialog_cancel', 'Cancel'))}</md-text-button>
+       <md-filled-button id="ta-regenerate-confirm">${escapeHtml(t('ta_regenerate', 'Regenerate'))}</md-filled-button>`
+    );
 
     d.querySelector('#ta-regenerate-confirm')!.addEventListener('click', async () => {
       d.close();
@@ -214,6 +184,5 @@ export function openRegenerateDialog(ctx: TargetDialogsContext) {
     });
 
     d.querySelector('.dialog-action-close')!.addEventListener('click', () => d.close());
-    d.show();
   }
 

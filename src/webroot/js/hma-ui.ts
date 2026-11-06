@@ -1,9 +1,8 @@
-import { getTranslation } from './i18n.js';
+import { t } from './i18n.js';
 import { wireRowDialog } from './toggles.js';
 import { openSubPage } from './subpage.js';
 import { cfgGet, cfgSet } from './cfg.js';
 
-const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
 export async function openHmaDialog() {
   const currentMode = (await cfgGet('hma_launch_mode', 'prompt')) || 'prompt';

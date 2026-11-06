@@ -86,7 +86,9 @@ function writeConfig(key: string, val: string | undefined | null) {
   if (!DATA_DIR) return Promise.resolve();
   const cmd =
     `mkdir -p ${shellEscape(DATA_DIR + '/config/val')} && printf '%s' ${shellEscape(val || '')} > ${shellEscape(DATA_DIR + '/config/val/' + key + '.val')}`;
-  return bridgeExec(cmd).catch((err: any) => console.warn('Config write failed for', key, err));
+  return bridgeExec(cmd)
+    .then(() => undefined)
+    .catch((err: unknown) => { console.warn('Config write failed for', key, err); });
 }
 
 /** Retrieve a config value by key. Checks the in-memory cache first, then reads from disk. Returns the stored value, `defaultValue`, or `null`. */
@@ -99,15 +101,31 @@ export async function cfgGet(key: string, defaultValue?: string): Promise<string
   return cache[key] ?? defaultValue;
 }
 
+const writeChains = new Map<string, Promise<void>>();
+
+/** Serialize disk writes per key so rapid toggles cannot land out of order. */
+function enqueueWrite(key: string, val: string | undefined | null): Promise<void> {
+  const previous = writeChains.get(key) || Promise.resolve();
+  const next = previous
+    .catch(() => {})
+    .then(() => writeConfig(key, val))
+    .catch((err: unknown) => console.warn('Config write failed for', key, err));
+  writeChains.set(key, next);
+  void next.finally(() => {
+    if (writeChains.get(key) === next) writeChains.delete(key);
+  });
+  return next;
+}
+
 /** Set a config value both in cache and on disk. No-op when the value is unchanged. */
-export function cfgSet(key: string, val: string | undefined | null) {
-  if (key in cache && cache[key] === val) return;
+export function cfgSet(key: string, val: string | undefined | null): Promise<void> {
+  if (key in cache && cache[key] === val) return Promise.resolve();
   cache[key] = val;
   try {
     localStorage.setItem('sp_cfg_' + key, val ?? '');
     localStorage.setItem('sp_cfg_ts', String(Date.now()));
   } catch {}
-  writeConfig(key, val);
+  return enqueueWrite(key, val);
 }
 
 /** Remove one key (or all keys when called without argument) from the in-memory cache. */

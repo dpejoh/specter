@@ -1,8 +1,8 @@
-import { getTranslation } from './i18n.js';
+import { t } from './i18n.js';
 import { openSubPage } from './subpage.js';
+import { row } from './ui-row.js';
 import { mountLocalKeyboxForm, type KeyboxLocalHandle } from './keybox-local-ui.js';
 
-const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
 export function wireKeybox() {
   const btn = document.getElementById('keybox-btn');
@@ -32,15 +32,13 @@ export async function openKeyboxPage() {
               container.innerHTML = `
                 <h2 class="list-title">${t('kb_remote_section', 'Specter source')}</h2>
                 <div class="list-container">
-                  <button type="button" class="list-item" id="kb-remote-open">
-                    <div class="li-icon"><md-icon aria-hidden="true">cloud_download</md-icon></div>
-                    <div class="list-item-content">
-                      <div class="toggle-text">${t('kb_specter_keyboxes', 'Specter keyboxes')}</div>
-                      <span class="supporting-text">${t('menu_import_keybox_desc', 'Browse available keyboxes and install one')}</span>
-                    </div>
-                    <div class="spacer"></div>
-                    <md-ripple></md-ripple>
-                  </button>
+                  ${row({
+                    tag: 'button',
+                    id: 'kb-remote-open',
+                    icon: 'cloud_download',
+                    title: t('kb_specter_keyboxes', 'Specter keyboxes'),
+                    description: t('menu_import_keybox_desc', 'Browse available keyboxes and install one'),
+                  })}
                 </div>
 
                 <h2 class="list-title">${t('kb_local_section', 'Custom source')}</h2>

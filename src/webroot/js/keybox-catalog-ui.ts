@@ -1,15 +1,14 @@
-import { exec, getModuleDir } from './bridge.js';
-import { cfgGet, cfgSet } from './cfg.js';
-import { getTranslation } from './i18n.js';
+import { exec } from './bridge.js';
+import { cfgSet } from './cfg.js';
+import { t } from './i18n.js';
 import { API_URLS } from './constants.js';
 import { escapeHtml, fetchJson, shellEscape, updateListContainerCorners } from './utils.js';
-import { runAction } from './actions.js';
-import { refreshKeyboxStatus } from './device.js';
 import { createFilterDropdown, type FilterDropdownHandle, type FilterOption } from './filter-dropdown.js';
 import { openSubPage } from './subpage.js';
+import { installKeybox } from './keybox-install.js';
+import { rowContent, rowIcon } from './ui-row.js';
 import type { CatalogEntry, CatalogJson } from './types.js';
 
-const t = (key: string, fallback: string): string => getTranslation(key) || fallback;
 
 export interface KeyboxCatalogOptions {
   refreshButton?: HTMLElement | null;
@@ -173,11 +172,12 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
     row.setAttribute('aria-disabled', disabled ? 'true' : 'false');
     row.innerHTML = `
       <md-radio name="kb-catalog" value="${escapeHtml(key)}" aria-label="${escapeHtml(title)}${badge ? `, ${escapeHtml(badge)}` : ''}" ${disabled ? 'disabled' : ''}></md-radio>
-      <div class="li-icon"><md-icon aria-hidden="true">${icon}</md-icon></div>
-      <div class="list-item-content">
-        <div class="toggle-text">${escapeHtml(title)}${badge ? ` <span class="subpage-radio-badge">${escapeHtml(badge)}</span>` : ''}</div>
-        <span class="supporting-text">${escapeHtml(description)}</span>
-      </div>
+      ${rowIcon(icon)}
+      ${rowContent({
+        title,
+        titleHtml: `${escapeHtml(title)}${badge ? ` <span class="subpage-radio-badge">${escapeHtml(badge)}</span>` : ''}`,
+        description,
+      })}
       <md-ripple></md-ripple>
     `;
     const radio = row.querySelector('md-radio') as HTMLElement & { checked: boolean };
@@ -265,15 +265,10 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
     updateListContainerCorners(list);
   };
 
-  let providerLoaded = false;
-
   async function loadCatalog() {
     if (loading) return;
-    if (!providerLoaded) {
-      const provider = (await cfgGet('keybox_provider', 'auto').catch(() => 'auto')) || 'auto';
-      if (provider !== 'auto') providerFilter = provider;
-      providerLoaded = true;
-    }
+    // providerFilter starts at "all"; the installed provider must not silently
+    // hide other sources when the catalog opens.
     loading = true;
     updateFab();
     refreshButton?.setAttribute('disabled', '');
@@ -333,16 +328,7 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
         cfgSet('keybox_provider', providerFilter === 'all' ? 'auto' : providerFilter);
       }
 
-      const code = await runAction('keybox.sh');
-      if (code === 0) {
-        const moddir = getModuleDir();
-        if (moddir) {
-          await exec(`sh ${shellEscape(moddir + '/features/keybox_info.sh')}`).catch(() => {});
-          await exec(`sh ${shellEscape(moddir + '/refresh_desc.sh')}`).catch(() => {});
-        }
-        await refreshKeyboxStatus();
-        onInstalled?.();
-      }
+      await installKeybox({ onInstalled });
     } finally {
       cfgSet('keybox_select_source', '');
       cfgSet('keybox_select_version', '');

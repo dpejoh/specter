@@ -1,7 +1,8 @@
 import { cfgGet, cfgSet, cfgInvalidate } from './cfg.js';
 import { CONTROL_TOGGLES } from './constants.js';
-import { applyTranslations } from './i18n.js';
-import { setDevMode } from './utils.js';
+import { applyTranslations, t } from './i18n.js';
+import { escapeHtml, makeRowInteractive, setDevMode } from './utils.js';
+import { rowIcon, rowShell } from './ui-row.js';
 
 function labelFromKey(key: string): string {
   const s = key.replace(/^(toggle_|action_)/, '').replace(/_/g, ' ');
@@ -23,70 +24,28 @@ export function renderControlToggles() {
     const labelKey = i18nLabelKey(toggle.key);
     const descKey = labelKey + '_desc';
 
-    const row = document.createElement('div');
-    row.className = 'list-item list-item--toggle';
-    row.id = toggle.id + '-row';
+    const configCue = toggle.configurable
+      ? `<button type="button" class="li-config-btn" aria-label="${escapeHtml(`${t('control_configure', 'Configure')} ${labelFromKey(toggle.key)}`)}">
+           <svg class="li-config-chevron" viewBox="0 0 8 14" width="8" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 2L6.5 7L1.5 12"/></svg>
+         </button>
+         <div class="li-config-divider" aria-hidden="true"></div>`
+      : '';
 
-    const iconDiv = document.createElement('div');
-    iconDiv.className = 'li-icon';
-    iconDiv.innerHTML = `<md-icon aria-hidden="true">${toggle.icon}</md-icon>`;
-
-    const content = document.createElement('div');
-    content.className = 'list-item-content';
-
-    const label = document.createElement('div');
-    label.className = 'toggle-text';
-    label.dataset.i18n = labelKey;
-    label.textContent = toggle.title || labelFromKey(toggle.key);
-    content.appendChild(label);
-
-    const hint = document.createElement('span');
-    hint.className = 'supporting-text';
-    hint.dataset.i18n = descKey;
-    hint.textContent = toggle.description || '';
-    content.appendChild(hint);
-
-    const spacer = document.createElement('div');
-    spacer.className = 'spacer';
-
-    const sw = document.createElement('md-switch');
-    sw.icons = true;
-    sw.id = toggle.id;
-    sw.setAttribute('aria-label', labelFromKey(toggle.key));
-    sw.dataset.i18nAria = labelKey;
-
-    const ripple = document.createElement('md-ripple');
-
-    const actionArea = document.createElement('div');
-    actionArea.className = 'li-toggle-action';
-
-    if (toggle.configurable) {
-      const cue = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      cue.setAttribute('class', 'li-config-chevron');
-      cue.setAttribute('viewBox', '0 0 8 14');
-      cue.setAttribute('width', '8');
-      cue.setAttribute('height', '14');
-      cue.setAttribute('fill', 'none');
-      cue.setAttribute('stroke', 'currentColor');
-      cue.setAttribute('stroke-width', '2');
-      cue.setAttribute('stroke-linecap', 'round');
-      cue.setAttribute('stroke-linejoin', 'round');
-      cue.setAttribute('aria-hidden', 'true');
-      cue.innerHTML = '<path d="M1.5 2L6.5 7L1.5 12"/>';
-      actionArea.appendChild(cue);
-
-      const div = document.createElement('div');
-      div.className = 'li-config-divider';
-      div.setAttribute('aria-hidden', 'true');
-      actionArea.appendChild(div);
-    }
-
-    actionArea.appendChild(sw);
-
-    row.appendChild(iconDiv);
-    row.appendChild(content);
-    row.appendChild(actionArea);
-    row.appendChild(ripple);
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = rowShell({
+      id: `${toggle.id}-row`,
+      className: 'list-item--toggle',
+      leading: rowIcon(toggle.icon),
+      content: `<div class="list-item-content">
+        <div class="toggle-text" data-i18n="${labelKey}">${escapeHtml(toggle.title || labelFromKey(toggle.key))}</div>
+        <span class="supporting-text" data-i18n="${descKey}">${escapeHtml(toggle.description || '')}</span>
+      </div>`,
+      trailing: `<div class="li-toggle-action">
+        ${configCue}
+        <md-switch icons id="${toggle.id}" aria-label="${escapeHtml(labelFromKey(toggle.key))}" data-i18n-aria="${labelKey}"></md-switch>
+      </div>`,
+    });
+    const row = wrapper.firstElementChild as HTMLElement;
     container.appendChild(row);
   }
 
@@ -98,9 +57,16 @@ export function wireRowDialog(rowId: string, open: () => void) {
   const row = document.getElementById(rowId);
   if (!row || row.dataset.spWired) return;
   row.dataset.spWired = '1';
-  row.addEventListener('click', e => {
+  makeRowInteractive(row);
+  const activate = (e: Event) => {
     if (e.composedPath().some(n => n instanceof Element && n.localName === 'md-switch')) return;
     open();
+  };
+  row.addEventListener('click', activate);
+  row.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    activate(e);
   });
 }
 

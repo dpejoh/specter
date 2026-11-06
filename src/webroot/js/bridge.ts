@@ -136,7 +136,12 @@ export function spawnScript(scriptName: string, type = 'feature'): ChildProcess 
     const globalName = genCallbackName();
     setGlobal(globalName, child);
     const cleanup = () => deleteGlobal(globalName);
-    const timer = setTimeout(cleanup, EXEC_TIMEOUT_MS);
+    const timer = setTimeout(() => {
+      // A hung spawn must reject the child promise; otherwise runAction's
+      // progress dialog can stay open forever with no way to dismiss it.
+      cleanup();
+      (child as any).emit('error', new TimeoutError());
+    }, EXEC_TIMEOUT_MS);
     (child as any).on('exit', () => { clearTimeout(timer); cleanup(); });
     (child as any).on('error', () => { clearTimeout(timer); cleanup(); });
     try { window.ksu.spawn('sh', JSON.stringify([scriptPath]), '{}', globalName); }
