@@ -1,7 +1,7 @@
 import { initBridge, getDataDir, getModuleDir, exec } from './bridge.js';
 import { shellEscape, setDevMode, updateListContainerCorners, initCornerObserver, afterPaint, wireLazyClick } from './utils.js';
 import { setDataDir, migrateLocalStorage, cfgInit, cfgGet } from './cfg.js';
-import { initDevice, refreshDevice, refreshKeyboxStatus, refreshConflictStatus, reapplyKeyboxStatus } from './device.js';
+import { initDevice, refreshDevice, refreshKeyboxStatus, refreshKeyboxWatch, refreshConflictStatus, reapplyKeyboxStatus } from './device.js';
 import { initNetwork, refreshNetworkStatus } from './network.js';
 import { initTheme } from './theme.js';
 import { initI18n, t } from './i18n.js';
@@ -12,6 +12,7 @@ import { initTerminal } from './terminal.js';
 import { renderActivityPreview } from './history.js';
 import { wireTopBarScroll, wireNavigation, onHomeShow, onPageActivate } from './navigation.js';
 import { initFonts } from './font.js';
+import { wireHomeCards } from './home-cards.js';
 import { FEATURE_I18N_KEYS } from './constants.js';
 import { wireActions, buildFriendlyNames } from './actions.js';
 import { wireControlRows } from './control-ui.js';
@@ -35,6 +36,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   wireTopBarScroll();
   wireNavigation();
   initRedirect();
+  wireHomeCards();
   wireActions();
   buildFriendlyNames();
   updateListContainerCorners();
@@ -83,7 +85,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderActivityPreview();
     if (!_homeInitialized) { _homeInitialized = true; return; }
     refreshDevice(true).catch(() => {});
-    refreshKeyboxStatus().catch(() => {});
+    refreshKeyboxWatch().catch(() => {});
   });
 
   afterPaint(() => {
