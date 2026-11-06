@@ -224,15 +224,19 @@ unset _pif_dir
 _hma_dir=$(_hma_find_dir 2>/dev/null || true)
 if [ -n "$_hma_dir" ] && [ -f "$_hma_dir/config.json" ]; then
   _hma_cfg="$_hma_dir/config.json"
-  _hma_templates=$(grep -o '"isWhitelist"[[:space:]]*:' "$_hma_cfg" 2>/dev/null | wc -l | tr -d ' ' || true)
-  _hma_hidden=$(grep -o '"appList"[[:space:]]*:[[:space:]]*\[[^]]*\]' "$_hma_cfg" 2>/dev/null \
-    | grep -o '"[^"]*"' | wc -l | tr -d ' ' || true)
+  _hma_ver=$(cat /data/adb/modules/hma_oss_zygisk/module.prop /data/adb/modules_update/hma_oss_zygisk/module.prop \
+    /data/adb/modules/hma_oss/module.prop /data/adb/modules_update/hma_oss/module.prop 2>/dev/null \
+    | sed -n 's/^version=//p' | head -1)
+  [ -n "$_hma_ver" ] || _hma_ver=$(dumpsys package org.frknkrc44.hma_oss 2>/dev/null \
+    | sed -n 's/.*versionName=//p' | head -1)
+  _hma_ver_num=$(printf '%s' "$_hma_ver" | sed -n 's/.*oss-\([0-9][0-9]*\).*/\1/p')
+  [ -n "$_hma_ver_num" ] || _hma_ver_num=$(printf '%s' "$_hma_ver" | grep -o '[0-9][0-9]*' | head -1 || true)
+  _hma_auto_reload="No"
+  [ -n "$_hma_ver_num" ] && [ "$_hma_ver_num" -ge 175 ] && _hma_auto_reload="Yes"
   _rows=""
-  _row "Templates" "${_hma_templates:-0}"
-  _row "Listed packages" "${_hma_hidden:-0}"
-  _row "Live reload" "$(_onoff "$(cfg_get toggle_hma_live_reload 1)")"
-  _emit_module "hma" "HMA-OSS" "" "$_rows"
-  unset _hma_cfg _hma_templates _hma_hidden
+  _row "Auto-reload" "$_hma_auto_reload"
+  _emit_module "hma" "HMA-OSS" "$_hma_ver" "$_rows"
+  unset _hma_cfg _hma_ver _hma_ver_num _hma_auto_reload
   _hma_present=1
 else
   _hma_present=0

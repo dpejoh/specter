@@ -71,7 +71,7 @@ public final class SetupProbe {
         boolean hmaPresent = hmaDir != null;
         if (hmaPresent) {
             try {
-                modules.put(hmaModule(hmaDir, dataDir));
+                modules.put(hmaModule(hmaDir));
             } catch (Exception e) {
                 hmaPresent = false;
                 warnings.put("HMA-OSS config could not be read");
@@ -148,32 +148,38 @@ public final class SetupProbe {
         return module;
     }
 
-    private static JSONObject hmaModule(File hmaDir, String dataDir) throws Exception {
+    private static JSONObject hmaModule(File hmaDir) throws Exception {
         JSONObject config = new JSONObject(read(new File(hmaDir, "config.json")));
-        JSONObject templates = config.optJSONObject("templates");
-        int templateCount = templates == null ? 0 : templates.length();
-        int listed = 0;
-        if (templates != null) {
-            java.util.Iterator<String> keys = templates.keys();
-            while (keys.hasNext()) {
-                String name = keys.next();
-                JSONObject template = templates.optJSONObject(name);
-                JSONArray appList = template == null ? null : template.optJSONArray("appList");
-                if (appList != null) listed += appList.length();
-            }
-        }
+        JSONObject scope = config.optJSONObject("scope");
+        int scopeCount = scope == null ? 0 : scope.length();
+        String version = hmaVersion();
+        boolean autoReload = autoReloadVersion(version);
 
         JSONArray rows = new JSONArray();
-        rows.put(row("Templates", String.valueOf(templateCount)));
-        rows.put(row("Listed packages", String.valueOf(listed)));
-        rows.put(row("Live reload", onOff(cfg(dataDir, "toggle_hma_live_reload", "1"))));
+        rows.put(row("Scope entries", String.valueOf(scopeCount)));
+        rows.put(row("Auto-reload", autoReload ? "Yes" : "No"));
 
         JSONObject module = new JSONObject();
         module.put("id", "hma");
         module.put("name", "HMA-OSS");
-        module.put("version", "");
+        module.put("version", version);
         module.put("rows", rows);
         return module;
+    }
+
+    private static String hmaVersion() {
+        for (String id : new String[]{"hma_oss_zygisk", "hma_oss"}) {
+            for (String base : new String[]{MODULES, MODULES + "_update"}) {
+                String version = prop(new File(base + "/" + id, "module.prop"), "version");
+                if (!version.isEmpty()) return version;
+            }
+        }
+        return "";
+    }
+
+    private static boolean autoReloadVersion(String version) {
+        Matcher matcher = Pattern.compile("(\\d+)").matcher(version);
+        return matcher.find() && Integer.parseInt(matcher.group(1)) >= 175;
     }
 
     private static JSONObject simpleModule(String id, File dir, String fallbackName, String state)
