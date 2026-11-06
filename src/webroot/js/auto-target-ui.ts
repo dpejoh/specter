@@ -2,7 +2,6 @@ import { cfgGet, cfgSet } from './cfg.js';
 import { t } from './i18n.js';
 import { wireRowDialog } from './toggles.js';
 import { openSubPage } from './subpage.js';
-import { updateListContainerCorners } from './utils.js';
 
 
 const DEFAULT_INTERVAL_MINUTES = 5;
@@ -61,11 +60,6 @@ export async function openAutoTargetDialog() {
       : t('auto_target_interval_desc', 'Minimum 1 minute.');
   };
 
-  const refreshCorners = () => {
-    const root = intervalRow?.closest('.subpage-overlay') || document;
-    updateListContainerCorners(root);
-  };
-
   const updateMethodUI = (animate: boolean) => {
     if (!intervalRow) return;
     clearHideTimer();
@@ -75,7 +69,6 @@ export async function openAutoTargetDialog() {
       intervalRow.classList.remove('at-interval--leaving');
       intervalRow.hidden = false;
       intervalRow.classList.add('at-interval--visible');
-      refreshCorners();
       return;
     }
 
@@ -91,12 +84,10 @@ export async function openAutoTargetDialog() {
           intervalRow.classList.remove('at-interval--leaving');
         }
         hideTimer = null;
-        refreshCorners();
       }, 180);
     } else {
       intervalRow.classList.remove('at-interval--leaving');
       intervalRow.hidden = true;
-      refreshCorners();
     }
   };
 
@@ -174,7 +165,7 @@ export async function openAutoTargetDialog() {
 
   intervalRow = instance.overlay.querySelector('#at-interval-row');
   intervalInput = instance.overlay.querySelector('#at-interval');
-  intervalHelp = intervalRow?.querySelector('.supporting-text') || null;
+  intervalHelp = intervalRow?.querySelector('[slot="supporting"], .supporting-text') || null;
 
   if (intervalInput && intervalHelp) {
     intervalHelp.id = 'at-interval-help';

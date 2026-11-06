@@ -6,7 +6,8 @@ import { cfgGet, cfgSet } from './cfg.js';
 import { t } from './i18n.js';
 import { escapeHtml } from './utils.js';
 import { setupOverlayA11y } from './overlay-a11y.js';
-import { rowContent, rowIcon, rowShell, rowSpacer } from './ui-row.js';
+import './ui/sp-settings-row.js';
+import './ui/sp-settings-section.js';
 import { overlayHeader } from './ui-overlay.js';
 
 
@@ -30,11 +31,18 @@ export interface SubPageInputItem {
   title: string;
   description?: string;
   inputType?: 'number' | 'text';
+  layout?: 'inline' | 'block';
   value?: string;
   min?: number;
   max?: number;
   step?: number;
   unit?: string;
+  placeholder?: string;
+  maxLength?: number;
+  mono?: boolean;
+  autocapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  autocomplete?: string;
+  spellcheck?: boolean;
   ariaLabel?: string;
   getValue?: () => Promise<string> | string;
   onChange?: (value: string) => void;
@@ -171,7 +179,7 @@ async function openSubPageInternal(config: SubPageConfig): Promise<SubPageInstan
 
   await Promise.all(fetchPromises);
 
-  // Build inner HTML structure reusing Specter's native .list-container and .list-item styling
+  // Build the subpage shell with component-based row containers.
   overlay.innerHTML = `
     <div class="subpage-inner">
       ${overlayHeader({
@@ -187,88 +195,13 @@ async function openSubPageInternal(config: SubPageConfig): Promise<SubPageInstan
         ${config.description ? `
           <p class="subpage-top-desc">${escapeHtml(config.description)}</p>
         ` : ''}
-        ${config.masterToggle ? `
-          <div class="subpage-master-container">
-            ${rowShell({
-              id: 'subpage-master-card',
-              className: `list-item--toggle subpage-master-item ${masterEnabled ? 'subpage-master-item--active' : ''}`.trim(),
-              content: rowContent({
-                title: config.masterToggle.title,
-                titleClass: 'subpage-master-text',
-                description: config.masterToggle.description,
-              }),
-              trailing: `<md-switch icons id="subpage-master-switch" ${masterEnabled ? 'selected' : ''} aria-label="${escapeHtml(config.masterToggle.title)}"></md-switch>`,
-            })}
-          </div>
-        ` : ''}
+        ${config.masterToggle ? '<div class="subpage-master-container" id="subpage-master-container"></div>' : ''}
 
         <div class="subpage-options-wrapper ${!masterEnabled && config.masterToggle ? 'subpage-options--disabled' : ''}" id="subpage-options-wrapper">
           ${config.groups.map((group, gIdx) => `
             ${group.title ? `<h2 class="list-title">${escapeHtml(group.title)}</h2>` : ''}
             ${group.description ? `<p class="supporting-text subpage-group-desc">${escapeHtml(group.description)}</p>` : ''}
-            <div class="list-container" id="subpage-group-${gIdx}">
-              ${group.items.map((item, iIdx) => {
-                const total = group.items.length;
-                const posClass = total === 1 ? 'list-item--only' : iIdx === 0 ? 'list-item--first' : iIdx === total - 1 ? 'list-item--last' : 'list-item--middle';
-                if (item.type === 'custom') {
-                  return `<div class="subpage-custom-item" id="subpage-custom-${gIdx}-${iIdx}"></div>`;
-                }
-                if (item.type === 'radio') {
-                  const rItem = item as SubPageRadioItem;
-                  const isChecked = !!rItem.selected;
-                  return `
-                    ${rowShell({
-                      id: `${rItem.id}-row`,
-                      className: `list-item--radio ${posClass}`,
-                      leading: `<md-radio name="${rItem.name}" value="${rItem.value}" id="${rItem.id}" ${isChecked ? 'checked' : ''} aria-label="${escapeHtml(rItem.title)}${rItem.badge ? `, ${escapeHtml(rItem.badge)}` : ''}"></md-radio>`,
-                      content: rowContent({
-                        title: rItem.title,
-                        titleHtml: `${escapeHtml(rItem.title)}${rItem.badge ? ` <span class="subpage-radio-badge">${escapeHtml(rItem.badge)}</span>` : ''}`,
-                        description: rItem.description,
-                      }),
-                      attributes: { 'data-radio-group': rItem.name, 'data-radio-value': rItem.value },
-                    })}
-                  `;
-                }
-                if (item.type === 'input') {
-                  const inpItem = item as SubPageInputItem;
-                  const currentVal = inputValues.get(inpItem.id) ?? inpItem.value ?? '';
-                  return `
-                    ${rowShell({
-                      id: `${inpItem.id}-row`,
-                      className: `list-item--input ${posClass}`,
-                      leading: inpItem.icon ? rowIcon(inpItem.icon) : '',
-                      content: rowContent({ title: inpItem.title, description: inpItem.description }),
-                      trailing: `${rowSpacer()}
-                        <div class="subpage-input-wrapper">
-                          <input
-                            type="${inpItem.inputType || 'number'}"
-                            id="${inpItem.id}"
-                            class="subpage-inline-input"
-                            value="${escapeHtml(currentVal)}"
-                            ${inpItem.min !== undefined ? `min="${inpItem.min}"` : ''}
-                            ${inpItem.max !== undefined ? `max="${inpItem.max}"` : ''}
-                            ${inpItem.step !== undefined ? `step="${inpItem.step}"` : ''}
-                            aria-label="${escapeHtml(inpItem.ariaLabel || inpItem.title)}"
-                          />
-                          ${inpItem.unit ? `<span class="subpage-input-unit">${inpItem.unit}</span>` : ''}
-                        </div>`,
-                    })}
-                  `;
-                }
-                const swItem = item as SubPageSwitchItem;
-                const isChecked = switchValues.get(swItem.key) ?? true;
-                return `
-                  ${rowShell({
-                    id: `${swItem.id}-row`,
-                    className: `list-item--toggle ${posClass}`,
-                    leading: swItem.icon ? rowIcon(swItem.icon) : '',
-                    content: rowContent({ title: swItem.title, description: swItem.description }),
-                    trailing: `<md-switch icons id="${swItem.id}" ${isChecked ? 'selected' : ''} aria-label="${escapeHtml(swItem.title)}"></md-switch>`,
-                  })}
-                `;
-              }).join('')}
-            </div>
+            <sp-settings-section id="subpage-group-${gIdx}" tone="primary"></sp-settings-section>
           `).join('')}
         </div>
 
@@ -276,10 +209,10 @@ async function openSubPageInternal(config: SubPageConfig): Promise<SubPageInstan
 
         ${config.infoCard ? `
           <div class="subpage-info-note">
-            <md-icon aria-hidden="true">${config.infoCard.icon || 'info'}</md-icon>
+            <md-icon aria-hidden="true">${escapeHtml(config.infoCard.icon || 'info')}</md-icon>
             <div>
-              ${config.infoCard.title ? `<strong class="subpage-info-title">${config.infoCard.title}</strong>` : ''}
-              <p>${config.infoCard.text}</p>
+              ${config.infoCard.title ? `<strong class="subpage-info-title">${escapeHtml(config.infoCard.title)}</strong>` : ''}
+              <p>${escapeHtml(config.infoCard.text)}</p>
             </div>
           </div>
         ` : ''}
@@ -290,15 +223,171 @@ async function openSubPageInternal(config: SubPageConfig): Promise<SubPageInstan
 
   document.body.appendChild(overlay);
 
-  // Setup custom renderers
+  const makeIcon = (name?: string): HTMLElement | null => {
+    if (!name) return null;
+    const icon = document.createElement('md-icon');
+    icon.setAttribute('slot', 'icon');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = name;
+    return icon;
+  };
+
+  const makeHeadline = (text: string, badge?: string): HTMLElement => {
+    const headline = document.createElement('span');
+    headline.setAttribute('slot', 'headline');
+    headline.textContent = text;
+    if (badge) {
+      const badgeEl = document.createElement('span');
+      badgeEl.className = 'subpage-radio-badge';
+      badgeEl.textContent = badge;
+      headline.append(' ', badgeEl);
+    }
+    return headline;
+  };
+
+  const makeSupporting = (text?: string): HTMLElement | null => {
+    if (!text) return null;
+    const supporting = document.createElement('span');
+    supporting.setAttribute('slot', 'supporting');
+    supporting.className = 'supporting-text';
+    supporting.textContent = text;
+    return supporting;
+  };
+
+  const makeSwitch = (id: string, selected: boolean, label: string): HTMLElement & { selected: boolean } => {
+    const sw = document.createElement('md-switch') as HTMLElement & { selected: boolean };
+    sw.setAttribute('slot', 'trailing');
+    sw.setAttribute('icons', '');
+    sw.id = id;
+    sw.selected = selected;
+    sw.setAttribute('aria-label', label);
+    return sw;
+  };
+
+  if (config.masterToggle) {
+    const mt = config.masterToggle;
+    const container = overlay.querySelector('#subpage-master-container');
+    if (container) {
+      const row = document.createElement('sp-settings-row');
+      row.id = 'subpage-master-card';
+      row.setAttribute('variant', 'toggle');
+      row.className = `subpage-master-item${masterEnabled ? ' subpage-master-item--active' : ''}`;
+      const headline = document.createElement('span');
+      headline.setAttribute('slot', 'headline');
+      headline.textContent = mt.title;
+      row.append(headline);
+      const supporting = makeSupporting(mt.description);
+      if (supporting) row.append(supporting);
+      row.append(makeSwitch('subpage-master-switch', masterEnabled, mt.title));
+      container.append(row);
+    }
+  }
+
   config.groups.forEach((group, gIdx) => {
+    const section = overlay.querySelector(`#subpage-group-${gIdx}`);
+    if (!section) return;
+
     group.items.forEach((item, iIdx) => {
       if (item.type === 'custom') {
-        const total = group.items.length;
-        const posClass = total === 1 ? 'list-item--only' : iIdx === 0 ? 'list-item--first' : iIdx === total - 1 ? 'list-item--last' : 'list-item--middle';
-        const host = overlay.querySelector(`#subpage-custom-${gIdx}-${iIdx}`) as HTMLElement;
-        if (host) item.render(host, () => masterEnabled, posClass);
+        const host = document.createElement('div');
+        host.className = 'subpage-custom-item';
+        host.id = `subpage-custom-${gIdx}-${iIdx}`;
+        section.append(host);
+        return;
       }
+
+      const row = document.createElement('sp-settings-row');
+      row.id = `${item.id}-row`;
+
+      if (item.type === 'radio') {
+        row.setAttribute('variant', 'custom');
+        row.className = 'subpage-radio-row';
+        const radio = document.createElement('md-radio');
+        radio.setAttribute('slot', 'leading');
+        radio.setAttribute('name', item.name);
+        radio.setAttribute('value', item.value);
+        radio.id = item.id;
+        (radio as HTMLElement & { checked: boolean }).checked = !!item.selected;
+        radio.setAttribute('aria-label', `${item.title}${item.badge ? `, ${item.badge}` : ''}`);
+        row.append(radio, makeHeadline(item.title, item.badge));
+        const supporting = makeSupporting(item.description);
+        if (supporting) row.append(supporting);
+        row.setAttribute('data-radio-group', item.name);
+        row.setAttribute('data-radio-value', item.value);
+        section.append(row);
+        return;
+      }
+
+      if (item.type === 'input') {
+        const block = item.layout === 'block';
+        row.setAttribute('variant', 'custom');
+        row.className = block ? 'subpage-input-row subpage-input-row--block' : 'subpage-input-row';
+        if (block) row.setAttribute('stacked', '');
+        const icon = makeIcon(item.icon);
+        if (icon) row.append(icon);
+        row.append(makeHeadline(item.title));
+        const supporting = makeSupporting(item.description);
+        if (supporting) {
+          supporting.id = `${item.id}-desc`;
+          row.append(supporting);
+        }
+
+        const wrapper = document.createElement('div');
+        wrapper.className = block
+          ? 'subpage-input-wrapper subpage-input-wrapper--block'
+          : 'subpage-input-wrapper';
+        wrapper.setAttribute('slot', 'trailing');
+        const input = document.createElement('input');
+        input.type = item.inputType || 'number';
+        input.id = item.id;
+        input.className = [
+          'subpage-inline-input',
+          block ? 'subpage-inline-input--block' : '',
+          item.mono ? 'subpage-inline-input--mono' : '',
+        ]
+          .filter(Boolean)
+          .join(' ');
+        input.value = inputValues.get(item.id) ?? item.value ?? '';
+        if (item.min !== undefined) input.min = String(item.min);
+        if (item.max !== undefined) input.max = String(item.max);
+        if (item.step !== undefined) input.step = String(item.step);
+        if (item.placeholder !== undefined) input.placeholder = item.placeholder;
+        if (item.maxLength !== undefined) input.maxLength = item.maxLength;
+        if (item.autocapitalize) input.setAttribute('autocapitalize', item.autocapitalize);
+        if (item.autocomplete) input.setAttribute('autocomplete', item.autocomplete);
+        if (item.spellcheck !== undefined) input.spellcheck = item.spellcheck;
+        input.setAttribute('aria-label', item.ariaLabel || item.title);
+        if (supporting) input.setAttribute('aria-describedby', supporting.id);
+        wrapper.append(input);
+        if (item.unit) {
+          const unit = document.createElement('span');
+          unit.className = 'subpage-input-unit';
+          unit.textContent = item.unit;
+          wrapper.append(unit);
+        }
+        row.append(wrapper);
+        section.append(row);
+        return;
+      }
+
+      const swItem = item as SubPageSwitchItem;
+      row.setAttribute('variant', 'toggle');
+      const icon = makeIcon(swItem.icon);
+      if (icon) row.append(icon);
+      row.append(makeHeadline(swItem.title));
+      const supporting = makeSupporting(swItem.description);
+      if (supporting) row.append(supporting);
+      row.append(makeSwitch(swItem.id, switchValues.get(swItem.key) ?? true, swItem.title));
+      section.append(row);
+    });
+
+    // Custom renderers still use the legacy position classes.
+    group.items.forEach((item, iIdx) => {
+      if (item.type !== 'custom') return;
+      const total = group.items.length;
+      const posClass = total === 1 ? 'list-item--only' : iIdx === 0 ? 'list-item--first' : iIdx === total - 1 ? 'list-item--last' : 'list-item--middle';
+      const host = overlay.querySelector(`#subpage-custom-${gIdx}-${iIdx}`) as HTMLElement | null;
+      if (host) item.render(host, () => masterEnabled, posClass);
     });
   });
 
@@ -377,12 +466,6 @@ async function openSubPageInternal(config: SubPageConfig): Promise<SubPageInstan
     masterSwitch.addEventListener('change', () => {
       onMasterToggle(masterSwitch.selected);
     });
-
-    masterCard?.addEventListener('click', (e) => {
-      if (e.composedPath().some(n => n instanceof Element && n.localName === 'md-switch')) return;
-      masterSwitch.selected = !masterSwitch.selected;
-      onMasterToggle(masterSwitch.selected);
-    });
   }
 
   // Child switches interactions
@@ -391,19 +474,9 @@ async function openSubPageInternal(config: SubPageConfig): Promise<SubPageInstan
       if (!item.type || item.type === 'switch') {
         const swItem = item as SubPageSwitchItem;
         const sw = overlay.querySelector(`#${swItem.id}`) as MdSwitch | null;
-        const row = overlay.querySelector(`#${swItem.id}-row`) as HTMLElement | null;
 
         if (sw) {
           sw.addEventListener('change', () => {
-            cfgSet(swItem.key, sw.selected ? '1' : '0');
-            swItem.onChange?.(sw.selected);
-          });
-        }
-
-        if (row && sw) {
-          row.addEventListener('click', (e) => {
-            if (e.composedPath().some(n => n instanceof Element && n.localName === 'md-switch')) return;
-            sw.selected = !sw.selected;
             cfgSet(swItem.key, sw.selected ? '1' : '0');
             swItem.onChange?.(sw.selected);
           });
@@ -438,7 +511,10 @@ async function openSubPageInternal(config: SubPageConfig): Promise<SubPageInstan
         const inpItem = item as SubPageInputItem;
         const input = overlay.querySelector(`#${inpItem.id}`) as HTMLInputElement | null;
         if (input) {
+          let lastValue = input.value;
           const handleInput = () => {
+            if (input.value === lastValue) return;
+            lastValue = input.value;
             if (inpItem.key) cfgSet(inpItem.key, input.value);
             inpItem.onChange?.(input.value);
           };

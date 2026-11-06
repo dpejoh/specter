@@ -2,7 +2,6 @@ import { cfgGet, cfgSet } from './cfg.js';
 import { t } from './i18n.js';
 import { wireRowDialog } from './toggles.js';
 import { openSubPage } from './subpage.js';
-import { rowContent, rowIcon, rowShell } from './ui-row.js';
 
 
 export function openAutoHmaDialog() {
@@ -23,31 +22,24 @@ export function openAutoHmaDialog() {
       {
         items: [
           {
-            type: 'custom',
-            id: 'auto-hma-interval',
-            render: async (container) => {
+            type: 'input',
+            id: 'auto-hma-interval-input',
+            icon: 'timer',
+            title: t('auto_hma_interval', 'Interval (hours)'),
+            description: t('auto_hma_interval_desc', 'How often the background job regenerates the HMA profile. Minimum 1 hour.'),
+            inputType: 'number',
+            min: 1,
+            max: 168,
+            step: 1,
+            unit: 'h',
+            ariaLabel: t('auto_hma_interval_aria', 'HMA update interval in hours'),
+            getValue: async () => {
               const raw = await cfgGet('hma_interval', '21600');
-              const hours = Math.max(1, Math.round(parseInt(raw || '21600', 10) / 3600));
-
-              container.innerHTML = rowShell({
-                className: 'list-item--only list-item--input',
-                leading: rowIcon('timer'),
-                content: rowContent({
-                  title: t('auto_hma_interval', 'Interval (hours)'),
-                  description: t('auto_hma_interval_desc', 'How often the background job regenerates the HMA profile. Minimum 1 hour.'),
-                }),
-                trailing: `<div class="spacer"></div>
-                  <div class="subpage-input-wrapper">
-                    <input type="number" id="auto-hma-interval-input" class="subpage-inline-input" min="1" max="168" value="${hours}" aria-label="${t('auto_hma_interval_aria', 'HMA update interval in hours')}">
-                    <span class="subpage-input-unit">h</span>
-                  </div>`,
-              });
-
-              const input = container.querySelector('#auto-hma-interval-input') as HTMLInputElement | null;
-              input?.addEventListener('input', () => {
-                const value = Math.min(168, Math.max(1, parseInt(input.value || '6', 10)));
-                cfgSet('hma_interval', String(value * 3600));
-              });
+              return String(Math.max(1, Math.round(parseInt(raw || '21600', 10) / 3600)));
+            },
+            onChange: (value: string) => {
+              const hours = Math.min(168, Math.max(1, parseInt(value || '6', 10)));
+              cfgSet('hma_interval', String(hours * 3600));
             },
           },
         ],

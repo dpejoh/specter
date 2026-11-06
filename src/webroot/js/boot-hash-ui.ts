@@ -1,6 +1,5 @@
 import { cfgGet, cfgSet } from './cfg.js';
 import { t } from './i18n.js';
-import { wireRowDialog } from './toggles.js';
 import { openSubPage } from './subpage.js';
 import { showToast } from './toast.js';
 import { exec, getModuleDir } from './bridge.js';
@@ -90,8 +89,7 @@ export async function openBootHashSubpage() {
                     <input
                       type="text"
                       id="bh-input"
-                      class="subpage-full-input"
-                      class="bh-mono"
+                      class="subpage-full-input bh-mono"
                       maxlength="64"
                       autocapitalize="none"
                       autocomplete="off"
@@ -145,7 +143,7 @@ export async function openBootHashSubpage() {
                     <div class="li-icon"><md-icon aria-hidden="true">verified_user</md-icon></div>
                     <div class="list-item-content">
                       <div class="toggle-text">${t('boot_hash_active_label', 'Active (ro.boot.vbmeta.digest)')}</div>
-                      <span class="supporting-text" id="bh-active-val" class="bh-mono bh-mono--block bh-mono--primary">
+                      <span class="supporting-text bh-mono bh-mono--block bh-mono--primary" id="bh-active-val">
                         ${escapeHtml(activeHash || t('boot_hash_active_empty', 'None'))}
                       </span>
                     </div>
@@ -165,7 +163,7 @@ export async function openBootHashSubpage() {
                     <div class="li-icon"><md-icon aria-hidden="true">storage</md-icon></div>
                     <div class="list-item-content bh-content-flex">
                       <div class="toggle-text">${t('boot_hash_cache_title', 'Cached Hash')}</div>
-                      <span class="supporting-text" id="bh-cache-val" class="bh-mono bh-mono--block">
+                      <span class="supporting-text bh-mono bh-mono--block" id="bh-cache-val">
                         ${escapeHtml(cachedHash || t('boot_hash_cache_empty', 'None'))}
                       </span>
                     </div>
@@ -303,12 +301,4 @@ export async function openBootHashSubpage() {
       });
     },
   });
-}
-
-export function wireBootHash() {
-  wireRowDialog('toggle-boot_hash-row', openBootHashSubpage);
-  const toolsBtn = document.getElementById('boot-hash-btn');
-  if (toolsBtn) {
-    toolsBtn.addEventListener('click', openBootHashSubpage);
-  }
 }
