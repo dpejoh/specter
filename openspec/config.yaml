@@ -1,0 +1,40 @@
+schema: spec-driven
+
+context: |
+  Specter is a Magisk/KernelSU/APatch module with a vanilla TypeScript WebUI built on
+  Material Web components (no UI framework). Reuse openSubPage, list-container/list-item
+  styling, the shell bridge, and the existing i18n system instead of adding a new UI layer.
+  Shell code must stay POSIX sh compatible for Android; tests run through tests/run.sh and Vitest.
+  Never expose keybox content, OMK crypto seeds, IMEI/MEID, or device serials in WebUI snapshots.
+  Every new i18n key must exist in lang/source/string.json and all ten language packs.
+
+# Project context (optional)
+# Add only constraints that should guide OpenSpec artifacts and workflows.
+# Include constraints an agent cannot infer by reading the code.
+# Keep general project documentation and discoverable codebase facts out.
+# Example:
+#   context: |
+#     Designs and tasks must cover Windows, macOS, and Linux
+#     Write all artifacts in Spanish
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always state what is out of scope
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing
