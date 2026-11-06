@@ -30,6 +30,9 @@ echo "$$" > "$PID_FILE"
 trap 'rm -f "$PID_FILE" "$INOTIFY_HANDLER" 2>/dev/null; exit' EXIT TERM INT HUP
 
 log_i "SCHED" "Started (PID $$)"
+# KernelSU can leave the installer cwd deleted; app_process helpers need a
+# valid working directory.
+cd / 2>/dev/null || true
 
 # Launch inotifyd for app install detection if available (skip if method=polling)
 if [ "$(cfg_get toggle_auto_target 1)" = "1" ] && [ "$(cfg_get auto_target_method instant)" != "polling" ]; then
@@ -76,11 +79,41 @@ if [ -f "$MODDIR/features/monet.sh" ]; then
   log_i "SCHED" "monet refresh launched"
 fi
 
+_setup_info_stale() {
+  _sis_stamp="$SPECTER_DIR/cache/setup_info.stamp"
+  [ -f "$_sis_stamp" ] || return 0
+  [ -d /data/adb/modules ] && [ /data/adb/modules -nt "$_sis_stamp" ] && return 0
+  [ -d "${MODULES_BASE}_update" ] && [ "${MODULES_BASE}_update" -nt "$_sis_stamp" ] && return 0
+
+  for _sis_f in \
+    "$MODDIR/module.prop" \
+    "$CONFIG_DIR"/val/*.val \
+    /data/adb/modules/*/module.prop \
+    "${MODULES_BASE}_update"/*/module.prop \
+    /data/adb/tricky_store/target.txt \
+    /data/adb/tricky_store/config.ini \
+    /data/adb/tricky_store/security_patch.txt \
+    /data/adb/teesim/config.json \
+    /data/misc/keystore/omk/config.toml \
+    /data/misc/keystore/omk/injector.toml \
+    /data/adb/pif.prop \
+    "$PIF_DIR"/custom.pif.prop \
+    "$PIF_DIR"/pif.json \
+    "$PIF_DIR"/autopif.json \
+    "$PIF_DIR"/custom.pif.json \
+    /data/misc/hide_my_applist*/config.json; do
+    [ -e "$_sis_f" ] || continue
+    [ "$_sis_f" -nt "$_sis_stamp" ] && return 0
+  done
+  unset _sis_stamp _sis_f
+  return 1
+}
+
 while true; do
   [ -d "$MODDIR" ] || exit 0
   _now=$(date +%s 2>/dev/null || echo "0")
 
-  for _task_line in keybox_info:keybox_info.sh:21600:toggle_keybox_info \
+  for _task_line in keybox_watch:keybox_watch.sh:300:toggle_keybox_info \
                     auto_target:auto_target.sh:300:toggle_auto_target \
                     hma:hma.sh:21600:toggle_auto_hma \
                     autopif:pif.sh:86400:toggle_autopif \
@@ -101,6 +134,7 @@ while true; do
     _last_run=$(cat "$TASKS_DIR/${_name}_last" 2>/dev/null || echo "0")
     _cfg_interval=$(cfg_get "${_name}_interval" "$_default_interval")
     [ "$_cfg_interval" -lt 10 ] && _cfg_interval=10
+    [ "$_name" = "keybox_watch" ] && [ "$_cfg_interval" -lt 60 ] && _cfg_interval=60
 
     if [ "$_now" -ge "$((_last_run + _cfg_interval))" ]; then
       log_rotate "$SPECTER_DIR/log/sched_${_name}.log"
@@ -113,12 +147,18 @@ while true; do
       printf '%s' "$_now" > "$TASKS_DIR/${_name}_last"
 
       case "$_name" in
-        keybox_info|auto_target|autopif|autokeybox)
+        keybox_watch|auto_target|autopif|autokeybox)
           refresh_module_description
           ;;
       esac
     fi
   done
+
+  if _setup_info_stale; then
+    log_rotate "$SPECTER_DIR/log/sched_setup_info.log"
+    log_i "SCHED" "Inputs changed, rebuilding setup snapshot"
+    sh "$MODDIR/features/setup_info.sh" >"$SPECTER_DIR/log/sched_setup_info.log" 2>&1 || log_e "SCHED" "setup_info failed"
+  fi
 
   sleep 57
 done

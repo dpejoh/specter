@@ -76,7 +76,8 @@ fi
 
 if [ "$_if_needed" = "1" ]; then
   _ki_info="${SPECTER_KEYBOX_INFO:-$MODDIR/../webroot/json/keybox_info.json}"
-  _ki_json=$(tr -d '\n' < "$_ki_info" 2>/dev/null || true)
+  _ki_json=""
+  [ -f "$_ki_info" ] && _ki_json=$(tr -d '\n' < "$_ki_info" 2>/dev/null || true)
   if [ -f "$KSM_KEYBOX" ] && [ -f "$_ki_info" ] && [ "$_ki_info" -nt "$KSM_KEYBOX" ] &&
      grep -q '"installed": true' "$_ki_info" &&
      ! grep -q '"revoked": true' "$_ki_info" &&

@@ -26,7 +26,7 @@ fi
 RUNTIME_JSON="/data/local/tmp/specter-webui-json"
 rm -rf "$RUNTIME_JSON"
 mkdir -p "$RUNTIME_JSON"
-for _f in state.json info.json keybox_info.json keystore_manager.json monet.json; do
+for _f in state.json info.json keybox_info.json keystore_manager.json monet.json setup_info.json; do
   [ -f "$MODULE_DIR/webroot/json/$_f" ] && cp "$MODULE_DIR/webroot/json/$_f" "$RUNTIME_JSON/$_f"
 done
 unset _f
@@ -50,7 +50,7 @@ fi
 
 # Restore runtime WebUI state and refresh the combined snapshot.
 if [ -d "$RUNTIME_JSON" ]; then
-  for _f in state.json info.json keybox_info.json keystore_manager.json monet.json; do
+  for _f in state.json info.json keybox_info.json keystore_manager.json monet.json setup_info.json; do
     [ -f "$RUNTIME_JSON/$_f" ] && cp "$RUNTIME_JSON/$_f" "$MODULE_DIR/webroot/json/$_f"
   done
   unset _f

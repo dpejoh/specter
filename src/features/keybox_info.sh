@@ -15,6 +15,7 @@ INFO_PATH="${SPECTER_KEYBOX_INFO:-$MODDIR/../webroot/json/keybox_info.json}"
 if [ "${1:-}" = "--if-needed" ] &&
    [ -f "$INFO_PATH" ] && [ -f "$KEYBOX_FILE" ] && [ "$INFO_PATH" -nt "$KEYBOX_FILE" ] &&
    grep -q '"installed": true' "$INFO_PATH" &&
+   ! grep -q '"revoked": true' "$INFO_PATH" &&
    ! grep -q '"expired": true' "$INFO_PATH" &&
    ! keybox_rkp_expired "$(tr -d '\n' < "$INFO_PATH" 2>/dev/null || true)"; then
   log_i "KEYBOX_INFO" "Keybox info is current, skipping refresh"
@@ -36,9 +37,38 @@ _expires_at=""
 _expired=false
 _serial=""
 _is_private_val="false"
+_checked_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || echo "")
+_latest_version=""
+_revocation_status=""
+_revocation_reason=""
+_revocation_source=""
+_revocation_checked_at=""
+_file_path=""
+_file_size="0"
+_file_modified=""
+
+_apply_google_revocation() {
+  _agr_info=$(google_revocation_info "$1" 2>/dev/null || true)
+  [ -n "$_agr_info" ] || return 0
+  _agr_status="${_agr_info%%|*}"
+  _agr_reason="${_agr_info#*|}"
+  [ "$_agr_reason" = "$_agr_info" ] && _agr_reason=""
+  _revocation_status="$_agr_status"
+  _revocation_reason="$_agr_reason"
+  _revocation_source="Google"
+  _revocation_checked_at="$_checked_at"
+  case "$_agr_status" in
+    REVOKED) _revoked=true ;;
+    SUSPENDED) _softbanned=true ;;
+  esac
+  unset _agr_info _agr_status _agr_reason
+}
 
 if [ -f "$KEYBOX_FILE" ]; then
   _installed=true
+  _file_path="$KEYBOX_FILE"
+  _file_size=$(wc -c < "$KEYBOX_FILE" 2>/dev/null | tr -d ' ' || echo 0)
+  _file_modified=$(date -u -r "$KEYBOX_FILE" +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || echo "")
 
   _is_private_val=$(cat "$CONFIG_DIR/val/keybox_private.val" 2>/dev/null || echo "false")
   [ -z "$_is_private_val" ] && _is_private_val="false"
@@ -48,9 +78,9 @@ if [ -f "$KEYBOX_FILE" ]; then
     _up_to_date=true
     log_d "KEYBOX_INFO" "Private keybox flagged by user"
     if _serial=$(decode_keybox_serial "$KEYBOX_FILE"); then
-      if check_google_revocation "$_serial"; then
-        _revoked=true
-        log_w "KEYBOX_INFO" "Revoked by Google"
+      _apply_google_revocation "$_serial"
+      if [ "$_revoked" = "true" ] || [ "$_softbanned" = "true" ]; then
+        log_w "KEYBOX_INFO" "Revocation status: ${_revocation_status:-unknown}"
       fi
     fi
   elif _serial=$(decode_keybox_serial "$KEYBOX_FILE"); then
@@ -58,9 +88,9 @@ if [ -f "$KEYBOX_FILE" ]; then
 
     _serial_dec=$(printf '%u' "0x$_serial" 2>/dev/null || echo "")
 
-    if check_google_revocation "$_serial"; then
-      _revoked=true
-      log_w "KEYBOX_INFO" "Revoked by Google"
+    _apply_google_revocation "$_serial"
+    if [ "$_revoked" = "true" ] || [ "$_softbanned" = "true" ]; then
+      log_w "KEYBOX_INFO" "Revocation status: ${_revocation_status:-unknown}"
     fi
 
     if [ "$KSM" = "omk" ] && cmp -s "$OMK_MODULE/keybox.xml" "$KEYBOX_FILE"; then
@@ -97,6 +127,20 @@ if [ -f "$KEYBOX_FILE" ]; then
 
           _softbanned=false
           echo "$_entry" | grep -q '"softbanned":true' 2>/dev/null && _softbanned=true || true
+          echo "$_entry" | grep -q '"revoked":true' 2>/dev/null && _revoked=true || true
+
+          _cat_rev_status=$(printf '%s' "$_entry" | sed -n 's/.*"revocation_status"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' || true)
+          if [ -n "$_cat_rev_status" ]; then
+            _revocation_status="$_cat_rev_status"
+            _revocation_reason=$(printf '%s' "$_entry" | sed -n 's/.*"revocation_reason"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' || true)
+            _revocation_checked_at=$(printf '%s' "$_entry" | sed -n 's/.*"revocation_checked_at"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' || true)
+            _revocation_source="Specter catalog"
+            [ "$_cat_rev_status" = "REVOKED" ] && _revoked=true
+            [ "$_cat_rev_status" = "SUSPENDED" ] && _softbanned=true
+          elif [ "$_revoked" = "true" ] && [ -z "$_revocation_source" ]; then
+            _revocation_source="Specter catalog"
+          fi
+          unset _cat_rev_status
 
           _rkp=false
           echo "$_entry" | grep -Eq '"rkp"[[:space:]]*:[[:space:]]*true' 2>/dev/null && _rkp=true || true
@@ -106,6 +150,7 @@ if [ -f "$KEYBOX_FILE" ]; then
           fi
 
           _latest_for_source=$(echo "$_history_json" | grep -o '"'"$_source"'":"[^"]*"' | sed 's/.*":"//;s/"//' || true)
+          _latest_version="$_latest_for_source"
           if [ -n "$_source_version" ] && [ "$_source_version" = "$_latest_for_source" ]; then
             _up_to_date=true
           fi
@@ -122,29 +167,35 @@ fi
 _expires_json="null"
 [ -n "$_expires_at" ] && _expires_json="\"$(_escape_json "$_expires_at")\""
 
-if [ "$_installed" != "true" ] || [ -n "$_source" ] || [ ! -f "$INFO_PATH" ] ||
-   { [ -n "$_serial" ] && ! grep -q '"serial": "'"$_serial"'"' "$INFO_PATH" 2>/dev/null; }; then
-  cat <<EOF > "$INFO_PATH"
+cat <<EOF > "$INFO_PATH"
 {
   "installed": $_installed,
   "source": "$(_escape_json "$_source")",
   "source_version": "$(_escape_json "$_source_version")",
   "text": "$(_escape_json "$_text")",
   "up_to_date": $_up_to_date,
+  "latest_version": "$(_escape_json "$_latest_version")",
   "revoked": $_revoked,
   "softbanned": $_softbanned,
   "rkp": $_rkp,
   "expires_at": $_expires_json,
   "expired": $_expired,
   "serial": "$(_escape_json "$_serial")",
-  "is_private": $_is_private_val
+  "is_private": $_is_private_val,
+  "checked_at": "$(_escape_json "$_checked_at")",
+  "revocation_status": "$(_escape_json "$_revocation_status")",
+  "revocation_reason": "$(_escape_json "$_revocation_reason")",
+  "revocation_source": "$(_escape_json "$_revocation_source")",
+  "revocation_checked_at": "$(_escape_json "$_revocation_checked_at")",
+  "file_path": "$(_escape_json "$_file_path")",
+  "file_size": ${_file_size:-0},
+  "file_modified": "$(_escape_json "$_file_modified")"
 }
 EOF
-fi
 
 if [ "$_installed" = "true" ]; then
   if [ "$_revoked" = "true" ]; then
-    log_w "KEYBOX_INFO" "Keybox is revoked by Google"
+    log_w "KEYBOX_INFO" "Keybox is revoked (${_revocation_source:-unknown}${_revocation_reason:+: $_revocation_reason})"
   elif [ "$_expired" = "true" ]; then
     log_w "KEYBOX_INFO" "Keybox is expired (${_expires_at:-no X.509 expiry date})"
   elif [ "$_up_to_date" = "true" ]; then
@@ -155,7 +206,7 @@ if [ "$_installed" = "true" ]; then
     log_i "KEYBOX_INFO" "Keybox is installed"
   fi
 fi
-unset _installed _source _source_version _text _up_to_date _revoked _softbanned _rkp _expires_at _expires_json _expired _serial _serial_dec _history_json _entry _provider _latest_for_source _is_private_val
+unset _installed _source _source_version _text _up_to_date _latest_version _revoked _softbanned _rkp _expires_at _expires_json _expired _serial _serial_dec _history_json _entry _provider _latest_for_source _is_private_val _checked_at _revocation_status _revocation_reason _revocation_source _revocation_checked_at _file_path _file_size _file_modified _cat_rev_status
 log_i "KEYBOX_INFO" "Keybox info check complete"
 write_webui_state
 exit 0

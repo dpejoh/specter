@@ -110,11 +110,27 @@ export async function refreshKeyboxStatus(): Promise<KeyboxInfoJson | null> {
   return diskData;
 }
 
-async function recomputeKeyboxStatus(): Promise<KeyboxInfoJson | null> {
+export async function recomputeKeyboxStatus(): Promise<KeyboxInfoJson | null> {
   try {
     await runScript('keybox_info.sh', 'feature');
   } catch (e) {
     console.warn('Keybox info script failed:', e);
+  }
+  return refreshKeyboxStatus();
+}
+
+/**
+ * Refresh through the revocation watch so a revoked keybox can be replaced
+ * when Auto Keybox is enabled. Skips the shell run when the snapshot is fresh.
+ */
+export async function refreshKeyboxWatch(maxAgeMs = 15_000): Promise<KeyboxInfoJson | null> {
+  const current = await refreshKeyboxStatus();
+  const checked = current?.checked_at ? Date.parse(current.checked_at) : 0;
+  if (current && checked > 0 && Date.now() - checked < maxAgeMs) return current;
+  try {
+    await runScript('keybox_watch.sh', 'feature');
+  } catch (e) {
+    console.warn('Keybox watch script failed:', e);
   }
   return refreshKeyboxStatus();
 }

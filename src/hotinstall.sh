@@ -53,5 +53,10 @@ rm -f "$SPECTER_DIR/.hotinstall_failed"
     : > "$SPECTER_DIR/.hotinstall_failed"
   fi
 
+  # Generate the setup page cache now; hot installs replace webroot/json and
+  # the page otherwise has to wait for the first background refresh.
+  log_i "HOT" "Building setup snapshot"
+  sh "$MODDIR/features/setup_info.sh" >/dev/null 2>&1 || log_w "HOT" "Setup snapshot failed"
+
   log_i "HOT" "Hot-install live-apply done"
 } 2>&1 | tee -a "$HOT_LOG"

@@ -124,36 +124,54 @@ keybox_catalog() {
   return 1
 }
 
-check_google_revocation() {
-  _gr_serial=$1
-  _gr_cache="$SPECTER_DIR/cache/google_revocation.json"
-  _gr_ttl="${GOOGLE_REVOCATION_TTL:-3600}"
-  _gr_file=""
-  if [ -s "$_gr_cache" ]; then
-    _gr_age=$(( $(date +%s) - $(stat -c %Y "$_gr_cache" 2>/dev/null || echo 0) ))
-    if [ "$_gr_age" -ge 0 ] && [ "$_gr_age" -lt "$_gr_ttl" ]; then
-      _gr_file="$_gr_cache"
+# Print the path to a fresh (or newly downloaded) Google revocation cache.
+_google_revocation_cache_file() {
+  _grc_cache="$SPECTER_DIR/cache/google_revocation.json"
+  _grc_ttl="${GOOGLE_REVOCATION_TTL:-3600}"
+  _grc_file=""
+  if [ -s "$_grc_cache" ]; then
+    _grc_age=$(( $(date +%s) - $(stat -c %Y "$_grc_cache" 2>/dev/null || echo 0) ))
+    if [ "$_grc_age" -ge 0 ] && [ "$_grc_age" -lt "$_grc_ttl" ]; then
+      _grc_file="$_grc_cache"
     fi
   fi
-  if [ -z "$_gr_file" ]; then
-    _gr_resp=$(download "$GOOGLE_REVOCATION_URL" 2>/dev/null) || _gr_resp=""
-    if [ -n "$_gr_resp" ]; then
+  if [ -z "$_grc_file" ]; then
+    _grc_resp=$(download "$GOOGLE_REVOCATION_URL" 2>/dev/null) || _grc_resp=""
+    if [ -n "$_grc_resp" ]; then
       ensure_dir "$SPECTER_DIR/cache"
-      cat > "$_gr_cache" <<EOF
-$_gr_resp
+      cat > "$_grc_cache" <<EOF
+$_grc_resp
 EOF
-      _gr_file="$_gr_cache"
+      _grc_file="$_grc_cache"
     fi
   fi
-  if [ -z "$_gr_file" ] || ! grep -q '"entries"' "$_gr_file"; then
-    unset _gr_serial _gr_cache _gr_ttl _gr_file _gr_resp _gr_age
+  [ -n "$_grc_file" ] && grep -q '"entries"' "$_grc_file" 2>/dev/null && printf '%s\n' "$_grc_file"
+  unset _grc_cache _grc_ttl _grc_file _grc_resp _grc_age
+}
+
+# Print "STATUS|REASON" for a certificate serial, or nothing when not listed.
+# Google keys are decimal; the keybox serial is hexadecimal.
+google_revocation_info() {
+  _gri_file=$(_google_revocation_cache_file 2>/dev/null || true)
+  [ -n "$_gri_file" ] || return 1
+  _gri_dec=$(hex_to_dec "$1")
+  [ -n "$_gri_dec" ] || { unset _gri_file _gri_dec; return 1; }
+  _gri_obj=$(tr -d '\n\r' < "$_gri_file" 2>/dev/null \
+    | grep -o "\"$_gri_dec\"[[:space:]]*:[[:space:]]*{[^}]*}" 2>/dev/null \
+    | head -1 || true)
+  if [ -z "$_gri_obj" ]; then
+    unset _gri_file _gri_dec _gri_obj
     return 1
   fi
-  _gr_dec=$(hex_to_dec "$_gr_serial")
-  _gr_rc=1
-  grep -Fq "\"$_gr_dec\"" "$_gr_file" && _gr_rc=0
-  unset _gr_serial _gr_cache _gr_ttl _gr_file _gr_resp _gr_age _gr_dec
-  return $_gr_rc
+  _gri_status=$(printf '%s' "$_gri_obj" | sed -n 's/.*"status"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+  [ -n "$_gri_status" ] || { unset _gri_file _gri_dec _gri_obj _gri_status; return 1; }
+  _gri_reason=$(printf '%s' "$_gri_obj" | sed -n 's/.*"reason"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+  printf '%s|%s\n' "$_gri_status" "$_gri_reason"
+  unset _gri_file _gri_dec _gri_obj _gri_status _gri_reason
+}
+
+check_google_revocation() {
+  [ -n "$(google_revocation_info "$1")" ]
 }
 
 find_kmInstallKeybox() {
