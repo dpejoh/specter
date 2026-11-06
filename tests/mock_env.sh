@@ -51,6 +51,14 @@ PROPS_DIR="${MOCK_DIR}/props"
 MOCK
   chmod +x "$BIN_DIR/getprop"
 
+  # Android's /system/bin/sh is mksh. CI hosts use dash for sh, which lacks
+  # mksh expansions used by some feature scripts; run sh via bash in tests.
+  cat > "$BIN_DIR/sh" << 'MOCK'
+#!/bin/bash
+exec /bin/bash "$@"
+MOCK
+  chmod +x "$BIN_DIR/sh"
+
   cat > "$BIN_DIR/pm" << 'MOCK'
 #!/bin/sh
 case "$*" in
@@ -127,9 +135,7 @@ mk_module() {
 
 run_feature() {
   _feature="$1"; shift
-  # Android's /system/bin/sh is mksh. Run features with bash here so
-  # mksh-compatible expansions also work on CI hosts where sh is dash.
-  PATH="$BIN_DIR:/usr/bin:/bin" MODDIR="$TEST_ROOT" SPECTER_DIR="$SPECTER_DIR" CONFIG_DIR="$CONFIG_DIR" TRICKY_DIR="$TRICKY_DIR" bash "$REPO_ROOT/src/features/$_feature" "$@" 2>&1
+  PATH="$BIN_DIR:/usr/bin:/bin" MODDIR="$TEST_ROOT" SPECTER_DIR="$SPECTER_DIR" CONFIG_DIR="$CONFIG_DIR" TRICKY_DIR="$TRICKY_DIR" sh "$REPO_ROOT/src/features/$_feature" "$@" 2>&1
 }
 
 source_feature() {
