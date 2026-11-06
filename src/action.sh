@@ -111,31 +111,8 @@ _force_keybox=$(cfg_get toggle_action_force_keybox 0)
     done
     if [ "$_first_boot" = "1" ] || [ "$_force_hma" = "1" ] || [ "$_hma_config_ok" != "1" ] || [ "$(cfg_get toggle_auto_hma 1)" != "1" ]; then
       [ "$_hma_config_ok" != "1" ] && log_w "ACTION" "HMA config missing, regenerating"
-      SPECTER_HMA_NO_UI_RELOAD=1 sh "$MODDIR/features/hma.sh" || true
-
-      _hma_policy=$(_hma_launch_policy)
-      _do_launch=0
-
-      if [ "$_first_boot" = "1" ]; then
-        log_u "ACTION" "HMA-OSS launch skipped on first boot"
-      elif [ "$_hma_policy" = "open" ]; then
-        log_u "ACTION" "Auto-launching HMA-OSS (policy: auto-accept)..."
-        _do_launch=1
-      elif [ "$_hma_policy" = "skip" ]; then
-        log_u "ACTION" "HMA-OSS launch skipped (policy: auto-refuse)"
-        log_u "ACTION" "Config written; reboot or open HMA-OSS to apply"
-      else
-        log_u "ACTION" "HMA-OSS configuration complete"
-      fi
-
-      if [ "$_do_launch" = "1" ]; then
-        if [ "$(cfg_get toggle_hma_live_reload 1)" = "1" ]; then
-          _hma_request_reload /data/local/tmp || _hma_open_ui || true
-        else
-          _hma_open_ui || true
-        fi
-      fi
-      unset _hma_policy _do_launch
+      sh "$MODDIR/features/hma.sh" || true
+      log_u "ACTION" "HMA-OSS configuration complete"
     else
       log_i "ACTION" "Auto-HMA is enabled, skipping HMA generation"
     fi
