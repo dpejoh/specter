@@ -31,6 +31,7 @@
     "vitest": "^5.1.0"
   },
   "dependencies": {
-    "@material/web": "2.5.0"
+    "@material/web": "2.5.0",
+    "lit": "^3.0.0"
   }
 }

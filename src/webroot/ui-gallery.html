@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en" dir="ltr" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark light" />
+  <title>Specter UI — Gallery</title>
+  <style>
+    @font-face {
+      font-family: 'Material Icons Outlined';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url(./assets/material-icons-outlined.woff2) format('woff2');
+    }
+    @font-face {
+      font-family: 'Google Sans Variable';
+      font-style: normal;
+      font-weight: 1 1000;
+      font-stretch: 100%;
+      font-display: swap;
+      src: url(./fonts/GoogleSans-var.woff2) format('woff2-variations');
+    }
+
+    :root {
+      color-scheme: dark;
+      --md-sys-color-surface: #141318;
+      --md-sys-color-surface-container: #1e1c20;
+      --md-sys-color-surface-container-high: #1e1c20;
+      --md-sys-color-surface-container-highest: #232126;
+      --md-sys-color-on-surface: #e6e0e9;
+      --md-sys-color-on-surface-variant: #cac4d0;
+      --md-sys-color-outline: #938f99;
+      --md-sys-color-outline-variant: #49454f;
+      --md-sys-color-primary: #d0bcff;
+      --md-sys-color-on-primary: #381e72;
+      --md-sys-color-primary-container: #4f378b;
+      --md-sys-color-on-primary-container: #eaddff;
+      --md-sys-color-inverse-surface: #e6e0e9;
+      --md-sys-color-inverse-on-surface: #313033;
+      --md-sys-color-error: #f2b8b5;
+      --md-sys-color-error-container: #8c1d18;
+      --md-sys-color-on-error-container: #f9dedc;
+      --md-icon-font: 'Material Icons Outlined';
+      --sp-font-mono: 'JetBrains Mono Variable', monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--md-sys-color-surface);
+      color: var(--md-sys-color-on-surface);
+      font-family: 'Google Sans Variable', Roboto, system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      width: min(100%, 880px);
+      margin: 0 auto;
+      padding: 32px 20px 96px;
+    }
+
+    header {
+      margin-bottom: 32px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 2rem;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+    }
+
+    .lede {
+      margin: 0;
+      color: var(--md-sys-color-on-surface-variant);
+      line-height: 1.5;
+    }
+
+    .demo {
+      margin: 32px 0 48px;
+    }
+
+    .demo h2 {
+      margin: 0 0 4px;
+      font-size: 1.125rem;
+      font-weight: 600;
+    }
+
+    .demo p {
+      margin: 0 0 16px;
+      color: var(--md-sys-color-on-surface-variant);
+      line-height: 1.5;
+    }
+
+    .icon-button {
+      --md-icon-button-icon-color: var(--md-sys-color-on-surface);
+    }
+
+    .inline {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .swatch {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .swatch span {
+      color: var(--md-sys-color-on-surface-variant);
+      font-size: 0.8125rem;
+    }
+
+    .note {
+      border-inline-start: 3px solid var(--md-sys-color-primary);
+      padding: 12px 16px;
+      background: var(--md-sys-color-surface-container);
+      color: var(--md-sys-color-on-surface-variant);
+      border-radius: 0 12px 12px 0;
+      line-height: 1.5;
+      font-size: 0.875rem;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <h1>Specter UI</h1>
+      <p class="lede">
+        Experimental Material settings primitives. This page is a development gallery, not part of the shipped WebUI.
+      </p>
+    </header>
+
+    <section class="demo">
+      <h2>Settings section</h2>
+      <p>
+        Connected rows with adaptive M3 Expressive corners. The last row is hidden by the button below to prove the
+        section recomputes first/middle/last.
+      </p>
+
+      <sp-settings-section label="Appearance" description="Theme, color, and typography">
+        <sp-settings-row variant="navigation" headline="Theme" supporting-text="Dark" id="theme-row" chevron>
+          <md-icon slot="icon">dark_mode</md-icon>
+        </sp-settings-row>
+        <sp-settings-row variant="toggle" headline="Dynamic color" supporting-text="Use the system wallpaper palette">
+          <md-icon slot="icon">palette</md-icon>
+          <md-switch slot="trailing" icons selected aria-label="Dynamic color"></md-switch>
+        </sp-settings-row>
+        <sp-settings-row variant="value" headline="Build" supporting-text="1.5.0 (21)" value="1.5.0 (21)" copyable mono>
+          <md-icon slot="icon">tag</md-icon>
+        </sp-settings-row>
+        <sp-settings-row variant="destructive" headline="Clear all detection traces" supporting-text="Deletes detector logs and caches" id="danger-row">
+          <md-icon slot="icon">delete_sweep</md-icon>
+        </sp-settings-row>
+        <sp-settings-row variant="action" headline="Export logs" supporting-text="Save debug logs to Downloads" loading id="action-row">
+          <md-icon slot="icon">bug_report</md-icon>
+        </sp-settings-row>
+        <sp-settings-row variant="toggle" headline="Hidden row" id="hidden-row" hidden>
+          <md-icon slot="icon">visibility_off</md-icon>
+        </sp-settings-row>
+      </sp-settings-section>
+
+      <div class="inline" style="margin-top: 16px">
+        <md-filled-button id="toggle-hidden">Toggle hidden row</md-filled-button>
+        <md-text-button id="toggle-loading">Toggle action loading</md-text-button>
+      </div>
+    </section>
+
+    <section class="demo">
+      <h2>Tooltip</h2>
+      <p>Hover or focus the icon button. Escape closes it.</p>
+      <div class="toolbar">
+        <md-icon-button id="tooltip-anchor" aria-label="Refresh keybox" class="icon-button">
+          <md-icon>refresh</md-icon>
+        </md-icon-button>
+        <sp-tooltip for="tooltip-anchor">Refresh keybox status</sp-tooltip>
+      </div>
+    </section>
+
+    <section class="demo">
+      <h2>Skeleton</h2>
+      <p>Text, circular, and rounded variants with pulse and wave animations.</p>
+      <div class="inline" style="margin-bottom: 20px">
+        <sp-skeleton style="width: 220px"></sp-skeleton>
+        <sp-skeleton variant="circular" animation="wave"></sp-skeleton>
+        <sp-skeleton variant="rounded" animation="none" style="width: 120px; --sp-skeleton-height: 48px"></sp-skeleton>
+      </div>
+
+      <sp-settings-section label="Loading list" description="Content is hidden until loaded">
+        <sp-settings-row variant="navigation" headline="Keybox catalog" supporting-text="Loading providers…">
+          <md-icon slot="icon">key</md-icon>
+        </sp-settings-row>
+      </sp-settings-section>
+
+      <div style="margin-top: 16px">
+        <sp-skeleton id="content-skeleton" variant="rounded" animation="pulse" style="--sp-skeleton-height: 96px">
+          <sp-settings-section>
+            <sp-settings-row variant="navigation" headline="Loaded content" supporting-text="This is the real row">
+              <md-icon slot="icon">check_circle</md-icon>
+            </sp-settings-row>
+          </sp-settings-section>
+        </sp-skeleton>
+      </div>
+
+      <div class="inline" style="margin-top: 16px">
+        <md-filled-tonal-button id="toggle-loaded">Toggle loaded</md-filled-tonal-button>
+      </div>
+    </section>
+
+    <section class="demo">
+      <h2>Notes</h2>
+      <div class="note">
+        These components are self-contained Lit elements. They register with the <code>sp-</code> prefix and use only
+        the Material token contract, so they can be ported or vendored independently.
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="js/ui-gallery.ts"></script>
+</body>
+</html>
