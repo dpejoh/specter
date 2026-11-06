@@ -2,7 +2,7 @@ import { openSubPage } from './subpage.js';
 import { t } from './i18n.js';
 import { escapeHtml, fetchJson } from './utils.js';
 import { runScript } from './bridge.js';
-import { dash, formatDate, infoGroup, type ValueSpec } from './info-page.js';
+import { appendInfoSection, dash, formatDate, type ValueSpec } from './info-page.js';
 import type { SetupInfoJson, SetupInfoModule } from './types.js';
 
 function deviceRows(data: SetupInfoJson): ValueSpec[] {
@@ -15,58 +15,65 @@ function deviceRows(data: SetupInfoJson): ValueSpec[] {
   ];
 }
 
-function moduleGroup(module: SetupInfoModule): string {
-  const title = module.version
-    ? `${module.name} · ${module.version}`
-    : module.name;
-  const rows = [...module.rows];
-  return infoGroup(title, rows.map((row) => ({
+function appendModuleSection(host: HTMLElement, module: SetupInfoModule): void {
+  const rows: ValueSpec[] = [];
+  if (module.version) {
+    rows.push({ label: t('setup_version', 'Version'), value: dash(module.version) });
+  }
+  rows.push(...module.rows.map((row) => ({
     label: row.label,
     value: dash(row.value),
   })));
+  appendInfoSection(host, module.name, rows);
 }
 
-function buildPage(data: SetupInfoJson | null, loading: boolean): string {
+function buildPage(host: HTMLElement, data: SetupInfoJson | null, loading: boolean): void {
+  host.replaceChildren();
+
   if (loading) {
-    return `<div class="subpage-info-note"><md-circular-progress indeterminate></md-circular-progress><div><strong>${escapeHtml(t('setup_loading', 'Collecting configuration...'))}</strong></div></div>`;
+    host.innerHTML = `<div class="subpage-info-note"><md-circular-progress indeterminate></md-circular-progress><div><strong>${escapeHtml(t('setup_loading', 'Collecting configuration...'))}</strong></div></div>`;
+    return;
   }
   if (!data) {
-    return `<div class="subpage-info-note"><md-icon aria-hidden="true">error</md-icon><div><strong>${escapeHtml(t('setup_unavailable', 'Setup information is unavailable.'))}</strong><p>${escapeHtml(t('setup_unavailable_hint', 'Open Specter again or refresh the page.'))}</p></div></div>`;
+    host.innerHTML = `<div class="subpage-info-note"><md-icon aria-hidden="true">error</md-icon><div><strong>${escapeHtml(t('setup_unavailable', 'Setup information is unavailable.'))}</strong><p>${escapeHtml(t('setup_unavailable_hint', 'Open Specter again or refresh the page.'))}</p></div></div>`;
+    return;
   }
 
-  const sections: string[] = [];
-  sections.push(infoGroup(t('setup_device_section', 'Device'), deviceRows(data)));
+  appendInfoSection(host, t('setup_device_section', 'Device'), deviceRows(data));
 
   for (const module of data.modules ?? []) {
-    sections.push(moduleGroup(module));
+    appendModuleSection(host, module);
   }
 
   if ((data.features ?? []).length > 0) {
-    sections.push(infoGroup(
+    appendInfoSection(
+      host,
       t('setup_features_section', 'Specter features'),
       (data.features ?? []).map((feature) => ({
         label: feature.label,
         value: dash(feature.value),
       })),
-    ));
+    );
   }
 
   if ((data.warnings ?? []).length > 0) {
-    sections.push(infoGroup(
+    appendInfoSection(
+      host,
       t('setup_warnings_section', 'Warnings'),
       (data.warnings ?? []).map((warning, index) => ({
         label: `${t('setup_warning', 'Warning')} ${index + 1}`,
         value: warning,
         tone: 'error' as const,
       })),
-    ));
+    );
   }
 
   if (data.generated_at) {
-    sections.push(`<p class="subpage-top-desc setup-generated">${escapeHtml(t('setup_generated', 'Generated'))}: ${escapeHtml(formatDate(data.generated_at))}</p>`);
+    host.insertAdjacentHTML(
+      'beforeend',
+      `<p class="subpage-top-desc setup-generated">${escapeHtml(t('setup_generated', 'Generated'))}: ${escapeHtml(formatDate(data.generated_at))}</p>`,
+    );
   }
-
-  return sections.join('');
 }
 
 async function loadSetupInfo(): Promise<SetupInfoJson | null> {
@@ -86,7 +93,7 @@ export async function openSetupPage(): Promise<void> {
   let hostEl: HTMLElement | null = null;
 
   const render = () => {
-    if (hostEl) hostEl.innerHTML = buildPage(latest, loading);
+    if (hostEl) buildPage(hostEl, latest, loading);
   };
 
   const refresh = async () => {

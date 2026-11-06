@@ -1,11 +1,19 @@
 import { openSubPage } from './subpage.js';
 import { t } from './i18n.js';
 import { escapeHtml } from './utils.js';
-import { dash, formatDate, formatSize, infoGroup, wireCopyButtons, type ValueSpec } from './info-page.js';
+import {
+  appendInfoSection,
+  dash,
+  formatDate,
+  formatSize,
+  type ValueSpec,
+} from './info-page.js';
 import { refreshKeyboxStatus, refreshKeyboxWatch } from './device.js';
 import type { KeyboxInfoJson } from './types.js';
 
-function statusOf(data: KeyboxInfoJson): { label: string; tone: ValueSpec['tone'] } {
+type InfoTone = 'default' | 'error' | 'warning';
+
+function statusOf(data: KeyboxInfoJson): { label: string; tone: InfoTone } {
   if (!data.installed) return { label: t('keybox_info_not_installed', 'Not installed'), tone: 'error' };
   if (data.revoked) {
     return {
@@ -32,79 +40,108 @@ function typeOf(data: KeyboxInfoJson): string {
   return data.rkp ? t('keybox_info_rkp', 'RKP') : t('keybox_info_normal', 'Normal');
 }
 
-function nameOf(data: KeyboxInfoJson): string {
-  if (data.is_private) return t('keybox_info_private_keybox', 'Private keybox');
-  const version = data.source_version
-    ? (data.source_version.startsWith('v') ? data.source_version : `v${data.source_version}`)
-    : '';
-  const text = data.text && data.text !== data.source_version ? data.text : '';
-  return [text || version, data.source && data.source !== 'Private' ? `by ${data.source}` : '']
-    .filter(Boolean)
-    .join(' ') || dash(data.source);
+function installAction(): string {
+  return `
+    <div class="info-page-actions">
+      <md-filled-button id="keybox-info-install">
+        <md-icon slot="icon" aria-hidden="true">vpn_key</md-icon>
+        ${escapeHtml(t('keybox_info_install', 'Install new keybox'))}
+      </md-filled-button>
+    </div>
+  `;
 }
 
-function revocationText(data: KeyboxInfoJson): string {
-  if (data.revocation_status) {
-    return data.revocation_reason
-      ? `${data.revocation_status} · ${data.revocation_reason}`
-      : data.revocation_status;
-  }
-  if (data.revoked) return t('custom_kb_revoked', 'Revoked');
-  if (data.softbanned) return t('custom_kb_softbanned', 'Softbanned');
-  return t('keybox_info_not_revoked', 'Not revoked');
-}
+function buildPage(host: HTMLElement, data: KeyboxInfoJson | null): void {
+  host.replaceChildren();
 
-function buildPage(data: KeyboxInfoJson | null): string {
   if (!data) {
-    return `<div class="subpage-info-note">${escapeHtml(t('keybox_info_unavailable', 'Keybox information is unavailable.'))}</div>`;
+    host.innerHTML = `<div class="subpage-info-note">${escapeHtml(t('keybox_info_unavailable', 'Keybox information is unavailable.'))}</div>`;
+    return;
+  }
+
+  if (!data.installed) {
+    host.innerHTML = `
+      <div class="subpage-info-note">
+        <md-icon aria-hidden="true">vpn_key_off</md-icon>
+        <div>
+          <strong>${escapeHtml(t('keybox_info_not_installed', 'Not installed'))}</strong>
+          <p>${escapeHtml(t('keybox_info_not_installed_desc', 'Install a keybox to enable attestation.'))}</p>
+        </div>
+      </div>
+      ${installAction()}
+    `;
+    return;
   }
 
   const status = statusOf(data);
-  const sections: string[] = [];
 
-  sections.push(infoGroup(t('keybox_info_status_section', 'Overview'), [
-    { label: t('keybox_info_name', 'Name'), value: nameOf(data) },
-    { label: t('keybox_info_provider', 'Provider'), value: dash(data.source) },
-    { label: t('keybox_info_version', 'Version'), value: dash(data.source_version), mono: true },
-    {
-      label: t('keybox_info_latest', 'Latest version'),
-      value: data.latest_version
-        ? dash(data.latest_version)
-        : (data.up_to_date ? t('device_latest', 'Latest') : '—'),
-    },
-    { label: t('keybox_info_type', 'Type'), value: typeOf(data) },
+  const healthRows: ValueSpec[] = [
     { label: t('keybox_info_status', 'Status'), value: status.label, tone: status.tone },
-  ]));
-
-  sections.push(infoGroup(t('keybox_info_cert_section', 'Certificate'), [
-    { label: t('keybox_info_serial', 'Serial'), value: dash(data.serial), mono: true, copy: true },
-    {
-      label: t('keybox_info_expires', 'Expires'),
-      value: data.expires_at ? formatDate(data.expires_at) : t('keybox_info_no_expiry', 'No expiry'),
-    },
-    { label: t('keybox_info_revocation', 'Revocation'), value: revocationText(data), tone: status.tone },
-    { label: t('keybox_info_checked', 'Last checked'), value: formatDate(data.revocation_checked_at || data.checked_at) },
-  ]));
-
-  sections.push(infoGroup(t('keybox_info_file_section', 'Installation'), [
-    { label: t('keybox_info_file', 'File'), value: dash(data.file_path), mono: true, copy: true },
-    { label: t('keybox_info_size', 'Size'), value: formatSize(data.file_size) },
-    { label: t('keybox_info_modified', 'Modified'), value: formatDate(data.file_modified) },
-  ]));
-
-  const needsInstall = !data.installed || !!data.revoked || !!data.expired;
-  if (needsInstall) {
-    sections.push(`
-      <div class="info-page-actions">
-        <md-filled-button id="keybox-info-install">
-          <md-icon slot="icon" aria-hidden="true">vpn_key</md-icon>
-          ${escapeHtml(t('keybox_info_install', 'Install new keybox'))}
-        </md-filled-button>
-      </div>
-    `);
+  ];
+  if (data.revocation_reason) {
+    healthRows.push({ label: t('keybox_info_reason', 'Reason'), value: data.revocation_reason });
   }
+  if (data.revocation_source) {
+    healthRows.push({ label: t('keybox_info_source', 'Source'), value: data.revocation_source });
+  }
+  const checked = formatDate(data.revocation_checked_at || data.checked_at);
+  if (checked !== '—') {
+    healthRows.push({ label: t('keybox_info_checked', 'Last checked'), value: checked });
+  }
+  appendInfoSection(host, t('keybox_info_health_section', 'Health'), healthRows);
 
-  return sections.join('');
+  const keyboxRows: ValueSpec[] = [];
+  keyboxRows.push({
+    label: t('keybox_info_provider', 'Provider'),
+    value: data.is_private
+      ? t('keybox_info_private_keybox', 'Private keybox')
+      : dash(data.source),
+  });
+  if (!data.is_private && data.source_version) {
+    keyboxRows.push({
+      label: t('keybox_info_installed_version', 'Installed version'),
+      value: dash(data.source_version),
+      mono: true,
+    });
+  }
+  keyboxRows.push({ label: t('keybox_info_type', 'Type'), value: typeOf(data) });
+
+  if (data.serial) {
+    keyboxRows.push({
+      label: t('keybox_info_serial', 'Serial'),
+      value: data.serial,
+      mono: true,
+      copy: true,
+    });
+  }
+  keyboxRows.push({
+    label: t('keybox_info_expires', 'Expires'),
+    value: data.expires_at
+      ? formatDate(data.expires_at)
+      : t('keybox_info_no_expiry', 'No expiry'),
+  });
+
+  if (data.file_path) {
+    keyboxRows.push({
+      label: t('keybox_info_file', 'File'),
+      value: data.file_path,
+      mono: true,
+      copy: true,
+    });
+  }
+  const size = formatSize(data.file_size);
+  if (size !== '—') {
+    keyboxRows.push({ label: t('keybox_info_size', 'Size'), value: size });
+  }
+  const modified = formatDate(data.file_modified);
+  if (modified !== '—') {
+    keyboxRows.push({ label: t('keybox_info_modified', 'Modified'), value: modified });
+  }
+  appendInfoSection(host, t('keybox_info_keybox_section', 'Keybox'), keyboxRows);
+
+  if (data.revoked || data.expired || data.softbanned) {
+    host.insertAdjacentHTML('beforeend', installAction());
+  }
 }
 
 export async function openKeyboxInfoPage(): Promise<void> {
@@ -113,8 +150,7 @@ export async function openKeyboxInfoPage(): Promise<void> {
   let pageRef: { close: () => void } | null = null;
 
   const render = (host: HTMLElement, data: KeyboxInfoJson | null) => {
-    host.innerHTML = buildPage(data);
-    wireCopyButtons(host);
+    buildPage(host, data);
     host.querySelector('#keybox-info-install')?.addEventListener('click', () => {
       pageRef?.close();
       window.setTimeout(() => {
@@ -137,7 +173,7 @@ export async function openKeyboxInfoPage(): Promise<void> {
   const page = await openSubPage({
     id: 'keybox-info',
     title: t('keybox_info_title', 'Keybox details'),
-    description: t('keybox_info_desc', 'Installed keybox identity, certificate status, and file information.'),
+    description: t('keybox_info_desc', 'Installed keybox identity, health, and file information.'),
     headerAction: (container) => {
       const button = document.createElement('md-icon-button');
       button.id = 'keybox-info-refresh';

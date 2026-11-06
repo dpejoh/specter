@@ -53,6 +53,7 @@ Attributes:
 - `selected` — switch/radio state
 - `loading` — shows an inline spinner for action and destructive rows
 - `copyable` — shows a copy button for value rows
+- `copy-label` — accessible name for the copy button
 - `value` — text copied by the copy button
 - `mono` — monospace supporting text
 

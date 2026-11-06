@@ -561,65 +561,6 @@ button.list-item {
   pointer-events: none;
 }
 
-.list-item--value {
-  cursor: default;
-  align-items: flex-start;
-}
-
-.list-item--value:hover,
-.list-item--value:active {
-  background-color: var(--md-sys-color-surface-container-high);
-  transform: none;
-}
-
-.value-text {
-  white-space: normal;
-  overflow-wrap: anywhere;
-  line-height: 1.35;
-}
-
-.value-text--mono {
-  font-family: var(--sp-font-mono, 'JetBrains Mono Variable', monospace);
-  font-size: 0.8125rem;
-}
-
-.value-text--error {
-  color: var(--md-sys-color-error);
-}
-
-.value-text--warning {
-  color: var(--md-sys-color-tertiary);
-}
-
-.value-copy-btn {
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--md-sys-color-on-surface-variant);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.value-copy-btn:hover {
-  background: var(--md-sys-color-surface-container-highest);
-  color: var(--md-sys-color-on-surface);
-}
-
-.value-copy-btn:focus-visible {
-  outline: 2px solid var(--md-sys-color-primary);
-  outline-offset: 2px;
-}
-
-.value-copy-btn md-icon {
-  font-size: 20px;
-}
-
 .list-container.info-page-container,
 sp-settings-section.info-page-container {
   overflow: visible;
@@ -628,6 +569,14 @@ sp-settings-section.info-page-container {
 .keybox-info-page,
 .setup-info-page {
   width: 100%;
+}
+
+sp-settings-row.sp-info-value--error::part(supporting) {
+  color: var(--md-sys-color-error);
+}
+
+sp-settings-row.sp-info-value--warning::part(supporting) {
+  color: var(--md-sys-color-tertiary);
 }
 
 .info-page-actions {

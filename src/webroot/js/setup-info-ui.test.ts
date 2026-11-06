@@ -38,6 +38,23 @@ vi.mock('./utils.js', async () => {
 
 import { openSetupPage } from './setup-info-ui.js';
 
+function sections(): HTMLElement[] {
+  return [...(state.host?.querySelectorAll('sp-settings-section') ?? [])] as HTMLElement[];
+}
+
+function sectionLabels(): string[] {
+  return sections().map(section => section.getAttribute('label') || '');
+}
+
+function rowsIn(label: string): { label: string; value: string; classes: string }[] {
+  const section = sections().find(entry => entry.getAttribute('label') === label);
+  return [...(section?.querySelectorAll('sp-settings-row') ?? [])].map(row => ({
+    label: row.getAttribute('headline') || '',
+    value: row.getAttribute('supporting-text') || '',
+    classes: row.className,
+  }));
+}
+
 const fixture: SetupInfoJson = {
   generated_at: '2026-11-06T10:00:00Z',
   device: {
@@ -82,27 +99,48 @@ describe('setup page', () => {
     document.body.innerHTML = '';
   });
 
-  it('renders device, keystore, modules, features, and warnings', async () => {
+  it('renders device, modules, features, and warnings through shared sections', async () => {
     await openSetupPage();
-    await vi.waitFor(() => expect(state.host?.textContent).toContain('TEESimulator'));
+    await vi.waitFor(() => expect(sectionLabels()).toContain('TEESimulator'));
 
-    const text = state.host?.textContent ?? '';
-    expect(text).toContain('Android version');
-    expect(text).toContain('17');
-    expect(text).toContain('Target count');
-    expect(text).not.toContain('/data/adb/');
-    expect(text).toContain('Play Integrity Fix');
-    expect(text).toContain('HMA-OSS');
-    expect(text).toContain('Spoofed device');
-    expect(text).toContain('Auto Target');
-    expect(text).toContain('No keybox is installed');
+    expect(sectionLabels()).toEqual([
+      'Device',
+      'TEESimulator',
+      'Play Integrity Fix',
+      'HMA-OSS',
+      'Specter features',
+      'Warnings',
+    ]);
+    expect(sectionLabels().some(label => label.includes('2.0.0'))).toBe(false);
+
+    expect(rowsIn('Device')).toContainEqual(
+      expect.objectContaining({ label: 'Android version', value: '17' }),
+    );
+    expect(rowsIn('TEESimulator')[0]).toMatchObject({ label: 'Version', value: '2.0.0' });
+    expect(rowsIn('TEESimulator')).toContainEqual(
+      expect.objectContaining({ label: 'Target count', value: '12' }),
+    );
+    expect(rowsIn('Play Integrity Fix')).toContainEqual(
+      expect.objectContaining({ label: 'Spoofed device', value: 'Google Pixel 8 Pro' }),
+    );
+    expect(rowsIn('Specter features')).toContainEqual(
+      expect.objectContaining({ label: 'Auto Target', value: 'On · 5 min' }),
+    );
+    expect(rowsIn('Warnings')[0]).toMatchObject({
+      label: 'Warning 1',
+      value: 'No keybox is installed',
+    });
+    expect(rowsIn('Warnings')[0]?.classes).toContain('sp-info-value--error');
+    expect(state.host?.textContent).not.toContain('/data/adb/');
   });
 
   it('renders the cached snapshot without running the shell', async () => {
     await openSetupPage();
 
-    expect(state.host?.textContent).toContain('TEESimulator');
-    expect(state.host?.textContent).toContain('Android version');
+    expect(sectionLabels()).toContain('TEESimulator');
+    expect(rowsIn('Device')).toContainEqual(
+      expect.objectContaining({ label: 'Android version', value: '17' }),
+    );
   });
 
   it('shows an unavailable state when the snapshot cannot be read', async () => {

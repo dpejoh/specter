@@ -1,34 +1,53 @@
 import { describe, expect, it } from 'vitest';
-import { infoGroup, valueRow, dash, formatSize } from './info-page.js';
+import { appendInfoSection, dash, formatSize } from './info-page.js';
 
-describe('read-only info rows', () => {
-  it('renders grouped label/value rows with grouped corners', () => {
-    const html = infoGroup('Overview', [
+function rows(host: HTMLElement) {
+  return [...host.querySelectorAll('sp-settings-row')].map(row => ({
+    label: row.getAttribute('headline') || '',
+    value: row.getAttribute('supporting-text') || '',
+    mono: row.hasAttribute('mono'),
+    copyable: row.hasAttribute('copyable'),
+    classes: row.className,
+  }));
+}
+
+describe('read-only info sections', () => {
+  it('renders shared component sections and value rows', () => {
+    const host = document.createElement('div');
+    appendInfoSection(host, 'Overview', [
       { label: 'Name', value: 'beebox by mhmrdd' },
       { label: 'Status', value: 'Active' },
     ]);
-    const host = document.createElement('div');
-    host.innerHTML = html;
 
-    expect(host.querySelector('.list-title')?.textContent).toBe('Overview');
-    expect(host.querySelectorAll('.list-item--value')).toHaveLength(2);
-    expect(host.querySelector('.list-item--first')).toBeTruthy();
-    expect(host.querySelector('.list-item--last')).toBeTruthy();
-    expect(host.textContent).toContain('beebox by mhmrdd');
+    const section = host.querySelector('sp-settings-section');
+    expect(section?.getAttribute('label')).toBe('Overview');
+    expect(rows(host)).toMatchObject([
+      { label: 'Name', value: 'beebox by mhmrdd' },
+      { label: 'Status', value: 'Active' },
+    ]);
   });
 
-  it('renders a copy control only for copyable values', () => {
-    const withCopy = valueRow({ label: 'Serial', value: 'abc123', copy: true }, 'list-item--only');
-    const withoutCopy = valueRow({ label: 'Status', value: 'Active' }, 'list-item--only');
-
+  it('marks copyable values and labels the copy action', () => {
     const host = document.createElement('div');
-    host.innerHTML = withCopy + withoutCopy;
+    appendInfoSection(host, 'Certificate', [
+      { label: 'Serial', value: 'abc123', copy: true },
+      { label: 'Expires', value: 'No expiry' },
+    ]);
 
-    expect(host.querySelectorAll('[data-copy]')).toHaveLength(1);
-    expect(host.querySelector('[data-copy]')?.getAttribute('data-copy')).toBe('abc123');
+    const [serial, expires] = rows(host);
+    expect(serial).toMatchObject({ label: 'Serial', copyable: true });
+    expect(host.querySelector('sp-settings-row')?.getAttribute('value')).toBe('abc123');
+    expect(host.querySelector('sp-settings-row')?.getAttribute('copy-label')).toContain('Serial');
+    expect(expires).toMatchObject({ label: 'Expires', copyable: false });
   });
 
-  it('dashes empty values and formats sizes', () => {
+  it('applies tones and formats utility values', () => {
+    const host = document.createElement('div');
+    appendInfoSection(host, 'Warnings', [
+      { label: 'Warning 1', value: 'No keybox is installed', tone: 'error' },
+    ]);
+
+    expect(rows(host)[0]?.classes).toContain('sp-info-value--error');
     expect(dash(undefined)).toBe('—');
     expect(dash('')).toBe('—');
     expect(formatSize(512)).toBe('512 B');

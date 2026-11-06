@@ -43,6 +43,7 @@ export class SpSettingsRow extends LitElement {
     selected: { type: Boolean, reflect: true },
     loading: { type: Boolean, reflect: true },
     copyable: { type: Boolean, reflect: true },
+    copyLabel: { attribute: 'copy-label', type: String },
     mono: { type: Boolean, reflect: true },
     hasIcon: { state: true },
     hasLeading: { state: true },
@@ -65,6 +66,7 @@ export class SpSettingsRow extends LitElement {
   declare selected: boolean;
   declare loading: boolean;
   declare copyable: boolean;
+  declare copyLabel: string;
   declare mono: boolean;
   declare hasIcon: boolean;
   declare hasLeading: boolean;
@@ -93,6 +95,7 @@ export class SpSettingsRow extends LitElement {
     this.selected = false;
     this.loading = false;
     this.copyable = false;
+    this.copyLabel = '';
     this.mono = false;
     this.hasIcon = false;
     this.hasLeading = false;
@@ -666,7 +669,7 @@ export class SpSettingsRow extends LitElement {
           type="button"
           class="copy-btn"
           part="copy-action"
-          aria-label=${`Copy ${this.headline || this.label || 'value'}`}
+          aria-label=${this.copyLabel || `Copy ${this.headline || this.label || 'value'}`}
           @click=${this.#handleCopy}
         >
           <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">

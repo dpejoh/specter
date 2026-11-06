@@ -186,12 +186,14 @@ describe('sp-settings-row', () => {
     row.supportingText = 'ABC123';
     row.value = 'ABC123';
     row.copyable = true;
+    row.copyLabel = 'Copy serial number';
     await row.updateComplete;
 
     const onCopy = vi.fn();
     row.addEventListener('sp-copy', onCopy);
     const button = row.shadowRoot!.querySelector('.copy-btn') as HTMLButtonElement;
     expect(button).not.toBeNull();
+    expect(button.getAttribute('aria-label')).toBe('Copy serial number');
 
     button.click();
     expect(onCopy).toHaveBeenCalledOnce();
