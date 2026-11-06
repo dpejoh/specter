@@ -218,10 +218,8 @@ async function wireConflictToggles() {
   const data = await refreshConflictStatus();
   if (!data || data.length === 0) return;
 
-  const title = document.getElementById('conflicts-title');
-  const desc = document.getElementById('conflicts-desc');
-  const container = document.getElementById('conflicts-container');
-  if (!title || !desc || !container) return;
+  const section = document.getElementById('conflicts-section') as HTMLElement | null;
+  if (!section) return;
 
   // Module-owned features get their Specter controls hidden (see applyOwnership).
   const entries = data.map(m => ({ key: m.key, prioritySpecter: m.prioritySpecter }));
@@ -232,27 +230,25 @@ async function wireConflictToggles() {
     document.getElementById('toggle-action_security_patch')?.toggleAttribute('hidden', moduleOwns);
   };
 
-  title.style.display = '';
-  desc.style.display = '';
-  container.innerHTML = '';
+  section.style.display = '';
+  section.querySelectorAll(':scope > sp-settings-row').forEach(row => row.remove());
 
   for (const mod of data) {
-    const row = document.createElement('div');
-    row.className = 'list-item list-item--toggle';
+    const row = document.createElement('sp-settings-row');
+    row.id = `conflict-row-${mod.key}`;
+    row.setAttribute('variant', 'toggle');
 
-    const icon = document.createElement('div');
-    icon.className = 'li-icon';
-    icon.innerHTML = '<md-icon aria-hidden="true">warning</md-icon>';
+    const icon = document.createElement('md-icon');
+    icon.setAttribute('slot', 'icon');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = 'warning';
 
-    const content = document.createElement('div');
-    content.className = 'list-item-content';
-
-    const label = document.createElement('div');
-    label.className = 'toggle-text';
+    const label = document.createElement('span');
+    label.setAttribute('slot', 'headline');
     label.textContent = mod.friendlyName;
 
     const hint = document.createElement('span');
-    hint.className = 'supporting-text';
+    hint.setAttribute('slot', 'supporting');
     hint.id = `conflict-hint-${mod.key}`;
     const prettyFeatures = mod.features
       ? [...new Set(mod.features.split(',').map(f => f.trim()).map(f => {
@@ -262,22 +258,15 @@ async function wireConflictToggles() {
       : '';
     const featLabel = prettyFeatures ? `${t('conflict_covers', 'Covers')}: ${prettyFeatures} | ` : '';
     hint.textContent = featLabel.replace(/ \| $/, '');
-    content.appendChild(label);
-    content.appendChild(hint);
-
-    const spacer = document.createElement('div');
-    spacer.className = 'spacer';
 
     const sw = document.createElement('md-switch');
-    sw.icons = true;
+    sw.setAttribute('slot', 'trailing');
+    sw.setAttribute('icons', '');
     sw.id = `conflict-switch-${mod.key}`;
     sw.selected = !mod.prioritySpecter;
 
-    row.appendChild(icon);
-    row.appendChild(content);
-    row.appendChild(spacer);
-    row.appendChild(sw);
-    container.appendChild(row);
+    row.append(icon, label, hint, sw);
+    section.appendChild(row);
 
     sw.addEventListener('change', async () => {
       sw.disabled = true;
@@ -310,5 +299,4 @@ async function wireConflictToggles() {
 
   _applyConflictOwnership = applyOwnership;
   applyOwnership();
-  updateListContainerCorners();
 }

@@ -20,8 +20,6 @@ export async function updateModuleConfigSectionVisibility(): Promise<void> {
   }
 
   const anyVisible = hma || zygiskNext;
-  const title = document.getElementById('module-config-title');
   const section = document.getElementById('module-config-section');
-  if (title) title.hidden = !anyVisible;
   if (section) section.hidden = !anyVisible;
 }

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import './ui/sp-settings-row.js'
 import { renderControlToggles, wireRowDialog } from './toggles.js'
 import { CONTROL_TOGGLES } from './constants.js'
 
@@ -24,8 +25,8 @@ describe('renderControlToggles', () => {
     for (const toggle of CONTROL_TOGGLES) {
       const row = document.getElementById(`${toggle.id}-row`)
       expect(row, toggle.id).not.toBeNull()
-      expect(row!.querySelector('.toggle-text')?.textContent?.trim()).not.toBe('')
-      expect(row!.querySelector('.supporting-text')?.textContent?.trim()).not.toBe('')
+      expect(row!.querySelector('[slot="headline"]')?.textContent?.trim()).not.toBe('')
+      expect(row!.querySelector('[slot="supporting"]')?.textContent?.trim()).not.toBe('')
     }
   })
 
@@ -34,28 +35,37 @@ describe('renderControlToggles', () => {
     await Promise.resolve()
     await Promise.resolve()
 
-    const row = document.getElementById('toggle-action_pif-row')!
+    const row = document.getElementById('toggle-action_pif-row') as HTMLElement
     const sw = row.querySelector('md-switch') as HTMLElement & { selected: boolean }
     const before = sw.selected
-    row.click()
+    ;(row.shadowRoot!.querySelector('[part=row]') as HTMLElement).click()
     expect(sw.selected).toBe(!before)
   })
 
-  it('leaves a configurable row to its dialog wiring', async () => {
+  it('opens the page from a configurable row body while leaving the switch alone', async () => {
     renderControlToggles()
     await Promise.resolve()
     await Promise.resolve()
 
-    const row = document.getElementById('toggle-prop_handler-row')!
+    const row = document.getElementById('toggle-prop_handler-row') as HTMLElement
     const sw = row.querySelector('md-switch') as HTMLElement & { selected: boolean }
     const before = sw.selected
-    row.click()
+    const open = vi.fn()
+
+    expect(row.hasAttribute('has-page')).toBe(true)
+    wireRowDialog('toggle-prop_handler-row', open)
+    ;(row.shadowRoot!.querySelector('[part=row]') as HTMLElement).click()
+    expect(open).toHaveBeenCalledTimes(1)
+    expect(sw.selected).toBe(before)
+
+    ;(row.querySelector('[data-config]') as HTMLElement).click()
+    expect(open).toHaveBeenCalledTimes(2)
     expect(sw.selected).toBe(before)
   })
 })
 
 describe('wireRowDialog', () => {
-  it('wires a row only once', () => {
+  it('wires a legacy row only once', () => {
     document.body.innerHTML = '<div id="row"></div>'
     const open = vi.fn()
     wireRowDialog('row', open)

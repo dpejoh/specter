@@ -67,7 +67,7 @@ const INTERACTIVE_SELECTOR = 'button, a, input, select, textarea, md-switch, md-
  * button role around a switch/radio is invalid and creates double activation.
  */
 export function makeRowInteractive(el: HTMLElement): boolean {
-  if (!el || el.matches('button, a, input, select, textarea')) return false;
+  if (!el || el.localName === 'sp-settings-row' || el.matches('button, a, input, select, textarea')) return false;
   const role = el.getAttribute('role');
   if (role && role !== 'button') return false;
   if (role === 'button') {
@@ -80,24 +80,39 @@ export function makeRowInteractive(el: HTMLElement): boolean {
   return true;
 }
 
-/** Wire a row/button that loads its module on first activation. Idempotent. */
-export function wireLazyClick(id: string, load: () => Promise<unknown>): void {
-  const el = document.getElementById(id);
-  if (!el || el.dataset.spWired) return;
-  el.dataset.spWired = '1';
+const isSwitchEvent = (e: Event) =>
+  e.composedPath().some(n => n instanceof Element &&
+    (n.localName === 'md-switch' || n.localName === 'md-checkbox' || n.localName === 'md-radio'));
+
+/**
+ * Wire activation for both the legacy `.list-item` rows and the new
+ * `sp-settings-row` custom element.
+ */
+export function wireRowActivation(el: HTMLElement, activate: () => void): void {
+  if (el.localName === 'sp-settings-row') {
+    el.addEventListener('sp-activate', activate);
+    return;
+  }
+
   makeRowInteractive(el);
-  const isSwitchEvent = (e: Event) =>
-    e.composedPath().some(n => n instanceof Element && n.localName === 'md-switch');
   el.addEventListener('click', (e) => {
     if (isSwitchEvent(e)) return;
-    load().catch(() => {});
+    activate();
   });
   el.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
     if (isSwitchEvent(e)) return;
     e.preventDefault();
-    load().catch(() => {});
+    activate();
   });
+}
+
+/** Wire a row/button that loads its module on first activation. Idempotent. */
+export function wireLazyClick(id: string, load: () => Promise<unknown>): void {
+  const el = document.getElementById(id);
+  if (!el || el.dataset.spWired) return;
+  el.dataset.spWired = '1';
+  wireRowActivation(el, () => { load().catch(() => {}); });
 }
 
 /** Run work after the current frame, when the browser is idle if possible. */

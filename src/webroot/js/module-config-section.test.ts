@@ -12,11 +12,10 @@ import { updateModuleConfigSectionVisibility } from './module-config-section.js'
 beforeEach(() => {
   vi.mocked(isAnyModuleInstalled).mockReset()
   document.body.innerHTML = `
-    <h2 id="module-config-title" hidden>Module Configs</h2>
-    <div id="module-config-section" hidden>
-      <div id="module-config-hma" hidden></div>
-      <div id="module-config-zygisk-next" hidden></div>
-    </div>
+    <sp-settings-section id="module-config-section" hidden>
+      <sp-settings-row id="module-config-hma" hidden></sp-settings-row>
+      <sp-settings-row id="module-config-zygisk-next" hidden></sp-settings-row>
+    </sp-settings-section>
   `
 })
 
@@ -32,7 +31,6 @@ describe('updateModuleConfigSectionVisibility', () => {
     await updateModuleConfigSectionVisibility()
     expect(visible('module-config-hma')).toBe(true)
     expect(visible('module-config-zygisk-next')).toBe(false)
-    expect(visible('module-config-title')).toBe(true)
     expect(visible('module-config-section')).toBe(true)
   })
 
@@ -43,7 +41,6 @@ describe('updateModuleConfigSectionVisibility', () => {
     await updateModuleConfigSectionVisibility()
     expect(visible('module-config-hma')).toBe(false)
     expect(visible('module-config-zygisk-next')).toBe(true)
-    expect(visible('module-config-title')).toBe(true)
     expect(visible('module-config-section')).toBe(true)
   })
 
@@ -59,14 +56,12 @@ describe('updateModuleConfigSectionVisibility', () => {
     await updateModuleConfigSectionVisibility()
     expect(visible('module-config-hma')).toBe(false)
     expect(visible('module-config-zygisk-next')).toBe(false)
-    expect(visible('module-config-title')).toBe(false)
     expect(visible('module-config-section')).toBe(false)
   })
 
   it('hides the whole section when detection fails', async () => {
     vi.mocked(isAnyModuleInstalled).mockRejectedValue(new Error('no-bridge'))
     await updateModuleConfigSectionVisibility()
-    expect(visible('module-config-title')).toBe(false)
     expect(visible('module-config-section')).toBe(false)
   })
 })
@@ -78,7 +73,6 @@ describe('Tools markup', () => {
       'text/html'
     )
     for (const id of [
-      'module-config-title',
       'module-config-section',
       'module-config-hma',
       'module-config-zygisk-next',

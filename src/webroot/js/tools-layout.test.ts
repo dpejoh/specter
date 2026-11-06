@@ -11,9 +11,16 @@ beforeAll(() => {
   )
 })
 
+function toolsSections(): HTMLElement[] {
+  return [...doc.querySelectorAll('#tools-page > sp-settings-section')] as HTMLElement[]
+}
+
+function sectionLabel(section: HTMLElement): string {
+  return section.querySelector('[slot="label"]')?.textContent?.trim() || ''
+}
+
 function toolsHeadings(): string[] {
-  return [...doc.querySelectorAll('#tools-page > h2')]
-    .map(h => h.textContent?.trim() || '')
+  return toolsSections().map(sectionLabel)
 }
 
 describe('Tools layout', () => {
@@ -29,11 +36,9 @@ describe('Tools layout', () => {
   })
 
   it('keeps the keybox entry first inside Keystore Management', () => {
-    const heading = [...doc.querySelectorAll('#tools-page > h2')]
-      .find(h => h.textContent?.trim() === 'Keystore Management')
-    const container = heading?.nextElementSibling
-    expect(container).toBeTruthy()
-    const ids = [...container!.querySelectorAll(':scope > .list-item')]
+    const section = toolsSections().find(s => sectionLabel(s) === 'Keystore Management')
+    expect(section).toBeTruthy()
+    const ids = [...section!.querySelectorAll(':scope > sp-settings-row')]
       .map(el => el.id)
     expect(ids[0]).toBe('keybox-btn')
     expect(ids).toContain('target-apps-btn')

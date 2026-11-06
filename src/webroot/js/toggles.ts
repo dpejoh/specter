@@ -1,8 +1,7 @@
 import { cfgGet, cfgSet, cfgInvalidate } from './cfg.js';
 import { CONTROL_TOGGLES } from './constants.js';
 import { applyTranslations, t } from './i18n.js';
-import { escapeHtml, makeRowInteractive, setDevMode } from './utils.js';
-import { rowIcon, rowShell } from './ui-row.js';
+import { setDevMode, wireRowActivation } from './utils.js';
 
 function labelFromKey(key: string): string {
   const s = key.replace(/^(toggle_|action_)/, '').replace(/_/g, ' ');
@@ -24,28 +23,54 @@ export function renderControlToggles() {
     const labelKey = i18nLabelKey(toggle.key);
     const descKey = labelKey + '_desc';
 
-    const configCue = toggle.configurable
-      ? `<button type="button" class="li-config-btn" aria-label="${escapeHtml(`${t('control_configure', 'Configure')} ${labelFromKey(toggle.key)}`)}">
-           <svg class="li-config-chevron" viewBox="0 0 8 14" width="8" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 2L6.5 7L1.5 12"/></svg>
-         </button>
-         <div class="li-config-divider" aria-hidden="true"></div>`
-      : '';
+    const row = document.createElement('sp-settings-row');
+    row.id = `${toggle.id}-row`;
+    row.setAttribute('variant', 'toggle');
 
-    const wrapper = document.createElement('div');
-    wrapper.innerHTML = rowShell({
-      id: `${toggle.id}-row`,
-      className: 'list-item--toggle',
-      leading: rowIcon(toggle.icon),
-      content: `<div class="list-item-content">
-        <div class="toggle-text" data-i18n="${labelKey}">${escapeHtml(toggle.title || labelFromKey(toggle.key))}</div>
-        <span class="supporting-text" data-i18n="${descKey}">${escapeHtml(toggle.description || '')}</span>
-      </div>`,
-      trailing: `<div class="li-toggle-action">
-        ${configCue}
-        <md-switch icons id="${toggle.id}" aria-label="${escapeHtml(labelFromKey(toggle.key))}" data-i18n-aria="${labelKey}"></md-switch>
-      </div>`,
-    });
-    const row = wrapper.firstElementChild as HTMLElement;
+    const icon = document.createElement('md-icon');
+    icon.setAttribute('slot', 'icon');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = toggle.icon;
+
+    const headline = document.createElement('span');
+    headline.setAttribute('slot', 'headline');
+    headline.dataset.i18n = labelKey;
+    headline.textContent = toggle.title || labelFromKey(toggle.key);
+
+    const supporting = document.createElement('span');
+    supporting.setAttribute('slot', 'supporting');
+    supporting.dataset.i18n = descKey;
+    supporting.textContent = toggle.description || '';
+
+    row.append(icon, headline, supporting);
+
+    if (toggle.configurable) {
+      row.setAttribute('has-page', '');
+      const config = document.createElement('button');
+      config.type = 'button';
+      config.className = 'li-config-btn';
+      config.setAttribute('data-config', '');
+      config.setAttribute('slot', 'trailing');
+      config.setAttribute(
+        'aria-label',
+        `${t('control_configure', 'Configure')} ${t(labelKey, labelFromKey(toggle.key))}`,
+      );
+      config.innerHTML = `<svg class="li-config-chevron" viewBox="0 0 8 14" width="8" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 2L6.5 7L1.5 12"/></svg>`;
+      const divider = document.createElement('div');
+      divider.className = 'li-config-divider';
+      divider.setAttribute('slot', 'trailing');
+      divider.setAttribute('aria-hidden', 'true');
+      row.append(config, divider);
+    }
+
+    const sw = document.createElement('md-switch');
+    sw.setAttribute('slot', 'trailing');
+    sw.setAttribute('icons', '');
+    sw.id = toggle.id;
+    sw.setAttribute('aria-label', labelFromKey(toggle.key));
+    sw.setAttribute('data-i18n-aria', labelKey);
+    row.append(sw);
+
     container.appendChild(row);
   }
 
@@ -57,17 +82,31 @@ export function wireRowDialog(rowId: string, open: () => void) {
   const row = document.getElementById(rowId);
   if (!row || row.dataset.spWired) return;
   row.dataset.spWired = '1';
-  makeRowInteractive(row);
-  const activate = (e: Event) => {
-    if (e.composedPath().some(n => n instanceof Element && n.localName === 'md-switch')) return;
-    open();
-  };
-  row.addEventListener('click', activate);
-  row.addEventListener('keydown', e => {
-    if (e.key !== 'Enter' && e.key !== ' ') return;
-    e.preventDefault();
-    activate(e);
-  });
+
+  const config = row.querySelector<HTMLElement>('[data-config], .li-config-btn');
+
+  if (row.localName === 'sp-settings-row') {
+    // Configurable toggle rows: the row body opens the page; the switch itself
+    // toggles state. The chevron is a second, explicit affordance for the page.
+    row.addEventListener('sp-activate', open);
+    if (config) {
+      config.addEventListener('click', event => {
+        event.stopPropagation();
+        open();
+      });
+    }
+    return;
+  }
+
+  if (config) {
+    config.addEventListener('click', event => {
+      event.stopPropagation();
+      open();
+    });
+    return;
+  }
+
+  wireRowActivation(row, open);
 }
 
 export function wireControlToggles() {
@@ -78,8 +117,8 @@ export function wireControlToggles() {
     sw.addEventListener('change', () => {
       cfgSet(key, sw.selected ? '1' : '0');
     });
-    const row = sw.closest('.list-item');
-    if (row && !configurable) {
+    const row = sw.closest('sp-settings-row, .list-item');
+    if (row && row.localName !== 'sp-settings-row' && !configurable) {
       row.addEventListener('click', e => {
         if (e.composedPath().some(n => n instanceof Element && n.localName === 'md-switch')) return;
         sw.selected = !sw.selected;
@@ -107,8 +146,8 @@ export function wireDevMode() {
     setDevMode(sw.selected);
     cfgSet('dev_mode', sw.selected ? 'true' : 'false');
   });
-  const row = sw.closest('.list-item');
-  if (row) {
+  const row = sw.closest('sp-settings-row, .list-item');
+  if (row && row.localName !== 'sp-settings-row') {
     row.addEventListener('click', e => {
       if (e.composedPath().some(n => n instanceof Element && n.localName === 'md-switch')) return;
       sw.selected = !sw.selected;

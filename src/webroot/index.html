@@ -232,368 +232,251 @@
 
         <section id="tools-page" hidden>
 
-          <h2 class="list-title" data-i18n="menu_tricky_store">Keystore Management</h2>
-          <div class="list-container list-container--tricky">
-            <button type="button" class="list-item" id="keybox-btn">
-              <div class="li-icon"><md-icon aria-hidden="true">key</md-icon></div>
-              <div class="list-item-content">
-                <div class="toggle-text" data-i18n="menu_keybox">Keybox</div>
-                <span class="supporting-text" data-i18n="menu_keybox_desc">Choose a Specter keybox or use a custom source</span>
-              </div>
-              <div class="spacer"></div>
-              <md-ripple></md-ripple>
-            </button>
+          <sp-settings-section tone="primary">
+            <span slot="label" data-i18n="menu_tricky_store">Keystore Management</span>
 
-            <div class="list-item" id="target-apps-btn">
-              <div class="li-icon"><md-icon aria-hidden="true">playlist_add_check</md-icon></div>
-              <div class="list-item-content">
-                <div class="toggle-text" data-i18n="menu_target_apps">App Targeting</div>
-                <span class="supporting-text" data-i18n="menu_target_apps_desc">Manage per-app targeting states interactively</span>
-              </div>
-              <div class="spacer"></div>
-              <md-ripple></md-ripple>
-            </div>
+            <sp-settings-row id="keybox-btn" variant="navigation">
+              <md-icon slot="icon" aria-hidden="true">key</md-icon>
+              <span slot="headline" data-i18n="menu_keybox">Keybox</span>
+              <span slot="supporting" data-i18n="menu_keybox_desc">Choose a Specter keybox or use a custom source</span>
+            </sp-settings-row>
 
-            <div class="list-item" id="security-patch-btn">
-              <div class="li-icon"><md-icon aria-hidden="true">security_update_good</md-icon></div>
-              <div class="list-item-content">
-                <div class="toggle-text" data-i18n="menu_patch">Set Security Patch</div>
-                <span class="supporting-text" data-i18n="menu_patch_desc">Writes spoofed security patch date to Tricky Store</span>
-              </div>
-              <div class="spacer"></div>
-              <md-ripple></md-ripple>
-            </div>
+            <sp-settings-row id="target-apps-btn" variant="navigation">
+              <md-icon slot="icon" aria-hidden="true">playlist_add_check</md-icon>
+              <span slot="headline" data-i18n="menu_target_apps">App Targeting</span>
+              <span slot="supporting" data-i18n="menu_target_apps_desc">Manage per-app targeting states interactively</span>
+            </sp-settings-row>
 
-            <div class="list-item" id="boot-hash-btn">
-              <div class="li-icon"><md-icon aria-hidden="true">tag</md-icon></div>
-              <div class="list-item-content">
-                <div class="toggle-text" data-i18n="boot_hash_title">Boot Hash</div>
-                <span class="supporting-text" data-i18n="boot_hash_desc">Fix or spoof ro.boot.vbmeta.digest</span>
-              </div>
-              <div class="spacer"></div>
-              <md-ripple></md-ripple>
-            </div>
+            <sp-settings-row id="security-patch-btn" variant="navigation">
+              <md-icon slot="icon" aria-hidden="true">security_update_good</md-icon>
+              <span slot="headline" data-i18n="menu_patch">Set Security Patch</span>
+              <span slot="supporting" data-i18n="menu_patch_desc">Writes spoofed security patch date to Tricky Store</span>
+            </sp-settings-row>
 
-            <div class="list-item" id="omk-trust-btn" hidden>
-              <div class="li-icon"><md-icon aria-hidden="true">tune</md-icon></div>
-              <div class="list-item-content">
-                <div class="toggle-text" data-i18n="omk_title">OMK OS & Boot Key</div>
-                <span class="supporting-text" data-i18n="omk_desc">Configure OS version and verified boot key reported by OhMyKeymint</span>
-              </div>
-              <div class="spacer"></div>
-              <md-ripple></md-ripple>
-            </div>
+            <sp-settings-row id="boot-hash-btn" variant="navigation">
+              <md-icon slot="icon" aria-hidden="true">tag</md-icon>
+              <span slot="headline" data-i18n="boot_hash_title">Boot Hash</span>
+              <span slot="supporting" data-i18n="boot_hash_desc">Fix or spoof ro.boot.vbmeta.digest</span>
+            </sp-settings-row>
 
-            <div class="list-item" id="omk-restart-btn" hidden>
-              <div class="li-icon"><md-icon aria-hidden="true">restart_alt</md-icon></div>
-              <div class="list-item-content">
-                <div class="toggle-text" data-i18n="tools_restart_omk">Restart OMK</div>
-                <span class="supporting-text" data-i18n="tools_restart_omk_desc">Restart keymint or injector after OMK changes</span>
-              </div>
-              <div class="spacer"></div>
-              <md-ripple></md-ripple>
-            </div>
+            <sp-settings-row id="omk-trust-btn" variant="navigation" hidden>
+              <md-icon slot="icon" aria-hidden="true">tune</md-icon>
+              <span slot="headline" data-i18n="omk_title">OMK OS &amp; Boot Key</span>
+              <span slot="supporting" data-i18n="omk_desc">Configure OS version and verified boot key reported by OhMyKeymint</span>
+            </sp-settings-row>
 
-          </div>
+            <sp-settings-row id="omk-restart-btn" variant="navigation" hidden>
+              <md-icon slot="icon" aria-hidden="true">restart_alt</md-icon>
+              <span slot="headline" data-i18n="tools_restart_omk">Restart OMK</span>
+              <span slot="supporting" data-i18n="tools_restart_omk_desc">Restart keymint or injector after OMK changes</span>
+            </sp-settings-row>
+          </sp-settings-section>
 
-          <h2 class="list-title" id="pif-tools-title" data-i18n="menu_pif_title" hidden>Play Integrity Fix</h2>
-          <div class="list-container list-container--pif" id="pif-tools-section" hidden>
-            <div class="list-item" data-script="pif.sh">
-              <div class="li-icon"><md-icon aria-hidden="true">refresh</md-icon></div>
-              <div class="list-item-content">
-                <div class="toggle-text" data-i18n="menu_pif_update">Get New Fingerprint</div>
-                <span class="supporting-text" data-i18n="menu_pif_update_desc">Detects your PIF variant and fetches the latest fingerprint</span>
-              </div>
-              <div class="spacer"></div>
-              <md-circular-progress indeterminate class="action-spinner hidden"></md-circular-progress>
-              <md-ripple></md-ripple>
-            </div>
-            <div class="list-item" id="pif-choose-device" role="button" tabindex="0" hidden>
-              <div class="li-icon"><md-icon aria-hidden="true">smartphone</md-icon></div>
-              <div class="list-item-content">
-                <div class="toggle-text" data-i18n="menu_pif_choose">Choose PIF Device</div>
-                <span class="supporting-text" id="pif-choose-device-desc">Pick which Pixel Canary models Specter may fetch</span>
-              </div>
-              <div class="spacer"></div>
-              <md-ripple></md-ripple>
-            </div>
-          </div>
+          <sp-settings-section id="pif-tools-section" hidden tone="secondary">
+            <span slot="label" data-i18n="menu_pif_title">Play Integrity Fix</span>
 
-          <h2 class="list-title" id="module-config-title" data-i18n="advance_menu_title_config" hidden>Module Configs</h2>
-          <div class="list-container list-container--config" id="module-config-section" hidden>
-            <div class="list-item" id="module-config-hma" data-script="hma.sh" hidden>
-              <div class="li-icon"><md-icon aria-hidden="true">cloud_download</md-icon></div>
-              <div class="list-item-content">
-                <div class="toggle-text" data-i18n="advance_set_hma-oss_configs">Set HMA-OSS Configs</div>
-                <span class="supporting-text" data-i18n="advance_set_hma_desc">Generates an HMA-OSS hiding profile from installed apps, merges and applies it live</span>
-              </div>
-              <div class="spacer"></div>
-              <md-circular-progress indeterminate class="action-spinner hidden"></md-circular-progress>
-              <md-ripple></md-ripple>
-            </div>
+            <sp-settings-row variant="action" data-script="pif.sh">
+              <md-icon slot="icon" aria-hidden="true">refresh</md-icon>
+              <span slot="headline" data-i18n="menu_pif_update">Get New Fingerprint</span>
+              <span slot="supporting" data-i18n="menu_pif_update_desc">Detects your PIF variant and fetches the latest fingerprint</span>
+            </sp-settings-row>
 
-            <div class="list-item" id="module-config-zygisk-next" data-script="zygisk_next.sh" hidden>
-              <div class="li-icon"><md-icon aria-hidden="true">tune</md-icon></div>
-              <div class="list-item-content">
-                <div class="toggle-text" data-i18n="advance_set_zygisk_next_configs">Set Zygisk Next Configs</div>
-                <span class="supporting-text" data-i18n="advance_set_zygisk_desc">Configures enforce-denylist, memory-type, linker settings</span>
-              </div>
-              <div class="spacer"></div>
-              <md-circular-progress indeterminate class="action-spinner hidden"></md-circular-progress>
-              <md-ripple></md-ripple>
-            </div>
+            <sp-settings-row id="pif-choose-device" variant="navigation" hidden>
+              <md-icon slot="icon" aria-hidden="true">smartphone</md-icon>
+              <span slot="headline" data-i18n="menu_pif_choose">Choose PIF Device</span>
+              <span slot="supporting" id="pif-choose-device-desc">Pick which Pixel Canary models Specter may fetch</span>
+            </sp-settings-row>
+          </sp-settings-section>
 
-          </div>
+          <sp-settings-section id="module-config-section" hidden tone="tertiary">
+            <span slot="label" data-i18n="advance_menu_title_config">Module Configs</span>
 
-          <h2 class="list-title" data-i18n="menu_google_services">Google Services</h2>
-          <div class="list-container list-container--google">
-            <div class="list-item" data-script="gms.sh">
-              <div class="li-icon"><md-icon aria-hidden="true">block</md-icon></div>
-              <div class="list-item-content">
-                <div class="toggle-text" data-i18n="menu_force_clear">Force Stop & Clear Play Store</div>
-                <span class="supporting-text" data-i18n="menu_force_clear_desc">Force-stops Play Store, Chrome, GMS, GSF, Wallet, and 10 other DroidGuard processes</span>
-              </div>
-              <div class="spacer"></div>
-              <md-circular-progress indeterminate class="action-spinner hidden"></md-circular-progress>
-              <md-ripple></md-ripple>
-            </div>
-          </div>
+            <sp-settings-row id="module-config-hma" variant="action" data-script="hma.sh" hidden>
+              <md-icon slot="icon" aria-hidden="true">cloud_download</md-icon>
+              <span slot="headline" data-i18n="advance_set_hma-oss_configs">Set HMA-OSS Configs</span>
+              <span slot="supporting" data-i18n="advance_set_hma_desc">Generates an HMA-OSS hiding profile from installed apps, merges and applies it live</span>
+            </sp-settings-row>
 
-          <h2 class="list-title" data-i18n="tools_support_section">Support</h2>
-          <div class="list-container">
-            <div class="list-item" data-script="export_logs.sh">
-              <div class="li-icon"><md-icon aria-hidden="true">bug_report</md-icon></div>
-              <div class="list-item-content">
-                <div class="toggle-text" data-i18n="advance_export_logs">Export Logs</div>
-                <span class="supporting-text" data-i18n="advance_export_logs_desc">Save all Specter debug logs to /sdcard/Download/</span>
-              </div>
-              <div class="spacer"></div>
-              <md-circular-progress indeterminate class="action-spinner hidden"></md-circular-progress>
-              <md-ripple></md-ripple>
-            </div>
-          </div>
+            <sp-settings-row id="module-config-zygisk-next" variant="action" data-script="zygisk_next.sh" hidden>
+              <md-icon slot="icon" aria-hidden="true">tune</md-icon>
+              <span slot="headline" data-i18n="advance_set_zygisk_next_configs">Set Zygisk Next Configs</span>
+              <span slot="supporting" data-i18n="advance_set_zygisk_desc">Configures enforce-denylist, memory-type, linker settings</span>
+            </sp-settings-row>
+          </sp-settings-section>
 
-          <h2 class="list-title danger-zone-title" data-i18n="tools_danger_zone">Danger Zone</h2>
-          <p class="danger-zone-desc" data-i18n="tools_danger_zone_desc">Destructive operations that may affect your device</p>
-          <div class="list-container">
-            <div class="list-item" data-script="cleanup.sh" data-destructive>
-              <div class="li-icon"><md-icon aria-hidden="true">delete_sweep</md-icon></div>
-              <div class="list-item-content">
-                <div class="toggle-text" data-i18n="advance_clear_all_detection_traces">Clear All Detection Traces</div>
-                <span class="supporting-text" data-i18n="advance_clear_all_detection_traces_desc">Deletes detector app data, log files, temp directories, hiding recovery folders, and cleaning system caches</span>
-              </div>
-              <div class="spacer"></div>
-              <md-circular-progress indeterminate class="action-spinner hidden"></md-circular-progress>
-              <md-ripple></md-ripple>
-            </div>
+          <sp-settings-section tone="secondary">
+            <span slot="label" data-i18n="menu_google_services">Google Services</span>
 
-            <div class="list-item" data-script="kill_all.sh" data-destructive>
-              <div class="li-icon"><md-icon aria-hidden="true">cancel</md-icon></div>
-              <div class="list-item-content">
-                <div class="toggle-text" data-i18n="advance_kill_all">Kill All Processes</div>
-                <span class="supporting-text" data-i18n="advance_kill_all_desc">Force-stops and clears data for all known detector, GMS, remote control, and tool apps</span>
-              </div>
-              <div class="spacer"></div>
-              <md-circular-progress indeterminate class="action-spinner hidden"></md-circular-progress>
-              <md-ripple></md-ripple>
-            </div>
+            <sp-settings-row variant="action" data-script="gms.sh">
+              <md-icon slot="icon" aria-hidden="true">block</md-icon>
+              <span slot="headline" data-i18n="menu_force_clear">Force Stop &amp; Clear Play Store</span>
+              <span slot="supporting" data-i18n="menu_force_clear_desc">Force-stops Play Store, Chrome, GMS, GSF, Wallet, and 10 other DroidGuard processes</span>
+            </sp-settings-row>
+          </sp-settings-section>
 
-            <div class="list-item" data-script="restore_backups.sh" data-destructive>
-              <div class="li-icon"><md-icon aria-hidden="true">restore</md-icon></div>
-              <div class="list-item-content">
-                <div class="toggle-text" data-i18n="restore_backups_title">Restore Original Backups</div>
-                <span class="supporting-text" data-i18n="restore_backups_desc">Restores your original Tricky Store files from the first-boot backup</span>
-              </div>
-              <div class="spacer"></div>
-              <md-circular-progress indeterminate class="action-spinner hidden"></md-circular-progress>
-              <md-ripple></md-ripple>
-            </div>
+          <sp-settings-section tone="tertiary">
+            <span slot="label" data-i18n="tools_support_section">Support</span>
 
-            <div class="list-item" data-script="boot_state_props.sh" data-destructive>
-              <div class="li-icon"><md-icon aria-hidden="true">cleaning_services</md-icon></div>
-              <div class="list-item-content">
-                <div class="toggle-text" data-i18n="advance_scan_clean_props">Clean Persistent Props</div>
-                <span class="supporting-text" data-i18n="advance_scan_clean_props_desc">Scans and removes persistent props from LSPosed, HyperCeiler, LuckyTool, and similar modding tools</span>
-              </div>
-              <div class="spacer"></div>
-              <md-circular-progress indeterminate class="action-spinner hidden"></md-circular-progress>
-              <md-ripple></md-ripple>
-            </div>
+            <sp-settings-row variant="action" data-script="export_logs.sh">
+              <md-icon slot="icon" aria-hidden="true">bug_report</md-icon>
+              <span slot="headline" data-i18n="advance_export_logs">Export Logs</span>
+              <span slot="supporting" data-i18n="advance_export_logs_desc">Save all Specter debug logs to /sdcard/Download/</span>
+            </sp-settings-row>
+          </sp-settings-section>
 
-            <div class="list-item" data-script="widevine.sh" data-destructive>
-              <div class="li-icon"><md-icon aria-hidden="true">layers</md-icon></div>
-              <div class="list-item-content">
-                <div class="toggle-text" data-i18n="advance_wdevinel1">Fix Widevine L1</div>
-                <span class="supporting-text" data-i18n="advance_wdevinel1_desc">Installs attestation keys for Widevine L1 DRM (Qualcomm devices only)</span>
-              </div>
-              <div class="spacer"></div>
-              <md-circular-progress indeterminate class="action-spinner hidden"></md-circular-progress>
-              <md-ripple></md-ripple>
-            </div>
-          </div>
+          <sp-settings-section variant="danger" tone="error">
+            <span slot="label" data-i18n="tools_danger_zone">Danger Zone</span>
+            <span slot="description" data-i18n="tools_danger_zone_desc">Destructive operations that may affect your device</span>
+
+            <sp-settings-row variant="destructive" data-script="cleanup.sh" data-destructive>
+              <md-icon slot="icon" aria-hidden="true">delete_sweep</md-icon>
+              <span slot="headline" data-i18n="advance_clear_all_detection_traces">Clear All Detection Traces</span>
+              <span slot="supporting" data-i18n="advance_clear_all_detection_traces_desc">Deletes detector app data, log files, temp directories, hiding recovery folders, and cleaning system caches</span>
+            </sp-settings-row>
+
+            <sp-settings-row variant="destructive" data-script="kill_all.sh" data-destructive>
+              <md-icon slot="icon" aria-hidden="true">cancel</md-icon>
+              <span slot="headline" data-i18n="advance_kill_all">Kill All Processes</span>
+              <span slot="supporting" data-i18n="advance_kill_all_desc">Force-stops and clears data for all known detector, GMS, remote control, and tool apps</span>
+            </sp-settings-row>
+
+            <sp-settings-row variant="destructive" data-script="restore_backups.sh" data-destructive>
+              <md-icon slot="icon" aria-hidden="true">restore</md-icon>
+              <span slot="headline" data-i18n="restore_backups_title">Restore Original Backups</span>
+              <span slot="supporting" data-i18n="restore_backups_desc">Restores your original Tricky Store files from the first-boot backup</span>
+            </sp-settings-row>
+
+            <sp-settings-row variant="destructive" data-script="boot_state_props.sh" data-destructive>
+              <md-icon slot="icon" aria-hidden="true">cleaning_services</md-icon>
+              <span slot="headline" data-i18n="advance_scan_clean_props">Clean Persistent Props</span>
+              <span slot="supporting" data-i18n="advance_scan_clean_props_desc">Scans and removes persistent props from LSPosed, HyperCeiler, LuckyTool, and similar modding tools</span>
+            </sp-settings-row>
+
+            <sp-settings-row variant="destructive" data-script="widevine.sh" data-destructive>
+              <md-icon slot="icon" aria-hidden="true">layers</md-icon>
+              <span slot="headline" data-i18n="advance_wdevinel1">Fix Widevine L1</span>
+              <span slot="supporting" data-i18n="advance_wdevinel1_desc">Installs attestation keys for Widevine L1 DRM (Qualcomm devices only)</span>
+            </sp-settings-row>
+          </sp-settings-section>
+
         </section>
 
         <section id="control-page" hidden>
-          <h2 class="list-title" data-i18n="control_boot_title">Boot Behavior</h2>
-          <div class="list-container list-container--primary" id="control-boot-container"></div>
 
-          <h2 class="list-title" data-i18n="control_background_title">Background Jobs</h2>
-          <div class="list-container list-container--secondary" id="control-background-container"></div>
+          <sp-settings-section id="control-boot-container" tone="primary">
+            <span slot="label" data-i18n="control_boot_title">Boot Behavior</span>
+          </sp-settings-section>
 
-          <h2 class="list-title" id="conflicts-title" style="display:none" data-i18n="control_conflicts_title">Conflict Resolution</h2>
-          <p class="danger-zone-desc" id="conflicts-desc" style="display:none" data-i18n="control_conflicts_desc">Decide which conflicting modules take priority. OFF = Specter handles it. ON = the module handles it.</p>
-          <div class="list-container list-container--tertiary" id="conflicts-container"></div>
+          <sp-settings-section id="control-background-container" tone="secondary">
+            <span slot="label" data-i18n="control_background_title">Background Jobs</span>
+          </sp-settings-section>
 
-          <h2 class="list-title" data-i18n="control_action_title">Action Pipeline</h2>
-          <div class="list-container list-container--tertiary" id="control-action-container"></div>
+          <sp-settings-section id="conflicts-section" style="display: none" tone="tertiary">
+            <span slot="label" data-i18n="control_conflicts_title">Conflict Resolution</span>
+            <span slot="description" data-i18n="control_conflicts_desc">Decide which conflicting modules take priority. OFF = Specter handles it. ON = the module handles it.</span>
+          </sp-settings-section>
+
+          <sp-settings-section id="control-action-container" tone="tertiary">
+            <span slot="label" data-i18n="control_action_title">Action Pipeline</span>
+          </sp-settings-section>
 
         </section>
 
         <section id="settings-page" hidden>
 
-          <!-- 1. Language -->
-          <h2 class="list-title" data-i18n="settings_language">Language</h2>
-          <div class="list-container list-container--language">
-            <div class="list-item" id="language-row">
-              <div class="li-icon"><md-icon aria-hidden="true">language</md-icon></div>
-              <div class="list-item-content">
-                <div class="toggle-text" data-i18n="settings_language">Language</div>
-                <span class="supporting-text" id="language-summary">Auto</span>
-              </div>
-              <div class="li-chevron-action">
-                <svg class="li-config-chevron" viewBox="0 0 8 14" width="8" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 2L6.5 7L1.5 12"/></svg>
-              </div>
-              <md-ripple></md-ripple>
-            </div>
-          </div>
+          <sp-settings-section tone="secondary">
+            <span slot="label" data-i18n="settings_language">Language</span>
+            <sp-settings-row id="language-row" variant="navigation" chevron>
+              <md-icon slot="icon" aria-hidden="true">language</md-icon>
+              <span slot="headline" data-i18n="settings_language">Language</span>
+              <span slot="supporting" id="language-summary">Auto</span>
+            </sp-settings-row>
+          </sp-settings-section>
 
-          <!-- 2. Appearance: Theme Mode & Color Accent -->
-          <h2 class="list-title" data-i18n="settings_appearance">Appearance</h2>
-          <div class="list-container list-container--appearance">
-            <div class="list-item" id="dark-theme-row">
-              <div class="li-icon"><md-icon aria-hidden="true">dark_mode</md-icon></div>
-              <div class="list-item-content">
-                <div class="toggle-text" data-i18n="settings_theme_mode">Dark theme</div>
-                <span class="supporting-text" id="dark-theme-summary">Off</span>
-              </div>
-              <div class="li-toggle-action">
+          <sp-settings-section tone="primary">
+            <span slot="label" data-i18n="settings_appearance">Appearance</span>
+            <sp-settings-row id="dark-theme-row" variant="toggle" has-page>
+              <md-icon slot="icon" aria-hidden="true">dark_mode</md-icon>
+              <span slot="headline" data-i18n="settings_theme_mode">Dark theme</span>
+              <span slot="supporting" id="dark-theme-summary">Off</span>
+              <button type="button" slot="trailing" class="li-config-btn" data-config aria-label="Configure Dark theme">
                 <svg class="li-config-chevron" viewBox="0 0 8 14" width="8" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 2L6.5 7L1.5 12"/></svg>
-                <div class="li-config-divider" aria-hidden="true"></div>
-                <md-switch icons id="dark-theme-switch" aria-label="Dark theme" data-i18n-aria="settings_theme_mode"></md-switch>
-              </div>
-              <md-ripple></md-ripple>
-            </div>
-
-            <div class="list-item" id="color-theme-row">
-              <div class="li-icon"><md-icon aria-hidden="true">palette</md-icon></div>
-              <div class="list-item-content">
-                <div class="toggle-text" data-i18n="settings_colors_title">Colors</div>
-                <span class="supporting-text" id="color-theme-summary">System (Dynamic)</span>
-              </div>
-              <div class="li-color-action">
+              </button>
+              <div slot="trailing" class="li-config-divider" aria-hidden="true"></div>
+              <md-switch slot="trailing" icons id="dark-theme-switch" aria-label="Dark theme" data-i18n-aria="settings_theme_mode"></md-switch>
+            </sp-settings-row>
+            <sp-settings-row id="color-theme-row" variant="navigation">
+              <md-icon slot="icon" aria-hidden="true">palette</md-icon>
+              <span slot="headline" data-i18n="settings_colors_title">Colors</span>
+              <span slot="supporting" id="color-theme-summary">System (Dynamic)</span>
+              <div slot="trailing" class="li-color-action">
                 <span class="color-preview-dot" id="settings-color-dot"></span>
                 <svg class="li-config-chevron" viewBox="0 0 8 14" width="8" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 2L6.5 7L1.5 12"/></svg>
               </div>
-              <md-ripple></md-ripple>
-            </div>
-          </div>
+            </sp-settings-row>
+          </sp-settings-section>
 
-          <!-- 3. Typography -->
-          <h2 class="list-title" data-i18n="settings_fonts">Fonts</h2>
-          <div class="list-container list-container--fonts">
-            <div class="list-item list-item--toggle">
-              <div class="li-icon"><md-icon aria-hidden="true">text_fields</md-icon></div>
-              <div class="list-item-content">
-                <div class="toggle-text" data-i18n="settings_custom_font">Google Sans Font</div>
-                <span class="supporting-text" data-i18n="settings_custom_font_desc">Use Google Sans as the WebUI font</span>
-              </div>
-              <div class="spacer"></div>
-              <md-switch icons id="custom-font-switch" aria-label="Google Sans" data-i18n-aria="settings_custom_font"></md-switch>
-              <md-ripple></md-ripple>
-            </div>
-            <div class="list-item list-item--toggle">
-              <div class="li-icon"><md-icon aria-hidden="true">terminal</md-icon></div>
-              <div class="list-item-content">
-                <div class="toggle-text" data-i18n="settings_mono_font">JetBrains Mono Font</div>
-                <span class="supporting-text" data-i18n="settings_mono_font_desc">Use JetBrains Mono as the monospace font</span>
-              </div>
-              <div class="spacer"></div>
-              <md-switch icons id="mono-font-switch" aria-label="JetBrains Mono" data-i18n-aria="settings_mono_font"></md-switch>
-              <md-ripple></md-ripple>
-            </div>
-          </div>
+          <sp-settings-section tone="tertiary">
+            <span slot="label" data-i18n="settings_fonts">Fonts</span>
+            <sp-settings-row variant="toggle">
+              <md-icon slot="icon" aria-hidden="true">text_fields</md-icon>
+              <span slot="headline" data-i18n="settings_custom_font">Google Sans Font</span>
+              <span slot="supporting" data-i18n="settings_custom_font_desc">Use Google Sans as the WebUI font</span>
+              <md-switch slot="trailing" icons id="custom-font-switch" aria-label="Google Sans" data-i18n-aria="settings_custom_font"></md-switch>
+            </sp-settings-row>
+            <sp-settings-row variant="toggle">
+              <md-icon slot="icon" aria-hidden="true">terminal</md-icon>
+              <span slot="headline" data-i18n="settings_mono_font">JetBrains Mono Font</span>
+              <span slot="supporting" data-i18n="settings_mono_font_desc">Use JetBrains Mono as the monospace font</span>
+              <md-switch slot="trailing" icons id="mono-font-switch" aria-label="JetBrains Mono" data-i18n-aria="settings_mono_font"></md-switch>
+            </sp-settings-row>
+          </sp-settings-section>
 
-          <!-- 4. Advanced -->
-          <h2 class="list-title" data-i18n="settings_advanced">Advanced</h2>
-          <div class="list-container list-container--advanced">
-            <div class="list-item" id="row-logs" role="button" tabindex="0">
-              <div class="li-icon"><md-icon aria-hidden="true">terminal</md-icon></div>
-              <div class="list-item-content">
-                <div class="toggle-text" data-i18n="terminal_title">Logs</div>
-                <span class="supporting-text" data-i18n="settings_logs_desc">View terminal output and execution logs</span>
-              </div>
-              <div class="spacer"></div>
-              <md-ripple></md-ripple>
-            </div>
-            <div class="list-item list-item--toggle">
-              <div class="li-icon"><md-icon aria-hidden="true">developer_mode</md-icon></div>
-              <div class="list-item-content">
-                <div class="toggle-text" data-i18n="settings_dev_mode">Developer Mode</div>
-                <span class="supporting-text" data-i18n="settings_dev_mode_desc">Enable verbose script logging</span>
-              </div>
-              <div class="spacer"></div>
-              <md-switch icons id="dev-mode-switch" aria-label="Developer Mode" data-i18n-aria="settings_dev_mode"></md-switch>
-              <md-ripple></md-ripple>
-            </div>
-          </div>
+          <sp-settings-section tone="secondary">
+            <span slot="label" data-i18n="settings_advanced">Advanced</span>
+            <sp-settings-row id="row-logs" variant="navigation">
+              <md-icon slot="icon" aria-hidden="true">terminal</md-icon>
+              <span slot="headline" data-i18n="terminal_title">Logs</span>
+              <span slot="supporting" data-i18n="settings_logs_desc">View terminal output and execution logs</span>
+            </sp-settings-row>
+            <sp-settings-row variant="toggle">
+              <md-icon slot="icon" aria-hidden="true">developer_mode</md-icon>
+              <span slot="headline" data-i18n="settings_dev_mode">Developer Mode</span>
+              <span slot="supporting" data-i18n="settings_dev_mode_desc">Enable verbose script logging</span>
+              <md-switch slot="trailing" icons id="dev-mode-switch" aria-label="Developer Mode" data-i18n-aria="settings_dev_mode"></md-switch>
+            </sp-settings-row>
+          </sp-settings-section>
 
-          <!-- 5. Danger Zone -->
-          <h2 class="list-title danger-zone-title" data-i18n="tools_danger_zone">Danger Zone</h2>
-          <p class="danger-zone-desc" data-i18n="tools_danger_zone_desc">Destructive operations that may affect your device</p>
-          <div class="list-container">
-            <div class="list-item" data-script="restore_defaults.sh" data-destructive>
-              <div class="li-icon"><md-icon aria-hidden="true">restart_alt</md-icon></div>
-              <div class="list-item-content">
-                <div class="toggle-text" data-i18n="settings_reset_defaults">Reset default options</div>
-                <span class="supporting-text" data-i18n="settings_reset_defaults_desc">Restore Control and feature toggles to factory defaults. Language and appearance are kept.</span>
-              </div>
-              <div class="spacer"></div>
-              <md-circular-progress indeterminate class="action-spinner hidden"></md-circular-progress>
-              <md-ripple></md-ripple>
-            </div>
-          </div>
+          <sp-settings-section variant="danger" tone="error">
+            <span slot="label" data-i18n="tools_danger_zone">Danger Zone</span>
+            <span slot="description" data-i18n="tools_danger_zone_desc">Destructive operations that may affect your device</span>
+            <sp-settings-row variant="destructive" data-script="restore_defaults.sh" data-destructive>
+              <md-icon slot="icon" aria-hidden="true">restart_alt</md-icon>
+              <span slot="headline" data-i18n="settings_reset_defaults">Reset default options</span>
+              <span slot="supporting" data-i18n="settings_reset_defaults_desc">Restore Control and feature toggles to factory defaults. Language and appearance are kept.</span>
+            </sp-settings-row>
+          </sp-settings-section>
 
-          <!-- 6. About & Support -->
-          <h2 class="list-title" data-i18n="update_title">Update & Support</h2>
-          <div class="list-container list-container--support">
-            <div class="list-item" data-url="https://github.com/dpejoh/specter">
-              <div class="li-icon">
+          <sp-settings-section tone="tertiary">
+            <span slot="label" data-i18n="update_title">Update &amp; Support</span>
+            <sp-settings-row variant="navigation" data-url="https://github.com/dpejoh/specter">
+              <div slot="icon">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5c.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03c.89 1.5 2.34 1.07 2.91.83c.09-.65.35-1.09.63-1.34c-2.22-.25-4.55-1.11-4.55-4.94c0-1.09.39-1.98 1.03-2.68c-.1-.25-.45-1.27.1-2.64c0 0 .84-.27 2.75 1.02c.8-.22 1.65-.33 2.5-.33s1.7.11 2.5.33c1.91-1.29 2.75-1.02 2.75-1.02c.55 1.37.2 2.39.1 2.64c.64.7 1.03 1.59 1.03 2.68c0 3.84-2.34 4.68-4.57 4.93c.36.31.68.92.68 1.85v2.75c0 .27.16.59.67.5A10 10 0 0 0 22 12c0-5.52-4.48-10-10-10"/></svg>
               </div>
-              <div class="list-item-content">
-                <div class="toggle-text" data-i18n="update_github">Source Code</div>
-                <span class="supporting-text" data-i18n="update_desc">Stay up to date with the latest Specter releases and bug fixes</span>
-              </div>
-              <div class="spacer"></div>
-              <md-icon class="external-link-icon" aria-hidden="true">open_in_new</md-icon>
-              <md-ripple></md-ripple>
-            </div>
-
-            <div class="list-item" data-url="https://t.me/dpejoh">
-              <div class="li-icon">
+              <span slot="headline" data-i18n="update_github">Source Code</span>
+              <span slot="supporting" data-i18n="update_desc">Stay up to date with the latest Specter releases and bug fixes</span>
+              <md-icon slot="trailing" class="external-link-icon" aria-hidden="true">open_in_new</md-icon>
+            </sp-settings-row>
+            <sp-settings-row variant="navigation" data-url="https://t.me/dpejoh">
+              <div slot="icon">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.2.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/></svg>
               </div>
-              <div class="list-item-content">
-                <div class="toggle-text" data-i18n="update_telegram">Join Telegram</div>
-                <span class="supporting-text" data-i18n="update_note">Join Telegram or check GitHub for contributions and technical discussions.</span>
-              </div>
-              <div class="spacer"></div>
-              <md-icon class="external-link-icon" aria-hidden="true">open_in_new</md-icon>
-              <md-ripple></md-ripple>
-            </div>
-          </div>
+              <span slot="headline" data-i18n="update_telegram">Join Telegram</span>
+              <span slot="supporting" data-i18n="update_note">Join Telegram or check GitHub for contributions and technical discussions.</span>
+              <md-icon slot="trailing" class="external-link-icon" aria-hidden="true">open_in_new</md-icon>
+            </sp-settings-row>
+          </sp-settings-section>
 
-          <!-- 7. Contributors -->
           <h2 class="list-title" data-i18n="settings_contributors">Top Contributors</h2>
           <div id="contributors-grid" class="contributors-grid"></div>
 

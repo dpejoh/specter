@@ -84,18 +84,15 @@ async function runActionInternal(scriptName: string, friendlyNameKey?: string): 
   });
 }
 
+type SettingsRowElement = HTMLElement & { disabled: boolean; loading: boolean };
+
 export function wireActions() {
-  document.querySelectorAll('.list-item[data-script]').forEach(item => {
-    const el = item as HTMLElement;
-    makeRowInteractive(el);
-    item.addEventListener('keydown', (e) => {
-      const key = (e as KeyboardEvent).key;
-      if (key !== 'Enter' && key !== ' ') return;
-      e.preventDefault();
-      el.click();
-    });
-    item.addEventListener('click', async (_e) => {
-      if ((el as HTMLButtonElement).disabled) return;
+  document.querySelectorAll('.list-item[data-script], sp-settings-row[data-script]').forEach(item => {
+    const el = item as SettingsRowElement;
+    const isSettingsRow = el.localName === 'sp-settings-row';
+
+    const activate = async () => {
+      if (el.disabled) return;
       const scriptName = el.dataset.script || '';
       const isDestructive = el.hasAttribute('data-destructive');
       if (isDestructive) {
@@ -104,11 +101,14 @@ export function wireActions() {
         const confirmed = await confirmDestructive(friendlyName, el.dataset.confirmI18n);
         if (!confirmed) return;
       }
+
       const spinner = item.querySelector('.action-spinner') as HTMLElement | null;
-      (el as HTMLButtonElement).disabled = true;
+      el.disabled = true;
       el.setAttribute('aria-disabled', 'true');
       el.setAttribute('aria-busy', 'true');
-      spinner?.classList.remove('hidden');
+      if (isSettingsRow) el.loading = true;
+      else spinner?.classList.remove('hidden');
+
       try {
         await runAction(scriptName);
         if (scriptName === 'restore_defaults.sh') {
@@ -117,12 +117,27 @@ export function wireActions() {
         }
       } catch { console.warn('Action error:'); }
       finally {
-        (el as HTMLButtonElement).disabled = false;
+        el.disabled = false;
         el.removeAttribute('aria-disabled');
         el.removeAttribute('aria-busy');
-        spinner?.classList.add('hidden');
+        if (isSettingsRow) el.loading = false;
+        else spinner?.classList.add('hidden');
       }
+    };
+
+    if (isSettingsRow) {
+      el.addEventListener('sp-activate', () => { void activate(); });
+      return;
+    }
+
+    makeRowInteractive(el);
+    el.addEventListener('keydown', (e) => {
+      const key = (e as KeyboardEvent).key;
+      if (key !== 'Enter' && key !== ' ') return;
+      e.preventDefault();
+      void activate();
     });
+    el.addEventListener('click', () => { void activate(); });
   });
 }
 

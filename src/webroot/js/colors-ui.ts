@@ -2,7 +2,7 @@ import { t } from './i18n.js';
 import { cfgGet, cfgSet } from './cfg.js';
 import { applyPreset, getCurrentPreset, PRESETS } from './theme.js';
 import { openSubPage } from './subpage.js';
-import { makeRowInteractive } from './utils.js';
+import { wireRowActivation } from './utils.js';
 
 
 const BASIC_COLORS: { id: string; nameKey: string; defaultName: string; hex: string }[] = [
@@ -275,14 +275,7 @@ export async function openColorsDialog() {
 export function wireColorsUI() {
   const row = document.getElementById('color-theme-row');
   if (row) {
-    makeRowInteractive(row);
-    const activate = () => openColorsDialog().catch(console.error);
-    row.addEventListener('click', activate);
-    row.addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter' && e.key !== ' ') return;
-      e.preventDefault();
-      activate();
-    });
+    wireRowActivation(row, () => { openColorsDialog().catch(console.error); });
   }
 
   document.addEventListener('languageChanged', () => {

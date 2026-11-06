@@ -1,4 +1,4 @@
-import { shellEscape, makeRowInteractive } from './utils.js';
+import { shellEscape, wireRowActivation } from './utils.js';
 import { setGlobal, deleteGlobal } from './utils.js';
 
 const ALLOWED_HOSTS = [
@@ -10,14 +10,7 @@ const ALLOWED_HOSTS = [
 
 export function initRedirect() {
   document.querySelectorAll<HTMLElement>('[data-url]').forEach(el => {
-    makeRowInteractive(el);
-    const activate = () => openUrl(el.dataset.url || '');
-    el.addEventListener('click', activate);
-    el.addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter' && e.key !== ' ') return;
-      e.preventDefault();
-      activate();
-    });
+    wireRowActivation(el, () => openUrl(el.dataset.url || ''));
   });
 }
 

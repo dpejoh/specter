@@ -269,23 +269,11 @@ code, pre {
   fill: currentColor;
 }
 
-.list-container--config .li-icon,
-.list-container--fonts .li-icon,
-.list-container--support .li-icon,
-.list-container--tertiary .li-icon,
 .list-item--tertiary .li-icon,
 .li-icon--tertiary {
   background: var(--md-sys-color-tertiary-container);
 }
 
-.list-container--config .li-icon md-icon,
-.list-container--config .li-icon svg,
-.list-container--fonts .li-icon md-icon,
-.list-container--fonts .li-icon svg,
-.list-container--support .li-icon md-icon,
-.list-container--support .li-icon svg,
-.list-container--tertiary .li-icon md-icon,
-.list-container--tertiary .li-icon svg,
 .list-item--tertiary .li-icon md-icon,
 .list-item--tertiary .li-icon svg,
 .li-icon--tertiary md-icon,
@@ -293,26 +281,11 @@ code, pre {
   color: var(--md-sys-color-on-tertiary-container);
 }
 
-.list-container--google .li-icon,
-.list-container--pif .li-icon,
-.list-container--language .li-icon,
-.list-container--advanced .li-icon,
-.list-container--secondary .li-icon,
 .list-item--secondary .li-icon,
 .li-icon--secondary {
   background: var(--md-sys-color-secondary-container);
 }
 
-.list-container--google .li-icon md-icon,
-.list-container--google .li-icon svg,
-.list-container--pif .li-icon md-icon,
-.list-container--pif .li-icon svg,
-.list-container--language .li-icon md-icon,
-.list-container--language .li-icon svg,
-.list-container--advanced .li-icon md-icon,
-.list-container--advanced .li-icon svg,
-.list-container--secondary .li-icon md-icon,
-.list-container--secondary .li-icon svg,
 .list-item--secondary .li-icon md-icon,
 .list-item--secondary .li-icon svg,
 .li-icon--secondary md-icon,
@@ -320,20 +293,11 @@ code, pre {
   color: var(--md-sys-color-on-secondary-container);
 }
 
-.list-container--tricky .li-icon,
-.list-container--appearance .li-icon,
-.list-container--primary .li-icon,
 .list-item--primary .li-icon,
 .li-icon--primary {
   background: var(--md-sys-color-primary-container);
 }
 
-.list-container--tricky .li-icon md-icon,
-.list-container--tricky .li-icon svg,
-.list-container--appearance .li-icon md-icon,
-.list-container--appearance .li-icon svg,
-.list-container--primary .li-icon md-icon,
-.list-container--primary .li-icon svg,
 .list-item--primary .li-icon md-icon,
 .list-item--primary .li-icon svg,
 .li-icon--primary md-icon,
@@ -476,21 +440,18 @@ code, pre {
   user-select: none;
 }
 
-.danger-zone-title {
-  color: var(--md-sys-color-error);
-  margin-top: 24px;
-  margin-bottom: 0;
-}
-
-.danger-zone-desc {
+sp-settings-section,
+sp-settings-row {
   width: 100%;
   max-width: 800px;
-  margin: 0 auto 8px;
-  padding: 0 20px;
-  font-size: 0.78em;
-  color: var(--md-sys-color-error);
-  opacity: 0.8;
-  box-sizing: border-box;
+  margin-inline: auto;
+}
+
+sp-settings-section:not(:defined),
+sp-settings-row:not(:defined),
+sp-tooltip:not(:defined),
+sp-skeleton:not(:defined) {
+  display: none;
 }
 
 .list-container {
@@ -506,11 +467,15 @@ code, pre {
 
 .list-title[hidden],
 .list-container[hidden],
-md-icon-button[hidden] {
+md-icon-button[hidden],
+md-switch[hidden],
+md-checkbox[hidden],
+md-radio[hidden] {
   display: none;
 }
 
-.list-container.kb-page-container {
+.list-container.kb-page-container,
+sp-settings-section.kb-page-container {
   overflow: visible;
 }
 
@@ -655,7 +620,8 @@ button.list-item {
   font-size: 20px;
 }
 
-.list-container.info-page-container {
+.list-container.info-page-container,
+sp-settings-section.info-page-container {
   overflow: visible;
 }
 
@@ -727,14 +693,6 @@ button.list-item {
 .li-toggle-action md-switch {
   margin: 0;
   flex-shrink: 0;
-}
-
-.li-chevron-action {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  margin-inline-start: auto;
-  color: var(--md-sys-color-on-surface-variant);
 }
 
 .li-color-action {
@@ -3071,52 +3029,15 @@ md-filled-tonal-button {
   flex-direction: column;
 }
 
-.list-item.subpage-master-item {
-  border-radius: 9999px;
-  padding: 22px 28px;
-  min-height: 76px;
-  box-sizing: border-box;
-  transition: background-color 0.25s cubic-bezier(0.2, 0, 0, 1),
-              color 0.25s ease,
-              transform 0.2s ease;
-}
-
-.list-item.subpage-master-item:hover,
-.list-item.subpage-master-item:active {
-  border-radius: 9999px;
-}
-
-.subpage-master-item .subpage-master-text {
-  font-size: 1.15rem;
-  font-weight: 500;
-  line-height: 1.35;
-}
-
-.list-item.subpage-master-item--active {
-  background-color: var(--md-sys-color-primary-container);
-  color: var(--md-sys-color-on-primary-container);
-}
-
-.list-item.subpage-master-item--active .li-icon {
-  background: var(--md-sys-color-surface);
-  color: var(--md-sys-color-primary);
-}
-
-.list-item.subpage-master-item--active .li-icon md-icon {
-  color: var(--md-sys-color-primary);
-}
-
-.list-item.subpage-master-item--active .toggle-text {
-  color: var(--md-sys-color-on-primary-container);
-}
-
-.list-item.subpage-master-item--active .supporting-text {
-  color: var(--md-sys-color-on-primary-container);
-  opacity: 0.85;
-}
-
 .subpage-custom-item {
   display: contents;
+}
+
+/* Custom renderers that emit cards directly (without their own .list-container)
+   lost the legacy 2px gap when sections replaced list containers. */
+.subpage-options-wrapper sp-settings-section .subpage-custom-item > .list-item.list-item--first,
+.subpage-options-wrapper sp-settings-section .subpage-custom-item > .list-item.list-item--middle {
+  margin-block-end: 2px;
 }
 
 /* Grouped M3 Expressive rounded cards for sub-options */
@@ -3134,8 +3055,56 @@ md-filled-tonal-button {
   margin-top: 8px;
 }
 
-.subpage-options-wrapper .list-container {
+.subpage-options-wrapper .list-container,
+.subpage-options-wrapper sp-settings-section {
   margin-bottom: 20px;
+}
+
+/* Component-based subpage rows */
+sp-settings-row#subpage-master-card {
+  border-radius: 9999px;
+  background-color: var(--md-sys-color-surface-container-high);
+  transition: background-color 0.25s cubic-bezier(0.2, 0, 0, 1), color 0.25s ease;
+}
+
+sp-settings-row#subpage-master-card::part(row) {
+  border-radius: 9999px;
+  padding: 22px 28px;
+  min-height: 76px;
+}
+
+sp-settings-row#subpage-master-card::part(headline) {
+  font-size: 1.15rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+sp-settings-row#subpage-master-card.subpage-master-item--active {
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+sp-settings-row#subpage-master-card.subpage-master-item--active::part(headline) {
+  color: var(--md-sys-color-on-primary-container);
+}
+
+sp-settings-row#subpage-master-card.subpage-master-item--active::part(supporting) {
+  color: var(--md-sys-color-on-primary-container);
+  opacity: 0.85;
+}
+
+sp-settings-row#subpage-master-card.subpage-master-item--active .supporting-text {
+  color: var(--md-sys-color-on-primary-container);
+  opacity: 0.85;
+}
+
+.subpage-options-wrapper sp-settings-row.subpage-radio-row::part(row) {
+  padding-inline: 30px;
+  gap: 24px;
+}
+
+.subpage-options-wrapper sp-settings-row.subpage-radio-row md-radio {
+  margin-inline-start: -4px;
 }
 
 .subpage-options-wrapper .list-container .list-item {
@@ -3184,6 +3153,28 @@ md-filled-tonal-button {
 .subpage-inline-input--invalid,
 .subpage-inline-input--invalid:focus {
   border-color: var(--md-sys-color-error);
+}
+
+.subpage-input-wrapper--block {
+  width: 100%;
+}
+
+.subpage-input-wrapper--block .subpage-inline-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.subpage-inline-input--block {
+  width: 100%;
+  min-height: 48px;
+  text-align: start;
+  padding: 12px 16px;
+}
+
+.subpage-inline-input--mono {
+  font-family: var(--sp-font-mono, 'JetBrains Mono', 'Courier New', monospace);
+  font-size: 0.8125rem;
+  font-variant-ligatures: none;
 }
 
 .list-item--stacked {
@@ -3400,7 +3391,9 @@ button.sp-action-row:disabled {
 }
 
 /* Disabled sub-options container when master switch is off */
-.subpage-options--disabled .list-item {
+.subpage-options--disabled .list-item,
+.subpage-options--disabled sp-settings-row,
+.subpage-options--disabled sp-settings-section {
   opacity: 0.42;
   pointer-events: none;
 }
@@ -3801,6 +3794,10 @@ button.sp-action-row:disabled {
 
 /* Boot Hash subpage */
 .bh-card {
+  width: 100%;
+  max-width: 800px;
+  margin-inline: auto;
+  box-sizing: border-box;
   flex-direction: column;
   align-items: stretch;
   gap: 8px;
@@ -3879,19 +3876,6 @@ button.sp-action-row:disabled {
   flex-shrink: 0;
   --md-filled-tonal-button-container-shape: 9999px;
   border-radius: 9999px;
-}
-
-/* OMK trust dialog */
-.omk-trust-content {
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.omk-field {
-  width: 100%;
-  --md-outlined-text-field-container-shape: 14px;
 }
 
 /* File browser icon tones */

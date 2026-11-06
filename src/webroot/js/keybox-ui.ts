@@ -2,14 +2,13 @@ import { t } from './i18n.js';
 import { openSubPage } from './subpage.js';
 import { row } from './ui-row.js';
 import { mountLocalKeyboxForm, type KeyboxLocalHandle } from './keybox-local-ui.js';
+import { wireRowActivation } from './utils.js';
 
 
 export function wireKeybox() {
   const btn = document.getElementById('keybox-btn');
   if (!btn) return;
-  btn.addEventListener('click', () => {
-    void openKeyboxPage();
-  });
+  wireRowActivation(btn, () => { void openKeyboxPage(); });
 }
 
 export async function openKeyboxPage() {

@@ -12,30 +12,26 @@ import { updatePlayIntegritySectionVisibility } from './pif-section.js'
 beforeEach(() => {
   vi.mocked(isModuleInstalled).mockReset()
   document.body.innerHTML = `
-    <h2 id="pif-tools-title" hidden>Play Integrity</h2>
-    <div id="pif-tools-section" hidden></div>
+    <sp-settings-section id="pif-tools-section" hidden></sp-settings-section>
   `
 })
 
 describe('updatePlayIntegritySectionVisibility', () => {
-  it('shows the heading and section when PIF is installed', async () => {
+  it('shows the section when PIF is installed', async () => {
     vi.mocked(isModuleInstalled).mockResolvedValue(true)
     await expect(updatePlayIntegritySectionVisibility()).resolves.toBe(true)
-    expect(document.getElementById('pif-tools-title')?.hidden).toBe(false)
     expect(document.getElementById('pif-tools-section')?.hidden).toBe(false)
   })
 
-  it('keeps both hidden when PIF is absent', async () => {
+  it('keeps the section hidden when PIF is absent', async () => {
     vi.mocked(isModuleInstalled).mockResolvedValue(false)
     await expect(updatePlayIntegritySectionVisibility()).resolves.toBe(false)
-    expect(document.getElementById('pif-tools-title')?.hidden).toBe(true)
     expect(document.getElementById('pif-tools-section')?.hidden).toBe(true)
   })
 
-  it('keeps both hidden when detection fails', async () => {
+  it('keeps the section hidden when detection fails', async () => {
     vi.mocked(isModuleInstalled).mockRejectedValue(new Error('no-bridge'))
     await expect(updatePlayIntegritySectionVisibility()).resolves.toBe(false)
-    expect(document.getElementById('pif-tools-title')?.hidden).toBe(true)
     expect(document.getElementById('pif-tools-section')?.hidden).toBe(true)
   })
 })
@@ -46,7 +42,6 @@ describe('Tools markup', () => {
       readFileSync(resolve(__dirname, '../index.html'), 'utf8'),
       'text/html'
     )
-    expect(doc.getElementById('pif-tools-title')?.hasAttribute('hidden')).toBe(true)
     expect(doc.getElementById('pif-tools-section')?.hasAttribute('hidden')).toBe(true)
   })
 })

@@ -1,7 +1,7 @@
 import { showToast } from './toast.js';
 import { t } from './i18n.js';
 import { exec, getDataDir } from './bridge.js';
-import { shellEscape } from './utils.js';
+import { shellEscape, wireRowActivation } from './utils.js';
 
 
 export interface LogEntry {
@@ -222,14 +222,6 @@ export async function openLogsSubPage() {
 export function initTerminal() {
   const row = document.getElementById('row-logs');
   if (row) {
-    row.addEventListener('click', () => {
-      openLogsSubPage().catch(console.error);
-    });
-    row.addEventListener('keydown', (e: KeyboardEvent) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        openLogsSubPage().catch(console.error);
-      }
-    });
+    wireRowActivation(row, () => { openLogsSubPage().catch(console.error); });
   }
 }

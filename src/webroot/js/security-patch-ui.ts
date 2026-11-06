@@ -2,7 +2,7 @@ import { exec, getModuleDir } from './bridge.js';
 import { t } from './i18n.js';
 import { showToast, closeToast } from './toast.js';
 import { API_URLS, defaultSecurityPatch } from './constants.js';
-import { fetchJson, makeRowInteractive, shellEscape } from './utils.js';
+import { fetchJson, shellEscape, wireRowActivation } from './utils.js';
 import { openSubPage } from './subpage.js';
 import { row } from './ui-row.js';
 import type { KeystoreManagerJson } from './types.js';
@@ -331,12 +331,5 @@ export async function openSecurityPatchPage() {
 export function wireSecurityPatch() {
   const btn = document.getElementById('security-patch-btn');
   if (!btn) return;
-  makeRowInteractive(btn);
-  const activate = () => { void openSecurityPatchPage(); };
-  btn.addEventListener('click', activate);
-  btn.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter' && e.key !== ' ') return;
-    e.preventDefault();
-    activate();
-  });
+  wireRowActivation(btn, () => { void openSecurityPatchPage(); });
 }

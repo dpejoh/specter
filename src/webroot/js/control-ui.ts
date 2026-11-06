@@ -1,4 +1,4 @@
-import { wireLazyClick } from './utils.js';
+import { wireRowDialog } from './toggles.js';
 
 /** Wire the configurable Control rows; safe to call after Tools too. */
 export async function wireControlRows(): Promise<void> {
@@ -32,5 +32,7 @@ export async function wireControlRows(): Promise<void> {
   autokeybox?.wireAutokeybox();
   keyboxWatch?.wireKeyboxWatch();
 
-  wireLazyClick('toggle-boot_hash-row', () => import('./boot-hash-ui.js').then(m => m.openBootHashSubpage()));
+  wireRowDialog('toggle-boot_hash-row', () => {
+    void import('./boot-hash-ui.js').then(m => m.openBootHashSubpage());
+  });
 }

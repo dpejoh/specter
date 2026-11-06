@@ -913,9 +913,3 @@ export async function openTargetAppsManager() {
   setupPullToRefresh();
   await loadData();
 }
-
-export function wireTargetApps() {
-  const btn = document.getElementById('target-apps-btn');
-  if (!btn) return;
-  btn.addEventListener('click', openTargetAppsManager);
-}
