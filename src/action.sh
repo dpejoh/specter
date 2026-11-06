@@ -125,7 +125,7 @@ _force_keybox=$(cfg_get toggle_action_force_keybox 0)
         log_u "ACTION" "HMA-OSS launch skipped (policy: auto-refuse)"
         log_u "ACTION" "Config written; reboot or open HMA-OSS to apply"
       else
-        log_u "ACTION" "Config written; open HMA-OSS or reboot to apply"
+        log_u "ACTION" "HMA-OSS configuration complete"
       fi
 
       if [ "$_do_launch" = "1" ]; then
