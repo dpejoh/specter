@@ -13,8 +13,20 @@ if [ -z "$ZIP" ] || [ ! -f "$ZIP" ]; then
 fi
 
 MODULE_DIR="/data/adb/modules/specter"
+SPECTER_DATA="${SPECTER_DATA:-/data/adb/specter}"
 echo "=== Deploying: $ZIP"
 echo "Target: $MODULE_DIR"
+
+# Stop the old scheduler before the directory is replaced. It lives in the data
+# dir, not the module dir, and would otherwise keep running old code.
+_old_sched_pid=""
+[ -f "$SPECTER_DATA/scheduler.pid" ] && _old_sched_pid=$(cat "$SPECTER_DATA/scheduler.pid" 2>/dev/null || true)
+if [ -n "$_old_sched_pid" ]; then
+  kill "$_old_sched_pid" 2>/dev/null || true
+  sleep 1
+  rm -f "$SPECTER_DATA/scheduler.pid"
+fi
+unset _old_sched_pid
 
 # Backup config if it exists
 if [ -f "$MODULE_DIR/config/specter.conf" ]; then
@@ -55,6 +67,9 @@ if [ -d "$RUNTIME_JSON" ]; then
   done
   unset _f
   rm -rf "$RUNTIME_JSON"
+  if [ -f "$MODULE_DIR/features/modules_state.sh" ]; then
+    MODDIR="$MODULE_DIR" sh "$MODULE_DIR/features/modules_state.sh" >/dev/null 2>&1 || true
+  fi
   if [ -f "$MODULE_DIR/lib/common.sh" ]; then
     ( MODDIR="$MODULE_DIR"; . "$MODULE_DIR/lib/common.sh"; write_webui_state ) >/dev/null 2>&1 || true
   fi
@@ -65,6 +80,21 @@ fi
 chmod -R 755 "$MODULE_DIR"
 chmod -R 644 "$MODULE_DIR/webroot"/*.html "$MODULE_DIR/webroot/assets"/*.css "$MODULE_DIR/webroot/assets"/*.js 2>/dev/null || true
 chmod 644 "$MODULE_DIR/webroot/json/"*.json 2>/dev/null || true
+
+# Start the scheduler with the new task intervals/state code. Respect a
+# disabled scheduler so a hot install cannot silently re-enable it.
+_sched_enabled=1
+[ -f "$SPECTER_DATA/config/val/toggle_scheduler.val" ] && _sched_enabled=$(cat "$SPECTER_DATA/config/val/toggle_scheduler.val" 2>/dev/null || echo 1)
+if [ "$_sched_enabled" != "0" ]; then
+  mkdir -p "$SPECTER_DATA/log" 2>/dev/null || true
+  if command -v setsid >/dev/null 2>&1; then
+    nohup setsid sh "$MODULE_DIR/lib/scheduler.sh" >>"$SPECTER_DATA/log/scheduler.log" 2>&1 </dev/null &
+  else
+    nohup sh "$MODULE_DIR/lib/scheduler.sh" >>"$SPECTER_DATA/log/scheduler.log" 2>&1 </dev/null &
+  fi
+  echo "Started scheduler"
+fi
+unset _sched_enabled
 
 echo "=== Done! Module files updated at $MODULE_DIR"
 echo "Hard-refresh the webui page to pick up changes."
