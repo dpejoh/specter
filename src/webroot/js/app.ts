@@ -1,7 +1,7 @@
 import { initBridge, getDataDir, getModuleDir, exec } from './bridge.js';
 import { shellEscape, setDevMode, updateListContainerCorners, initCornerObserver, afterPaint, wireLazyClick } from './utils.js';
 import { setDataDir, migrateLocalStorage, cfgInit, cfgGet } from './cfg.js';
-import { initDevice, refreshDevice, refreshKeyboxStatus, refreshKeyboxWatch, refreshConflictStatus, reapplyKeyboxStatus } from './device.js';
+import { initDevice, refreshDevice, refreshKeyboxStatus, refreshKeyboxWatch, refreshKeyboxWatchInBackground, refreshConflictStatus, reapplyKeyboxStatus } from './device.js';
 import { initTheme } from './theme.js';
 import { initI18n, t } from './i18n.js';
 import { loadContributors } from './contributors.js';
@@ -83,6 +83,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     .then(() => initI18n())
     .then(() => reapplyKeyboxStatus())
     .catch(() => {});
+  // Revocation is server-side and random. Run the existing watcher in the
+  // background on WebUI open so the snapshot is as fresh as the network allows;
+  // spawn keeps the main thread free.
+  void cfgReady
+    .then(() => cfgGet('toggle_keybox_info', '1'))
+    .then(value => {
+      if (value !== '0') return refreshKeyboxWatchInBackground();
+      return null;
+    })
+    .catch(() => {});
   onHomeShow(() => {
     renderActivityPreview();
     if (!_homeInitialized) { _homeInitialized = true; return; }
@@ -125,12 +135,11 @@ async function loadToolsUI() {
     updatePlayIntegritySectionVisibility().catch(() => false),
     updateModuleConfigSectionVisibility().catch(() => false),
   ]);
-  const [keybox, autoTarget, autoHma, autopif, autokeybox, romFp, adb, prop, gms, hma, actionSecurityPatch, securityPatch, omk] = await Promise.all([
+  const [keybox, autoTarget, autoHma, autopif, romFp, adb, prop, gms, hma, actionSecurityPatch, securityPatch, omk] = await Promise.all([
     import('./keybox-ui.js').catch(() => null),
     import('./auto-target-ui.js').catch(() => null),
     import('./auto-hma-ui.js').catch(() => null),
     import('./autopif-ui.js').catch(() => null),
-    import('./autokeybox-ui.js').catch(() => null),
     import('./rom-fingerprint-ui.js').catch(() => null),
     import('./adb-disabler-ui.js').catch(() => null),
     import('./prop-handler-ui.js').catch(() => null),
@@ -145,7 +154,6 @@ async function loadToolsUI() {
   autoTarget?.wireAutoTarget();
   autoHma?.wireAutoHma();
   autopif?.wireAutopif();
-  autokeybox?.wireAutokeybox();
   romFp?.wireRomFingerprint();
   adb?.wireAdbDisabler();
   prop?.wirePropHandler();

@@ -125,7 +125,7 @@ function createChildProcess(): ChildProcess {
   };
 }
 
-export function spawnScript(scriptName: string, type = 'feature'): ChildProcess {
+export function spawnScript(scriptName: string, type = 'feature', args: string[] = []): ChildProcess {
   const child = createChildProcess();
   if (!window.ksu?.exec) { setTimeout(() => (child as any).emit('error', new BridgeError('NO_BRIDGE', 'no-bridge'))); return child; }
   if (!MODULE) { setTimeout(() => (child as any).emit('error', new BridgeError('NO_MODULE', 'no-module-path'))); return child; }
@@ -144,10 +144,10 @@ export function spawnScript(scriptName: string, type = 'feature'): ChildProcess 
     }, EXEC_TIMEOUT_MS);
     (child as any).on('exit', () => { clearTimeout(timer); cleanup(); });
     (child as any).on('error', () => { clearTimeout(timer); cleanup(); });
-    try { window.ksu.spawn('sh', JSON.stringify([scriptPath]), '{}', globalName); }
+    try { window.ksu.spawn('sh', JSON.stringify([scriptPath, ...args]), '{}', globalName); }
     catch (e) { clearTimeout(timer); cleanup(); setTimeout(() => (child as any).emit('error', e)); }
   } else {
-    const cmd = `sh ${shellEscape(scriptPath)}`;
+    const cmd = `sh ${shellEscape(scriptPath)}${args.length ? ' ' + args.map(shellEscape).join(' ') : ''}`;
     let timedOut = false;
     const t = setTimeout(() => { timedOut = true; (child as any).emit('error', new TimeoutError()); }, EXEC_TIMEOUT_MS);
     exec(cmd).then(({ code, stdout, stderr }) => {

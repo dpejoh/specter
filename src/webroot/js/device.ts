@@ -1,5 +1,5 @@
 import { afterPaint, fetchJson, updateListContainerCorners } from './utils.js';
-import { runScript } from './bridge.js';
+import { runScript, spawnScript } from './bridge.js';
 import { appendToOutput } from './terminal.js';
 import { API_URLS } from './constants.js';
 import { getTranslation } from './i18n.js';
@@ -311,6 +311,36 @@ export function applyKeyboxStatus(data: KeyboxInfoJson) {
     statusEl.textContent = getTranslation('custom_kb_active') || 'Active';
     statusEl.className = 'kb-hero-status-text kb-hero-status-text--active';
   }
+}
+
+let _keyboxWatchAt = 0;
+
+/**
+ * Run the existing keybox watcher in the background and re-read the snapshot.
+ * Revocation is server-side and random; spawning the watcher on WebUI open is
+ * the only way to get a fresh check without blocking the WebView main thread.
+ */
+export function refreshKeyboxWatchInBackground(minAgeMs = 60_000): Promise<KeyboxInfoJson | null> {
+  if (Date.now() - _keyboxWatchAt < minAgeMs) return refreshKeyboxStatus();
+  // The exec fallback blocks the WebView main thread; only use the watcher
+  // when the bridge can spawn a real background process.
+  if (typeof (window as { ksu?: { spawn?: unknown } }).ksu?.spawn !== 'function') {
+    return refreshKeyboxStatus();
+  }
+  _keyboxWatchAt = Date.now();
+
+  return new Promise(resolve => {
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      refreshKeyboxStatus().then(resolve).catch(() => resolve(null));
+    };
+
+    const child = spawnScript('keybox_watch.sh', 'feature', ['--fresh']);
+    child.on('exit', finish);
+    child.on('error', finish);
+  });
 }
 
 function applySecurityPatch(data: InfoJson) {

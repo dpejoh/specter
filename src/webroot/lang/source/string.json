@@ -219,8 +219,8 @@
   "control_background_title": "Background Jobs",
   "control_toggle_auto_target": "Auto-Targeting",
   "control_toggle_auto_target_desc": "Automatically add new apps to Tricky Store target list",
-  "control_toggle_keybox_info": "Keybox Info Refresh",
-  "control_toggle_keybox_info_desc": "Periodically refresh keybox attestation status",
+  "control_toggle_keybox_info": "Keybox Refresh",
+  "control_toggle_keybox_info_desc": "Check the installed keybox and replace it if revoked or expired",
   "control_toggle_action_gms": "Kill Play Store",
   "control_toggle_action_gms_desc": "Force-stop and clear Play Store, GMS, and DroidGuard processes",
   "control_toggle_action_target": "Update Target",
@@ -532,5 +532,12 @@
   "keybox_watch_desc": "Checks the installed keybox against the Specter catalog and replaces it when Auto Keybox is enabled.",
   "keybox_watch_master": "Watch keybox revocation",
   "keybox_watch_interval": "Check interval (minutes)",
-  "keybox_watch_interval_desc": "Minimum 1 minute. Default 5 minutes."
+  "keybox_watch_interval_desc": "Minimum 1 minute. Default 5 minutes.",
+  "keybox_refresh_title": "Keybox refresh",
+  "keybox_refresh_desc": "Checks the installed keybox and replaces it when revoked or expired.",
+  "keybox_refresh_master": "Enable keybox refresh",
+  "keybox_refresh_interval": "Check interval (minutes)",
+  "keybox_refresh_interval_desc": "Minimum 1 minute. Default 60 minutes. Opening the WebUI checks immediately.",
+  "keybox_refresh_replace": "Replace keybox if revoked",
+  "keybox_refresh_replace_desc": "Automatically install a new keybox when the current one is revoked or expired."
 }

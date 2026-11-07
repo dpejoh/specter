@@ -532,5 +532,12 @@
   "keybox_watch_desc": "Checks the installed keybox against the Specter catalog and replaces it when Auto Keybox is enabled.",
   "keybox_watch_master": "Watch keybox revocation",
   "keybox_watch_interval": "Check interval (minutes)",
-  "keybox_watch_interval_desc": "Minimum 1 minute. Default 5 minutes."
+  "keybox_watch_interval_desc": "Minimum 1 minute. Default 5 minutes.",
+  "keybox_refresh_title": "Keybox refresh",
+  "keybox_refresh_desc": "Checks the installed keybox and replaces it when revoked or expired.",
+  "keybox_refresh_master": "Enable keybox refresh",
+  "keybox_refresh_interval": "Check interval (minutes)",
+  "keybox_refresh_interval_desc": "Minimum 1 minute. Default 60 minutes. Opening the WebUI checks immediately.",
+  "keybox_refresh_replace": "Replace keybox if revoked",
+  "keybox_refresh_replace_desc": "Automatically install a new keybox when the current one is revoked or expired."
 }
