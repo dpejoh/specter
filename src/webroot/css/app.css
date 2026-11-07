@@ -2321,6 +2321,20 @@ md-filled-tonal-button {
   font-size: 18px;
   color: var(--md-sys-color-on-surface-variant);
 }
+#kb-refresh-btn.kb-refresh-btn--busy md-icon {
+  display: inline-block;
+  animation: kb-refresh-spin 0.8s linear infinite;
+}
+
+@keyframes kb-refresh-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #kb-refresh-btn.kb-refresh-btn--busy md-icon {
+    animation: none;
+  }
+}
 
 .info-grid--compact {
   display: grid;

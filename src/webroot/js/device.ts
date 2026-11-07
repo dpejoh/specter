@@ -4,6 +4,7 @@ import { appendToOutput } from './terminal.js';
 import { API_URLS } from './constants.js';
 import { getTranslation } from './i18n.js';
 import { getModulesSnapshot } from './modules.js';
+import { showToast } from './toast.js';
 import type { ConflictModule, InfoJson, KeyboxInfoJson, KeystoreManagerJson } from './types.js';
 
 const HERO_CLIP = 'hero-clip';
@@ -54,10 +55,34 @@ function setClipped(el: HTMLElement, text: string) {
 }
 
 export async function initDevice() {
-  document.getElementById('kb-refresh-btn')?.addEventListener('click', () => {
-    recomputeKeyboxStatus().catch(() => {});
-  });
+  wireKeyboxRefreshButton();
   await Promise.all([refreshDevice(), refreshKeyboxStatus(), refreshKeystoreManager()]);
+}
+
+export function wireKeyboxRefreshButton() {
+  const btn = document.getElementById('kb-refresh-btn');
+  if (!btn || btn.dataset.spWired) return;
+  btn.dataset.spWired = '1';
+  btn.addEventListener('click', async () => {
+    btn.setAttribute('disabled', '');
+    btn.classList.add('kb-refresh-btn--busy');
+    // Paint the busy state before the bridge call. spawn() keeps the main
+    // thread free, but the exec fallback runs synchronously and would hide it.
+    await new Promise<void>(resolve => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    });
+    try {
+      await recomputeKeyboxStatus();
+    } catch (e) {
+      console.warn('Keybox refresh failed:', e);
+      showToast(getTranslation('toast_failed_update') || 'Failed to update', {
+        icon: 'error', type: 'error', autoCloseDelay: 3000,
+      });
+    } finally {
+      btn.removeAttribute('disabled');
+      btn.classList.remove('kb-refresh-btn--busy');
+    }
+  });
 }
 
 export async function refreshDevice(refreshFromScript = false): Promise<InfoJson | null> {
@@ -112,12 +137,17 @@ export async function refreshKeyboxStatus(): Promise<KeyboxInfoJson | null> {
 }
 
 export async function recomputeKeyboxStatus(): Promise<KeyboxInfoJson | null> {
-  try {
-    await runScript('keybox_info.sh', 'feature');
-  } catch (e) {
-    console.warn('Keybox info script failed:', e);
-  }
+  await runKeyboxInfoScript();
   return refreshKeyboxStatus();
+}
+
+/** Run keybox_info.sh out of process so it cannot block the WebView thread. */
+function runKeyboxInfoScript(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawnScript('keybox_info.sh', 'feature');
+    child.on('exit', () => resolve());
+    child.on('error', (e: unknown) => reject(e));
+  });
 }
 
 /**
