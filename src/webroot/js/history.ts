@@ -11,6 +11,9 @@ export function getHistory(): HistoryEntry[] {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; }
 }
 
+let _deviceHistory: HistoryEntry[] | null = null;
+let _lastPreviewSignature = '';
+
 async function fetchDeviceHistory(): Promise<HistoryEntry[]> {
   try {
     const dir = getDataDir() || '/data/adb/specter';
@@ -18,6 +21,13 @@ async function fetchDeviceHistory(): Promise<HistoryEntry[]> {
     if (!r.stdout) return [];
     return r.stdout.trim().split('\n').filter(Boolean).map(l => { try { return JSON.parse(l) as HistoryEntry; } catch { return null; } }).filter((e): e is HistoryEntry => e !== null);
   } catch { return []; }
+}
+
+/** Read the device log once per session; Home must not run a shell call per visit. */
+async function getDeviceHistory(): Promise<HistoryEntry[]> {
+  if (_deviceHistory) return _deviceHistory;
+  _deviceHistory = await fetchDeviceHistory();
+  return _deviceHistory;
 }
 
 function mergeHistory(local: HistoryEntry[], device: HistoryEntry[]): HistoryEntry[] {
@@ -64,6 +74,7 @@ function wirePreviewClear() {
   _previewWired = true;
   document.getElementById('clear-history-btn')?.addEventListener('click', () => {
     clearHistory();
+    _deviceHistory = [];
     clearDeviceHistory();
     renderActivityPreview();
   });
@@ -112,7 +123,12 @@ function renderPreviewEntries(container: HTMLElement, allEntries: HistoryEntry[]
   }
 }
 
-export async function renderActivityPreview() {
+function previewSignature(entries: HistoryEntry[]): string {
+  const first = entries[0];
+  return `${entries.length}|${first?.time ?? ''}|${first?.script ?? ''}|${first?.code ?? ''}`;
+}
+
+export async function renderActivityPreview(force = false) {
   const container = document.getElementById('activity-list');
   if (!container) return;
 
@@ -120,16 +136,21 @@ export async function renderActivityPreview() {
 
   // Local history is synchronous; paint it before waiting on the device log.
   const local = getHistory();
-  renderPreviewEntries(container, local);
+  const localSignature = previewSignature(local);
+  if (force || localSignature !== _lastPreviewSignature) {
+    renderPreviewEntries(container, local);
+    _lastPreviewSignature = localSignature;
+  }
 
   const device = await new Promise<HistoryEntry[]>(resolve => {
-    afterPaint(() => { fetchDeviceHistory().then(resolve).catch(() => resolve([])); });
+    afterPaint(() => { getDeviceHistory().then(resolve).catch(() => resolve([])); });
   });
   if (device.length === 0) return;
 
   const merged = mergeHistory(local, device);
-  const changed = merged.length !== local.length
-    || (merged[0]?.time !== local[0]?.time)
-    || (merged[0]?.script !== local[0]?.script);
-  if (changed) renderPreviewEntries(container, merged);
+  const mergedSignature = previewSignature(merged);
+  if (force || mergedSignature !== _lastPreviewSignature) {
+    renderPreviewEntries(container, merged);
+    _lastPreviewSignature = mergedSignature;
+  }
 }

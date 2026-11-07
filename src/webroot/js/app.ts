@@ -1,7 +1,7 @@
 import { initBridge, getDataDir, getModuleDir, exec } from './bridge.js';
 import { shellEscape, setDevMode, updateListContainerCorners, initCornerObserver, afterPaint, wireLazyClick } from './utils.js';
 import { setDataDir, migrateLocalStorage, cfgInit, cfgGet } from './cfg.js';
-import { initDevice, refreshDevice, refreshKeyboxStatus, refreshKeyboxWatch, refreshKeyboxWatchInBackground, refreshConflictStatus, reapplyKeyboxStatus } from './device.js';
+import { initDevice, refreshKeyboxStatus, refreshKeyboxWatchInBackground, refreshConflictStatus, reapplyKeyboxStatus } from './device.js';
 import { initTheme } from './theme.js';
 import { initI18n, t } from './i18n.js';
 import { loadContributors } from './contributors.js';
@@ -9,7 +9,8 @@ import { initRedirect } from './redirect.js';
 import { showToast } from './toast.js';
 import { initTerminal } from './terminal.js';
 import { renderActivityPreview } from './history.js';
-import { wireTopBarScroll, wireNavigation, onHomeShow, onPageActivate } from './navigation.js';
+import { wireTopBarScroll, wireNavigation, onHomeShow } from './navigation.js';
+import { onPageActivate } from './page-loader.js';
 import { initFonts } from './font.js';
 import { wireHomeCards } from './home-cards.js';
 import { initBrand } from './brand.js';
@@ -22,11 +23,21 @@ import { updateModuleConfigSectionVisibility } from './module-config-section.js'
 
 
 let _homeInitialized = false;
+let _lastHomeKeyboxRead = 0;
+
+function refreshHomeKeybox(): void {
+  if (Date.now() - _lastHomeKeyboxRead < 30_000) return;
+  _lastHomeKeyboxRead = Date.now();
+  refreshKeyboxStatus().catch(() => {});
+}
+
+// Start Material components and the Specter UI components as early as the app
+// module runs. Navigation does not wait for them; if a page opens first, the
+// skeleton covers the remaining setup.
+void import('./material-core.js').catch(e => console.warn('Material components failed:', e));
 
 document.addEventListener('DOMContentLoaded', async () => {
   if ((import.meta as { env?: { DEV?: boolean } }).env?.DEV) await import('./dev-mock.js');
-
-  import('./material-core.js').catch(e => console.warn('Material components failed:', e));
 
   try {
     await initBridge();
@@ -59,7 +70,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.addEventListener('languageChanged', () => {
     loadContributors().catch(() => {});
-    renderActivityPreview();
+    renderActivityPreview(true);
     refreshKeyboxStatus().catch(() => {});
     void import('./pif-choose-desc.js').then(m => m.refreshPifChooseDesc()).catch(() => {});
     import('./dark-theme-ui.js').then(m => m.updateDarkThemeSummary()).catch(() => {});
@@ -96,8 +107,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   onHomeShow(() => {
     renderActivityPreview();
     if (!_homeInitialized) { _homeInitialized = true; return; }
-    refreshDevice(true).catch(() => {});
-    refreshKeyboxWatch().catch(() => {});
+    // Shell scripts block the WebView while the KernelSU bridge runs them, so
+    // Home does not start any. The scheduler handles background refreshes;
+    // here we only re-read the keybox snapshot.
+    refreshHomeKeybox();
   });
 
   afterPaint(() => {
