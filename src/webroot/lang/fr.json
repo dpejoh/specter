@@ -6,8 +6,6 @@
   "nav_settings": "Paramètres",
   "common_back": "Retour",
   "home_security_patch": "Correctif de sécurité",
-  "home_status_online": "En ligne",
-  "home_status_offline": "Hors connexion",
   "menu_keybox": "Keybox",
   "menu_keybox_desc": "Sélection d'une keybox Specter ou utilisation d'une keybox personnalisée",
   "kb_filter_status_aria": "Filtrer par état",

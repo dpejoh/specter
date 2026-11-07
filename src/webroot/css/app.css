@@ -46,7 +46,6 @@ code, pre {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  .network-chip:not(.offline) md-icon,
   .sp-icn-spin::after {
     animation: none;
   }
@@ -117,6 +116,37 @@ code, pre {
   font-size: 1.375rem;
   font-weight: 400;
   letter-spacing: 0;
+  display: flex;
+  align-items: center;
+  margin: 0;
+}
+
+.app-brand {
+  display: block;
+  height: 30px;
+  width: auto;
+  max-width: 150px;
+  flex-shrink: 0;
+  object-fit: contain;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.app-brand[data-ready="1"] {
+  opacity: 1;
+}
+
+.app-header-action {
+  flex-shrink: 0;
+  margin-inline-start: 8px;
+  --md-icon-button-icon-color: var(--md-sys-color-on-surface-variant);
+}
+
+@media (max-width: 420px) {
+  .app-brand {
+    height: 26px;
+    max-width: 130px;
+  }
 }
 
 #pages {
@@ -160,47 +190,6 @@ code, pre {
 
 #pages > section[hidden] {
   display: none;
-}
-
-@keyframes pulse-glow {
-  0% { text-shadow: 0 0 2px currentColor; text-shadow: 0 0 2px color-mix(in srgb, currentColor 20%, transparent); }
-  50% { text-shadow: 0 0 8px currentColor; text-shadow: 0 0 8px color-mix(in srgb, currentColor 60%, transparent); }
-  100% { text-shadow: 0 0 2px currentColor; text-shadow: 0 0 2px color-mix(in srgb, currentColor 20%, transparent); }
-}
-
-.network-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-inline-end: 12px;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: #146c2e;
-}
-.network-chip md-icon {
-  font-size: 20px;
-  color: #146c2e;
-}
-.network-chip:not(.offline) md-icon {
-  animation: pulse-glow 3s infinite;
-}
-[data-theme-resolved="dark"] .network-chip {
-  color: #8fdb9e;
-}
-[data-theme-resolved="dark"] .network-chip md-icon {
-  color: #8fdb9e;
-}
-.network-chip.offline {
-  color: #b3261e;
-}
-.network-chip.offline md-icon {
-  color: #b3261e;
-}
-[data-theme-resolved="dark"] .network-chip.offline {
-  color: #f2b8b5;
-}
-[data-theme-resolved="dark"] .network-chip.offline md-icon {
-  color: #f2b8b5;
 }
 
 .hero-card__body {

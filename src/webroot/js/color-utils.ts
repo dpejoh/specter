@@ -19,7 +19,7 @@ export function getPresetColors(preset: string, isDark: boolean): Record<string,
 
 /** HCT hues for each preset's seed color (computed via @material/material-color-utilities Hct). */
 const PRESET_HUES: [string, number][] = [
-  ['red', 25.8], ['orange', 49.1], ['yellow', 58.6], ['green', 153.8],
+  ['red', 25.8], ['orange', 49.1], ['yellow', 87.2], ['green', 153.8],
   ['cyan', 218.9], ['blue', 270.4], ['purple', 303.4], ['pink', 356.0],
 ];
 

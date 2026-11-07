@@ -87,9 +87,8 @@ describe('i18n and ids', () => {
 })
 
 describe('aria landmarks', () => {
-  it('has main, header, and aria-live regions', () => {
+  it('has main and header landmarks', () => {
     expect(doc.querySelector('main')).not.toBeNull()
     expect(doc.querySelector('header')).not.toBeNull()
-    expect(doc.querySelector('[aria-live="polite"], [aria-live="assertive"]')).not.toBeNull()
   })
 })

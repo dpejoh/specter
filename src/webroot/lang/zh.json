@@ -6,8 +6,6 @@
   "nav_settings": "设置",
   "common_back": "返回",
   "home_security_patch": "安全补丁",
-  "home_status_online": "在线",
-  "home_status_offline": "离线",
   "menu_keybox": "Keybox",
   "menu_keybox_desc": "选择 Specter Keybox 或使用自定义来源",
   "kb_filter_status_aria": "按状态筛选",

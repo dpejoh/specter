@@ -9,7 +9,7 @@ const BASIC_COLORS: { id: string; nameKey: string; defaultName: string; hex: str
   { id: 'blue',   nameKey: 'theme_preset_blue',   defaultName: 'Blue',   hex: '#1157CE' },
   { id: 'cyan',   nameKey: 'theme_preset_cyan',   defaultName: 'Cyan',   hex: '#00687C' },
   { id: 'green',  nameKey: 'theme_preset_green',  defaultName: 'Green',  hex: '#006C35' },
-  { id: 'yellow', nameKey: 'theme_preset_yellow', defaultName: 'Yellow', hex: '#8F4E06' },
+  { id: 'yellow', nameKey: 'theme_preset_yellow', defaultName: 'Yellow', hex: '#be9108' },
   { id: 'orange', nameKey: 'theme_preset_orange', defaultName: 'Orange', hex: '#9A4600' },
   { id: 'red',    nameKey: 'theme_preset_red',    defaultName: 'Red',    hex: '#B3251E' },
   { id: 'pink',   nameKey: 'theme_preset_pink',   defaultName: 'Pink',   hex: '#B60D6E' },
@@ -33,7 +33,7 @@ export function updateColorsSummary() {
 
   if (dotEl) {
     if (current === 'monet') {
-      dotEl.style.background = 'linear-gradient(135deg, #1157CE 25%, #8F4E06 50%, #B3251E 75%, #7438D2 100%)';
+      dotEl.style.background = 'linear-gradient(135deg, #1157CE 25%, #be9108 50%, #B3251E 75%, #7438D2 100%)';
     } else {
       dotEl.style.background = PRESETS[current] || 'var(--md-sys-color-primary)';
     }

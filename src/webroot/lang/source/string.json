@@ -6,8 +6,6 @@
   "nav_settings": "Settings",
   "common_back": "Back",
   "home_security_patch": "Security Patch",
-  "home_status_online": "Online",
-  "home_status_offline": "Offline",
   "menu_keybox": "Keybox",
   "menu_keybox_desc": "Choose a Specter keybox or use a custom source",
   "kb_filter_status_aria": "Filter by status",
