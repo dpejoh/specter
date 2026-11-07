@@ -128,13 +128,13 @@ code, pre {
   transition: opacity 0.15s ease;
   /* Light mode; brand.ts supplies the --brand-* palette for the active preset. */
   --brand-body: #fff;
-  --brand-ink: #000;
+  --brand-ink: var(--brand-deep);
   --brand-halo-display: none;
 }
 
 [data-theme-resolved="dark"] .app-brand {
   --brand-body: var(--brand-tint);
-  --brand-ink: #fff;
+  --brand-ink: var(--brand-tint);
   --brand-halo-display: inline;
 }
 
