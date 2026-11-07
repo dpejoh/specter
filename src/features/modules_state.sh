@@ -1,4 +1,5 @@
 #!/system/bin/sh
+# shellcheck shell=ksh
 # Write the installed-module/conflict snapshot consumed by the WebUI.
 # Runs from service.sh, action.sh, and the scheduler's stale-input path.
 set -e

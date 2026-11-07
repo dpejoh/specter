@@ -1,4 +1,5 @@
 #!/system/bin/sh
+# shellcheck shell=ksh
 set -e
 MODDIR=${0%/*}
 . "$MODDIR/../lib/common.sh"

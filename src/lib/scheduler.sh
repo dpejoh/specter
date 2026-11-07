@@ -1,4 +1,4 @@
-# shellcheck shell=sh
+# shellcheck shell=ksh
 
 MODDIR="${0%/*}"
 case "$MODDIR" in */lib) MODDIR="${MODDIR%/lib}" ;; */features) MODDIR="${MODDIR%/features}" ;; esac

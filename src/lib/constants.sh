@@ -1,4 +1,4 @@
-# shellcheck shell=sh disable=SC2034
+# shellcheck shell=ksh disable=SC2034
 
 # -- URL definitions --
 KEYBOX_URL="https://rawbin.dpejoh.com/key"

@@ -3,9 +3,6 @@
 MODDIR="$MODPATH"
 . "$MODPATH/lib/common.sh"
 
-# Clean up old uppercase paths (module id + data dir)
-rm -rf /data/adb/modules/Specter /data/adb/Specter
-
 ui_print ""
 ui_print " ____                  _            "
 ui_print "/ ___| _ __   ___  ___| |_ ___ _ __ "

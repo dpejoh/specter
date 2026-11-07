@@ -1,4 +1,4 @@
-# shellcheck shell=sh
+# shellcheck shell=ksh
 
 if [ -n "$MODDIR" ]; then
   case "$MODDIR" in */features) _root="${MODDIR%/*}" ;; *) _root="$MODDIR" ;; esac
