@@ -73,7 +73,21 @@ export interface KeystoreManagerJson { id: string; name?: string; format?: strin
 
 export interface DevEntry { name: string; role: string; github: string; avatar: string; }
 
-export interface CatalogEntry { source: string; version: string; text: string; revoked: boolean; softbanned: boolean; serial: string; last_checked: string; timestamp: string; rkp?: boolean; expires_at?: string | null; }
+export interface CatalogEntry {
+  source: string;
+  version: string;
+  text: string;
+  revoked: boolean;
+  softbanned: boolean;
+  serial: string;
+  last_checked: string;
+  timestamp: string;
+  rkp?: boolean;
+  expires_at?: string | null;
+  revocation_status?: string;
+  revocation_reason?: string;
+  revocation_checked_at?: string;
+}
 
 export interface CatalogJson { entries: CatalogEntry[]; latest: Record<string, string>; working: { source: string; version: string }; workingEntries: { source: string; version: string; text: string }[]; }
 

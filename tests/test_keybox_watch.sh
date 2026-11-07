@@ -18,26 +18,32 @@ cat > "$TEST_ROOT/fake_keybox.sh" <<'EOF'
 printf '%s' 'replaced' > "$SPECTER_DIR/replaced"
 EOF
 
+cat > "$TEST_ROOT/fake_info_healthy.sh" <<'EOF'
+#!/bin/sh
+printf '%s' '{"installed":true,"revoked":false,"expired":false}' > "$SPECTER_KEYBOX_INFO"
+EOF
+
 export SPECTER_KEYBOX_INFO="$TEST_ROOT/keybox_info.json"
 export SPECTER_KEYBOX_INFO_SCRIPT="$TEST_ROOT/fake_info.sh"
 export SPECTER_KEYBOX_SCRIPT="$TEST_ROOT/fake_keybox.sh"
 
 # Healthy keybox: no replacement.
-printf '%s' '{"installed":true,"revoked":false,"expired":false}' > "$SPECTER_KEYBOX_INFO"
+export SPECTER_KEYBOX_INFO_SCRIPT="$TEST_ROOT/fake_info_healthy.sh"
 _out=$(run_feature keybox_watch.sh 2>&1)
 assert_not_contains "healthy: no replacement" "$_out" "attempting automatic replacement"
 assert_file_not_exists "healthy: guard not written" "$SPECTER_DIR/cache/keybox_watch_last_replace"
+export SPECTER_KEYBOX_INFO_SCRIPT="$TEST_ROOT/fake_info.sh"
 
 # Revoked, Auto Keybox off: only a warning.
 rm -f "$SPECTER_DIR/replaced" "$SPECTER_DIR/cache/keybox_watch_last_replace"
-set_cfg toggle_autokeybox 0
+set_cfg toggle_keybox_auto_replace 0
 _out=$(run_feature keybox_watch.sh 2>&1)
-assert_contains "auto off: warns" "$_out" "Auto Keybox is off"
+assert_contains "auto off: warns" "$_out" "auto-replace is disabled"
 assert_file_not_exists "auto off: guard not written" "$SPECTER_DIR/cache/keybox_watch_last_replace"
 
 # Revoked, Auto Keybox on, recent guard: no second attempt.
 rm -f "$SPECTER_DIR/replaced"
-set_cfg toggle_autokeybox 1
+set_cfg toggle_keybox_auto_replace 1
 printf '%s' "$(date +%s)" > "$SPECTER_DIR/cache/keybox_watch_last_replace"
 _out=$(run_feature keybox_watch.sh 2>&1)
 assert_contains "guard: waits" "$_out" "already attempted recently"

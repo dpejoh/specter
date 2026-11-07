@@ -92,7 +92,7 @@ toggle_action_security_patch_device:1 toggle_action_security_patch_bulletin:1
 toggle_action_security_patch_synthetic:1
 toggle_action_gms_force_stop:1 toggle_action_gms_clear_data:0
 toggle_auto_hma:1
-toggle_auto_target:1 toggle_keybox_info:1 toggle_autopif:0 toggle_autokeybox:0
+toggle_auto_target:1 toggle_keybox_info:1 toggle_keybox_auto_replace:1 toggle_autopif:0
 "
 
 _apply_toggle_defaults() {
@@ -111,7 +111,15 @@ _apply_toggle_defaults() {
 # -- Utilities --
 ensure_dir() { mkdir -p "$1" 2>/dev/null; }
 
-_escape_json() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
+_escape_json() {
+  # mksh parameter expansion avoids one sed process per JSON field; on-device
+  # process spawn is far more expensive than the substitution itself.
+  _ej_val=$1
+  _ej_val=${_ej_val//\\/\\\\}
+  _ej_val=${_ej_val//\"/\\\"}
+  printf '%s' "$_ej_val"
+  unset _ej_val
+}
 
 version_ge() {
   _v_a="$1" _v_b="$2"

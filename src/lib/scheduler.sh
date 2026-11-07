@@ -34,6 +34,17 @@ log_i "SCHED" "Started (PID $$)"
 # valid working directory.
 cd / 2>/dev/null || true
 
+# One-time migration to the merged keybox-refresh model. Auto Keybox no longer
+# rotates a healthy keybox; the refresh watch replaces only revoked/expired ones.
+if [ ! -f "$SPECTER_DIR/.keybox_refresh_migrated" ]; then
+  cfg_set toggle_keybox_auto_replace 1
+  _kw_old=$(cfg_get keybox_watch_interval 300)
+  [ "$_kw_old" = "300" ] && cfg_set keybox_watch_interval 3600
+  rm -f "$CONFIG_DIR/val/toggle_autokeybox.val" "$CONFIG_DIR/val/autokeybox_interval.val" 2>/dev/null || true
+  touch "$SPECTER_DIR/.keybox_refresh_migrated" 2>/dev/null || true
+  unset _kw_old
+fi
+
 # Launch inotifyd for app install detection if available. The same watcher
 # serves instant auto-target and auto-HMA; polling auto-target disables only
 # its own handler path.
@@ -121,11 +132,10 @@ while true; do
   [ -d "$MODDIR" ] || exit 0
   _now=$(date +%s 2>/dev/null || echo "0")
 
-  for _task_line in keybox_watch:keybox_watch.sh:300:toggle_keybox_info \
+  for _task_line in keybox_watch:keybox_watch.sh:3600:toggle_keybox_info \
                     auto_target:auto_target.sh:300:toggle_auto_target \
                     hma:hma.sh:21600:toggle_auto_hma \
-                    autopif:pif.sh:86400:toggle_autopif \
-                    autokeybox:keybox.sh:86400:toggle_autokeybox; do
+                    autopif:pif.sh:86400:toggle_autopif; do
     _name="${_task_line%%:*}"
     _rest="${_task_line#*:}"
     _script="${_rest%%:*}"
@@ -135,7 +145,7 @@ while true; do
 
     _toggle_default=1
     case "$_toggle" in
-      toggle_autopif|toggle_autokeybox) _toggle_default=0 ;;
+      toggle_autopif) _toggle_default=0 ;;
     esac
     [ "$(cfg_get "$_toggle" "$_toggle_default")" = "0" ] && continue
 
@@ -176,7 +186,7 @@ while true; do
       unset _task_rc
 
       case "$_name" in
-        keybox_watch|auto_target|autopif|autokeybox)
+        keybox_watch|auto_target|autopif)
           refresh_module_description
           ;;
       esac

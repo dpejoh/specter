@@ -86,7 +86,9 @@ hex_to_dec() {
 # action pipeline; a short cache keeps them from downloading it twice.
 keybox_catalog() {
   _kc_cache="$SPECTER_DIR/cache/keybox_catalog.json"
-  _kc_ttl="${KEYBOX_CATALOG_TTL:-300}"
+  # Providers/softbans move slowly; Google revocation is checked separately.
+  # An app-open --fresh check bypasses this cache.
+  _kc_ttl="${KEYBOX_CATALOG_TTL:-1800}"
   if [ -s "$_kc_cache" ]; then
     _kc_age=$(( $(date +%s) - $(stat -c %Y "$_kc_cache" 2>/dev/null || echo 0) ))
     if [ "$_kc_age" -ge 0 ] && [ "$_kc_age" -lt "$_kc_ttl" ]; then
@@ -121,6 +123,21 @@ keybox_catalog() {
   fi
 
   unset _kc_cache _kc_ttl _kc_age _kc_json _kc_url _kc_try
+  return 1
+}
+
+# True when the catalog cache is still within its TTL, so callers can skip a
+# network probe before reusing it.
+keybox_catalog_fresh() {
+  _kcf_cache="$SPECTER_DIR/cache/keybox_catalog.json"
+  _kcf_ttl="${KEYBOX_CATALOG_TTL:-300}"
+  [ -s "$_kcf_cache" ] || { unset _kcf_cache _kcf_ttl; return 1; }
+  _kcf_age=$(( $(date +%s) - $(stat -c %Y "$_kcf_cache" 2>/dev/null || echo 0) ))
+  if [ "$_kcf_age" -ge 0 ] && [ "$_kcf_age" -lt "$_kcf_ttl" ]; then
+    unset _kcf_cache _kcf_ttl _kcf_age
+    return 0
+  fi
+  unset _kcf_cache _kcf_ttl _kcf_age
   return 1
 }
 

@@ -10,6 +10,11 @@ KEYBOX_SCRIPT="${SPECTER_KEYBOX_SCRIPT:-$MODDIR/keybox.sh}"
 GUARD="$SPECTER_DIR/cache/keybox_watch_last_replace"
 GUARD_SECONDS="${KEYBOX_WATCH_REPLACE_GUARD:-1800}"
 
+for _kw_arg in "$@"; do
+  [ "$_kw_arg" = "--fresh" ] && export KEYBOX_CATALOG_TTL=0 GOOGLE_REVOCATION_TTL=0
+done
+unset _kw_arg
+
 log_d "KEYBOX_WATCH" "Starting keybox watch"
 
 sh "$INFO_SCRIPT" >/dev/null 2>&1 || true
@@ -27,8 +32,8 @@ if [ "$_needs_replace" != "1" ]; then
   exit 0
 fi
 
-if [ "$(cfg_get toggle_autokeybox 0)" != "1" ]; then
-  log_w "KEYBOX_WATCH" "Keybox needs replacement but Auto Keybox is off"
+if [ "$(cfg_get toggle_keybox_auto_replace 1)" != "1" ]; then
+  log_w "KEYBOX_WATCH" "Keybox needs replacement but auto-replace is disabled"
   exit 0
 fi
 

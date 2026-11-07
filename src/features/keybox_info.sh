@@ -4,6 +4,11 @@ MODDIR=${0%/*}
 . "$MODDIR/../lib/common.sh"
 . "$MODDIR/../lib/constants.sh"
 
+for _ki_arg in "$@"; do
+  [ "$_ki_arg" = "--fresh" ] && export KEYBOX_CATALOG_TTL=0 GOOGLE_REVOCATION_TTL=0
+done
+unset _ki_arg
+
 log_i "KEYBOX_INFO" "Starting keybox info check"
 
 detect_keystore_manager
@@ -96,7 +101,7 @@ if [ -f "$KEYBOX_FILE" ]; then
     if [ "$KSM" = "omk" ] && cmp -s "$OMK_MODULE/keybox.xml" "$KEYBOX_FILE"; then
       _source="OhMyKeymint"
       _text="Default keybox"
-    elif check_network; then
+    elif keybox_catalog_fresh || check_network; then
       _history_json=$(keybox_catalog 2>/dev/null || true)
       if [ -n "$_history_json" ]; then
         log_d "KEYBOX_INFO" "Catalog response length: ${#_history_json}"
@@ -164,32 +169,50 @@ if [ -f "$KEYBOX_FILE" ]; then
   fi
 fi
 
+# Escape only once per field; command substitution would fork a shell per
+# value and dominates the runtime on-device.
+_esc_source=$_source; _esc_source=${_esc_source//\\/\\\\}; _esc_source=${_esc_source//\"/\\\"}
+_esc_source_version=$_source_version; _esc_source_version=${_esc_source_version//\\/\\\\}; _esc_source_version=${_esc_source_version//\"/\\\"}
+_esc_text=$_text; _esc_text=${_esc_text//\\/\\\\}; _esc_text=${_esc_text//\"/\\\"}
+_esc_latest=$_latest_version; _esc_latest=${_esc_latest//\\/\\\\}; _esc_latest=${_esc_latest//\"/\\\"}
+_esc_serial=$_serial; _esc_serial=${_esc_serial//\\/\\\\}; _esc_serial=${_esc_serial//\"/\\\"}
+_esc_checked=$_checked_at; _esc_checked=${_esc_checked//\\/\\\\}; _esc_checked=${_esc_checked//\"/\\\"}
+_esc_rev_status=$_revocation_status; _esc_rev_status=${_esc_rev_status//\\/\\\\}; _esc_rev_status=${_esc_rev_status//\"/\\\"}
+_esc_rev_reason=$_revocation_reason; _esc_rev_reason=${_esc_rev_reason//\\/\\\\}; _esc_rev_reason=${_esc_rev_reason//\"/\\\"}
+_esc_rev_source=$_revocation_source; _esc_rev_source=${_esc_rev_source//\\/\\\\}; _esc_rev_source=${_esc_rev_source//\"/\\\"}
+_esc_rev_checked=$_revocation_checked_at; _esc_rev_checked=${_esc_rev_checked//\\/\\\\}; _esc_rev_checked=${_esc_rev_checked//\"/\\\"}
+_esc_file_path=$_file_path; _esc_file_path=${_esc_file_path//\\/\\\\}; _esc_file_path=${_esc_file_path//\"/\\\"}
+_esc_file_modified=$_file_modified; _esc_file_modified=${_esc_file_modified//\\/\\\\}; _esc_file_modified=${_esc_file_modified//\"/\\\"}
+
 _expires_json="null"
-[ -n "$_expires_at" ] && _expires_json="\"$(_escape_json "$_expires_at")\""
+[ -n "$_expires_at" ] && {
+  _esc_expires=$_expires_at; _esc_expires=${_esc_expires//\\/\\\\}; _esc_expires=${_esc_expires//\"/\\\"}
+  _expires_json="\"$_esc_expires\""
+}
 
 cat <<EOF > "$INFO_PATH"
 {
   "installed": $_installed,
-  "source": "$(_escape_json "$_source")",
-  "source_version": "$(_escape_json "$_source_version")",
-  "text": "$(_escape_json "$_text")",
+  "source": "$_esc_source",
+  "source_version": "$_esc_source_version",
+  "text": "$_esc_text",
   "up_to_date": $_up_to_date,
-  "latest_version": "$(_escape_json "$_latest_version")",
+  "latest_version": "$_esc_latest",
   "revoked": $_revoked,
   "softbanned": $_softbanned,
   "rkp": $_rkp,
   "expires_at": $_expires_json,
   "expired": $_expired,
-  "serial": "$(_escape_json "$_serial")",
+  "serial": "$_esc_serial",
   "is_private": $_is_private_val,
-  "checked_at": "$(_escape_json "$_checked_at")",
-  "revocation_status": "$(_escape_json "$_revocation_status")",
-  "revocation_reason": "$(_escape_json "$_revocation_reason")",
-  "revocation_source": "$(_escape_json "$_revocation_source")",
-  "revocation_checked_at": "$(_escape_json "$_revocation_checked_at")",
-  "file_path": "$(_escape_json "$_file_path")",
+  "checked_at": "$_esc_checked",
+  "revocation_status": "$_esc_rev_status",
+  "revocation_reason": "$_esc_rev_reason",
+  "revocation_source": "$_esc_rev_source",
+  "revocation_checked_at": "$_esc_rev_checked",
+  "file_path": "$_esc_file_path",
   "file_size": ${_file_size:-0},
-  "file_modified": "$(_escape_json "$_file_modified")"
+  "file_modified": "$_esc_file_modified"
 }
 EOF
 
@@ -206,7 +229,7 @@ if [ "$_installed" = "true" ]; then
     log_i "KEYBOX_INFO" "Keybox is installed"
   fi
 fi
-unset _installed _source _source_version _text _up_to_date _latest_version _revoked _softbanned _rkp _expires_at _expires_json _expired _serial _serial_dec _history_json _entry _provider _latest_for_source _is_private_val _checked_at _revocation_status _revocation_reason _revocation_source _revocation_checked_at _file_path _file_size _file_modified _cat_rev_status
+unset _installed _source _source_version _text _up_to_date _latest_version _revoked _softbanned _rkp _expires_at _expires_json _expired _serial _serial_dec _history_json _entry _provider _latest_for_source _is_private_val _checked_at _revocation_status _revocation_reason _revocation_source _revocation_checked_at _file_path _file_size _file_modified _cat_rev_status _esc_source _esc_source_version _esc_text _esc_latest _esc_serial _esc_checked _esc_rev_status _esc_rev_reason _esc_rev_source _esc_rev_checked _esc_file_path _esc_file_modified _esc_expires
 log_i "KEYBOX_INFO" "Keybox info check complete"
 write_webui_state
 exit 0
