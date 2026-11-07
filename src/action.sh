@@ -123,6 +123,8 @@ _force_keybox=$(cfg_get toggle_action_force_keybox 0)
   run_device_info "$MODDIR"
   sh "$MODDIR/features/keybox_info.sh" --if-needed >/dev/null 2>&1 || true
   sh "$MODDIR/features/keystore_info.sh" >/dev/null 2>&1 || true
+  sh "$MODDIR/features/modules_state.sh" >/dev/null 2>&1 || true
+  write_webui_state
   # Build the setup snapshot in a detached background process; the WebUI
   # serves the previous copy immediately and replaces it when this finishes.
   if command -v setsid >/dev/null 2>&1; then

@@ -11,6 +11,7 @@ import { isAnyModuleInstalled, isModuleInstalled } from './modules.js'
 beforeEach(() => {
   vi.mocked(exec).mockReset()
   vi.mocked(getModuleDir).mockReturnValue('/data/adb/modules/specter')
+  delete (window as { __modulesPromise?: unknown }).__modulesPromise
 })
 
 describe('isModuleInstalled', () => {
@@ -52,5 +53,37 @@ describe('isModuleInstalled', () => {
   it('returns false without a shell call for an empty id list', async () => {
     await expect(isAnyModuleInstalled([])).resolves.toBe(false)
     expect(exec).not.toHaveBeenCalled()
+  })
+})
+
+describe('module state snapshot', () => {
+  it('reads installed modules without a shell call', async () => {
+    ;(window as { __modulesPromise?: Promise<unknown> }).__modulesPromise = Promise.resolve({
+      modules: { playintegrityfix: true },
+      conflicts: [],
+    })
+
+    await expect(isModuleInstalled('playintegrityfix')).resolves.toBe(true)
+    expect(exec).not.toHaveBeenCalled()
+  })
+
+  it('treats a module missing from the snapshot as not installed', async () => {
+    ;(window as { __modulesPromise?: Promise<unknown> }).__modulesPromise = Promise.resolve({
+      modules: { hma_oss: true },
+      conflicts: [],
+    })
+
+    await expect(isModuleInstalled('playintegrityfix')).resolves.toBe(false)
+    expect(exec).not.toHaveBeenCalled()
+  })
+
+  it('falls back to the bridge when the snapshot has no module map', async () => {
+    ;(window as { __modulesPromise?: Promise<unknown> }).__modulesPromise = Promise.resolve({
+      conflicts: [],
+    })
+    vi.mocked(exec).mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+
+    await expect(isModuleInstalled('playintegrityfix')).resolves.toBe(true)
+    expect(exec).toHaveBeenCalled()
   })
 })

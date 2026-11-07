@@ -34,6 +34,21 @@ export interface KeyboxInfoJson {
   file_modified?: string;
 }
 
+export interface ConflictModule {
+  key: string;
+  friendlyName: string;
+  detected: boolean;
+  prioritySpecter: boolean;
+  type?: string;
+  features?: string;
+}
+
+export interface ModulesStateJson {
+  modules: Record<string, boolean>;
+  conflicts: ConflictModule[];
+  checked_at?: string;
+}
+
 export interface SetupInfoRow {
   label: string;
   value: string;

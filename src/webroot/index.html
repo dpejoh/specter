@@ -18,6 +18,7 @@
       .then(function(r){ return r.ok ? r.json() : null; })
       .catch(function(){ return null; });
     window.__infoPromise = window.__statePromise.then(function(s){return s && s.info ? s.info : null});
+    window.__modulesPromise = window.__statePromise.then(function(s){return s && s.modules ? s.modules : null});
     window.__keyboxInfoPromise = window.__statePromise.then(function(s){return s && s.keybox ? s.keybox : null});
     window.__monetPromise = window.__statePromise.then(function(s){return s && s.monet ? s.monet : null});
     window.__keystoreManagerPromise = window.__statePromise.then(function(s){return s && s.keystore ? s.keystore : null});

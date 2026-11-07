@@ -39,10 +39,12 @@ write_webui_state() {
   [ -d "$_ws_dir" ] || return 0
 
   _ws_info=$(cat "$_ws_dir/info.json" 2>/dev/null || true)
+  _ws_modules=$(cat "$_ws_dir/modules_state.json" 2>/dev/null || true)
   _ws_keybox=$(cat "$_ws_dir/keybox_info.json" 2>/dev/null || true)
   _ws_keystore=$(cat "$_ws_dir/keystore_manager.json" 2>/dev/null || true)
   _ws_monet=$(cat "$_ws_dir/monet.json" 2>/dev/null || true)
   [ -n "$_ws_info" ] || _ws_info=null
+  [ -n "$_ws_modules" ] || _ws_modules=null
   [ -n "$_ws_keybox" ] || _ws_keybox=null
   [ -n "$_ws_keystore" ] || _ws_keystore=null
   [ -n "$_ws_monet" ] || _ws_monet=null
@@ -56,7 +58,11 @@ write_webui_state() {
     _ws_v=''
     IFS= read -r _ws_v < "$_ws_f" || true
     if [ -n "$_ws_v" ]; then
-      _ws_cfg="${_ws_cfg}${_ws_sep}\"${_ws_k}\":\"$(_escape_json "$_ws_v")\""
+      # Avoid one command-substitution subshell per config value.
+      _ws_esc="$_ws_v"
+      _ws_esc=${_ws_esc//\\/\\\\}
+      _ws_esc=${_ws_esc//\"/\\\"}
+      _ws_cfg="${_ws_cfg}${_ws_sep}\"${_ws_k}\":\"${_ws_esc}\""
     else
       _ws_cfg="${_ws_cfg}${_ws_sep}\"${_ws_k}\":null"
     fi
@@ -65,12 +71,12 @@ write_webui_state() {
   _ws_cfg="${_ws_cfg}}"
 
   _ws_tmp="$_ws_dir/.state.json.tmp"
-  if printf '{"info":%s,"keybox":%s,"keystore":%s,"monet":%s,"config":%s,"config_ts":%s}\n' \
-      "$_ws_info" "$_ws_keybox" "$_ws_keystore" "$_ws_monet" "$_ws_cfg" "$(date +%s)" > "$_ws_tmp" 2>/dev/null; then
+  if printf '{"info":%s,"modules":%s,"keybox":%s,"keystore":%s,"monet":%s,"config":%s,"config_ts":%s}\n' \
+      "$_ws_info" "$_ws_modules" "$_ws_keybox" "$_ws_keystore" "$_ws_monet" "$_ws_cfg" "$(date +%s)" > "$_ws_tmp" 2>/dev/null; then
     mv "$_ws_tmp" "$_ws_dir/state.json" 2>/dev/null || rm -f "$_ws_tmp" 2>/dev/null
     chmod 644 "$_ws_dir/state.json" 2>/dev/null || true
   fi
-  unset _ws_root _ws_dir _ws_info _ws_keybox _ws_keystore _ws_monet _ws_cfg _ws_sep _ws_f _ws_k _ws_v _ws_tmp
+  unset _ws_root _ws_dir _ws_info _ws_modules _ws_keybox _ws_keystore _ws_monet _ws_cfg _ws_sep _ws_f _ws_k _ws_v _ws_esc _ws_tmp
 }
 
 # Pick the bundled inotifyd binary for this architecture and install it as

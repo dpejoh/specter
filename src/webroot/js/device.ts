@@ -3,7 +3,8 @@ import { runScript } from './bridge.js';
 import { appendToOutput } from './terminal.js';
 import { API_URLS } from './constants.js';
 import { getTranslation } from './i18n.js';
-import type { InfoJson, KeyboxInfoJson, KeystoreManagerJson } from './types.js';
+import { getModulesSnapshot } from './modules.js';
+import type { ConflictModule, InfoJson, KeyboxInfoJson, KeystoreManagerJson } from './types.js';
 
 const HERO_CLIP = 'hero-clip';
 const HERO_CLIP_OPEN = 'hero-clip--open';
@@ -320,15 +321,11 @@ function applySecurityPatch(data: InfoJson) {
   if (pifEl) setClipped(pifEl, data.pif_model || '—');
 }
 
-interface ConflictModule {
-  key: string;
-  friendlyName: string;
-  detected: boolean;
-  prioritySpecter: boolean;
-  features?: string;
-}
-
 export async function refreshConflictStatus(): Promise<ConflictModule[]> {
+  const snapshot = await getModulesSnapshot();
+  if (snapshot?.conflicts) return snapshot.conflicts;
+
+  // Compatibility fallback for an older snapshot or a missing state file.
   try {
     const result = await runScript('conflicts.sh', 'common');
     const raw = result.output || result.rawOutput || '[]';

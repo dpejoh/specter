@@ -149,6 +149,12 @@ while true; do
       unset _hma_cfg _hma_cfg_ok
     fi
     _cfg_interval=$(cfg_get "${_name}_interval" "$_default_interval")
+
+    # Instant auto-target is event-driven via inotifyd; the periodic run only
+    # cleans stale targets, so a 6-hour pass is enough.
+    if [ "$_name" = "auto_target" ] && [ "$(cfg_get auto_target_method instant)" != "polling" ]; then
+      _cfg_interval=21600
+    fi
     [ "$_cfg_interval" -lt 10 ] && _cfg_interval=10
     [ "$_name" = "keybox_watch" ] && [ "$_cfg_interval" -lt 60 ] && _cfg_interval=60
 
@@ -181,6 +187,8 @@ while true; do
     log_rotate "$SPECTER_DIR/log/sched_setup_info.log"
     log_i "SCHED" "Inputs changed, rebuilding setup snapshot"
     sh "$MODDIR/features/setup_info.sh" >"$SPECTER_DIR/log/sched_setup_info.log" 2>&1 || log_e "SCHED" "setup_info failed"
+    sh "$MODDIR/features/modules_state.sh" >/dev/null 2>&1 || log_e "SCHED" "modules_state failed"
+    write_webui_state
   fi
 
   sleep 57
