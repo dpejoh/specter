@@ -16,7 +16,7 @@ type MonetData = {
 
 export const PRESETS: Record<string, string> = {
   blue:   '#1157CE',
-  yellow: '#8F4E06',
+  yellow: '#be9108',
   red:    '#B3251E',
   purple: '#7438D2',
   green:  '#006C35',
@@ -34,6 +34,18 @@ let monetTs = 0;
 
 export function getCurrentPreset(): string {
   return currentPreset;
+}
+
+/** Fixed preset, or the closest fixed palette for Monet. */
+export function getCurrentMappedPreset(): string {
+  if (currentPreset !== 'monet') return currentPreset;
+  return currentMappedPreset && currentMappedPreset !== 'monet' ? currentMappedPreset : 'blue';
+}
+
+function notifyThemeApplied(isDark: boolean) {
+  document.dispatchEvent(new CustomEvent('specter-theme-applied', {
+    detail: { preset: getCurrentMappedPreset(), dark: isDark },
+  }));
 }
 
 export async function initTheme(savedMode: string) {
@@ -212,7 +224,15 @@ function applyMonetData(data: MonetData, mode: string) {
   if (monetPalette) {
     const vars = monetPalette[isDark ? 'dark' : 'light'];
     if (vars && Object.keys(vars).length) {
+      try {
+        currentMappedPreset = presetClosestTo(
+          monetSeed || vars['--md-sys-color-primary'] || '#1157CE'
+        );
+      } catch {
+        currentMappedPreset = 'blue';
+      }
       applyPalette(vars, isDark);
+      notifyThemeApplied(isDark);
       return;
     }
   }
@@ -290,6 +310,7 @@ export function applyPreset(preset: string) {
 function applyNamedPreset(name: string, isDark: boolean) {
   const vars = getPresetColors(name, isDark);
   if (!vars) return;
+  currentMappedPreset = name;
   const root = document.documentElement;
   for (const [key, val] of Object.entries(vars)) {
     root.style.setProperty(key, val);
@@ -302,6 +323,7 @@ function applyNamedPreset(name: string, isDark: boolean) {
       localStorage.setItem('specter_theme_seed', s);
     }
   } catch (e) {}
+  notifyThemeApplied(isDark);
 }
 
 function wireThemeControls() {

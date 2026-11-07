@@ -6,8 +6,6 @@
   "nav_settings": "Beállítások",
   "common_back": "Vissza",
   "home_security_patch": "Biztonsági javítás dátuma",
-  "home_status_online": "Online",
-  "home_status_offline": "Offline",
   "menu_keybox": "Keybox",
   "menu_keybox_desc": "Válasszon Specter keyboxot, vagy használjon egyéni forrást",
   "kb_filter_status_aria": "Szűrés állapot szerint",
