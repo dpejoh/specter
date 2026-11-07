@@ -9,6 +9,7 @@ bootstrap() {
   cleanup 2>/dev/null
   TEST_ROOT=$(mktemp -d /tmp/specter_test_XXXX)
   export TEST_ROOT
+  TMPDIR="$TEST_ROOT"; export TMPDIR
   MOCK_DIR="$TEST_ROOT/mock"; PROPS_DIR="$MOCK_DIR/props"; LOGS_DIR="$MOCK_DIR/logs"
   BIN_DIR="$TEST_ROOT/bin"; CONFIG_DIR="$TEST_ROOT/config"
   SPECTER_DIR="$TEST_ROOT/specter"

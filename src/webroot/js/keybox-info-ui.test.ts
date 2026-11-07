@@ -39,6 +39,7 @@ import { openKeyboxInfoPage } from './keybox-info-ui.js';
 
 const activeKeybox: KeyboxInfoJson = {
   installed: true,
+  cert_validity: 'valid',
   source: 'TAKR',
   source_version: '36',
   text: '36',
@@ -81,6 +82,20 @@ describe('keybox details page', () => {
     state.close.mockClear();
     state.watch.mockReset();
     document.body.innerHTML = '';
+  });
+
+  it('does not mark certificates with unknown validity as active', async () => {
+    state.keybox = { ...activeKeybox, cert_validity: 'unknown' };
+    state.watch.mockResolvedValue(state.keybox);
+    await openKeyboxInfoPage();
+    expect(row('Status')?.value).toBe('Certificate validity unknown');
+  });
+
+  it('reports certificates that are not yet valid', async () => {
+    state.keybox = { ...activeKeybox, expired: true, cert_validity: 'not_yet_valid' };
+    state.watch.mockResolvedValue(state.keybox);
+    await openKeyboxInfoPage();
+    expect(row('Status')?.value).toBe('Not yet valid');
   });
 
   it('groups identity, health, updates, certificate, and installation', async () => {

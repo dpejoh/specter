@@ -23,6 +23,7 @@ if [ "${1:-}" = "--if-needed" ] &&
    grep -q '"installed": true' "$INFO_PATH" &&
    ! grep -q '"revoked": true' "$INFO_PATH" &&
    ! grep -q '"expired": true' "$INFO_PATH" &&
+   [ "$(keybox_cert_validity "$KEYBOX_FILE")" = "valid" ] &&
    ! keybox_rkp_expired "$(tr -d '\n' < "$INFO_PATH" 2>/dev/null || true)"; then
   log_i "KEYBOX_INFO" "Keybox info is current, skipping refresh"
   write_webui_state
@@ -41,6 +42,7 @@ _softbanned=false
 _rkp=false
 _expires_at=""
 _expired=false
+_cert_validity="unknown"
 _serial=""
 _is_private_val="false"
 _checked_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || echo "")
@@ -72,6 +74,8 @@ _apply_google_revocation() {
 
 if [ -f "$KEYBOX_FILE" ]; then
   _installed=true
+  _cert_validity=$(keybox_cert_validity "$KEYBOX_FILE")
+  case "$_cert_validity" in expired|not_yet_valid) _expired=true ;; esac
   _file_path="$KEYBOX_FILE"
   _file_size=$(wc -c < "$KEYBOX_FILE" 2>/dev/null | tr -d ' ' || echo 0)
   _file_modified=$(date -u -r "$KEYBOX_FILE" +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || echo "")
@@ -204,6 +208,7 @@ cat <<EOF > "$INFO_PATH"
   "rkp": $_rkp,
   "expires_at": $_expires_json,
   "expired": $_expired,
+  "cert_validity": "$_cert_validity",
   "serial": "$_esc_serial",
   "is_private": $_is_private_val,
   "checked_at": "$_esc_checked",

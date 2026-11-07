@@ -12,11 +12,18 @@ download() {
     fi
 
     for _dl_try in 1 2 3; do
-        if busybox wget -T 10 --no-check-certificate -qO "$_dl_output" -U "$_dl_ua" "$_dl_url" 2>/dev/null; then
-            [ -s "$_dl_output" ] && { _dl_code=0; break; }
-        fi
+        # BusyBox builds may silently skip TLS certificate verification.
+        # Use curl for HTTPS, and fail closed if it is unavailable.
+        case "$_dl_url" in
+            https://*) ;;
+            *) if busybox wget -T 10 -qO "$_dl_output" -U "$_dl_ua" "$_dl_url" 2>/dev/null; then
+                [ -s "$_dl_output" ] && { _dl_code=0; break; }
+            fi ;;
+        esac
         if command -v curl >/dev/null 2>&1 && curl --version >/dev/null 2>&1; then
-            curl --connect-timeout 10 -Ls -o "$_dl_output" -A "$_dl_ua" "$_dl_url" 2>/dev/null && [ -s "$_dl_output" ] && { _dl_code=0; break; }
+            _dl_proto=""
+            case "$_dl_url" in https://*) _dl_proto="=https" ;; esac
+            curl --connect-timeout 10 -fLs ${_dl_proto:+--proto-redir} ${_dl_proto:+"$_dl_proto"} -o "$_dl_output" -A "$_dl_ua" "$_dl_url" 2>/dev/null && [ -s "$_dl_output" ] && { _dl_code=0; break; }
         fi
         sleep 1
     done
@@ -45,7 +52,7 @@ download() {
 
     PATH="$_dl_oldpath"
     _dl_rc=$_dl_code
-    unset _dl_url _dl_output _dl_sha256 _dl_oldpath _dl_tmp _dl_code _dl_try _dl_sum _dl_ua
+    unset _dl_url _dl_output _dl_sha256 _dl_oldpath _dl_tmp _dl_code _dl_try _dl_sum _dl_ua _dl_proto
     return $_dl_rc
 }
 

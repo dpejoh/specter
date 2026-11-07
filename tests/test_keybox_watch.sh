@@ -27,6 +27,19 @@ export SPECTER_KEYBOX_INFO="$TEST_ROOT/keybox_info.json"
 export SPECTER_KEYBOX_INFO_SCRIPT="$TEST_ROOT/fake_info.sh"
 export SPECTER_KEYBOX_SCRIPT="$TEST_ROOT/fake_keybox.sh"
 
+# A failed refresh must not act on an old revoked snapshot.
+printf '%s' '{"installed":true,"revoked":true}' > "$SPECTER_KEYBOX_INFO"
+printf '#!/bin/sh\nexit 1\n' > "$TEST_ROOT/fake_info_fail.sh"
+export SPECTER_KEYBOX_INFO_SCRIPT="$TEST_ROOT/fake_info_fail.sh"
+_out=$(run_feature keybox_watch.sh 2>&1)
+assert_contains "refresh failure: warns" "$_out" "refresh failed"
+assert_file_not_exists "refresh failure: no replacement" "$SPECTER_DIR/replaced"
+rm -f "$SPECTER_KEYBOX_INFO"
+printf '#!/bin/sh\nexit 0\n' > "$TEST_ROOT/fake_info_missing.sh"
+export SPECTER_KEYBOX_INFO_SCRIPT="$TEST_ROOT/fake_info_missing.sh"
+_out=$(run_feature keybox_watch.sh 2>&1)
+assert_contains "missing snapshot: warns" "$_out" "info unavailable"
+
 # Healthy keybox: no replacement.
 export SPECTER_KEYBOX_INFO_SCRIPT="$TEST_ROOT/fake_info_healthy.sh"
 _out=$(run_feature keybox_watch.sh 2>&1)

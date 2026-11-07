@@ -110,9 +110,10 @@ assert_eq "crl cache: one download" "1" "$(grep -c x "$_dl_count")"
 # --- keybox.sh --if-needed skips a healthy installed keybox ---
 bootstrap
 source_libs
+ln -sf /usr/bin/od "$BIN_DIR/od"
 mk_module tricky_store "Tricky Store"
 detect_keystore_manager
-printf '<keybox/>\n' > "$KSM_KEYBOX"
+openssl req -x509 -newkey rsa:2048 -nodes -keyout "$TEST_ROOT/key.pem" -out "$KSM_KEYBOX" -days 2 -subj '/CN=test' >/dev/null 2>&1
 _ki_info="$TEST_ROOT/keybox_info.json"
 printf '{\n  "installed": true,\n  "source": "TAKR",\n  "source_version": "32",\n  "revoked": false,\n  "softbanned": false\n}\n' > "$_ki_info"
 sleep 1
@@ -127,9 +128,10 @@ unset SPECTER_KEYBOX_INFO
 # --- expired RKP info must not be treated as healthy ---
 bootstrap
 source_libs
+ln -sf /usr/bin/od "$BIN_DIR/od"
 mk_module tricky_store "Tricky Store"
 detect_keystore_manager
-printf '<keybox/>\n' > "$KSM_KEYBOX"
+openssl req -x509 -newkey rsa:2048 -nodes -keyout "$TEST_ROOT/key.pem" -out "$KSM_KEYBOX" -days 2 -subj '/CN=test' >/dev/null 2>&1
 _ki_expired="$TEST_ROOT/keybox_info_expired.json"
 printf '{\n  "installed": true,\n  "source": "TAKR",\n  "source_version": "36",\n  "rkp": true,\n  "expires_at": "2000-01-01T00:00:00Z",\n  "expired": true\n}\n' > "$_ki_expired"
 sleep 1

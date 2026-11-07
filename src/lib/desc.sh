@@ -30,6 +30,8 @@ refresh_module_description() {
     _kb_rev=$(echo "$_kb_info" | grep -o '"revoked": *true') || true
     _kb_soft=$(echo "$_kb_info" | grep -o '"softbanned": *true') || true
     _kb_exp=$(echo "$_kb_info" | grep -o '"expired": *true') || true
+    _kb_validity=unknown
+    [ -f "$KSM_KEYBOX" ] && _kb_validity=$(keybox_cert_validity "$KSM_KEYBOX")
 
     [ -z "$_kb_src" ] && _kb_src=$(cfg_get 'keybox_provider' '')
     [ -z "$_kb_src" ] && [ "$(cfg_get 'keybox_private' 'false')" = "true" ] && _kb_src="Private"
@@ -50,10 +52,14 @@ refresh_module_description() {
       fi
       if [ -n "$_kb_rev" ]; then
         _new_desc="🔑 $_title · ❌ | $_apps apps | 🛡️ $_patch"
-      elif [ -n "$_kb_exp" ]; then
+      elif [ "$_kb_validity" = "not_yet_valid" ]; then
+        _new_desc="🔑 $_title · ❌ not yet valid | $_apps apps | 🛡️ $_patch"
+      elif [ -n "$_kb_exp" ] || [ "$_kb_validity" = "expired" ]; then
         _new_desc="🔑 $_title · ❌ expired | $_apps apps | 🛡️ $_patch"
       elif [ -n "$_kb_soft" ]; then
         _new_desc="🔑 $_title · ⚠️ | $_apps apps | 🛡️ $_patch"
+      elif [ "$_kb_validity" != "valid" ]; then
+        _new_desc="🔑 $_title · ⚠️ unknown | $_apps apps | 🛡️ $_patch"
       else
         _new_desc="🔑 $_title · ✅ | $_apps apps | 🛡️ $_patch"
       fi

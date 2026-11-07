@@ -331,11 +331,17 @@ export function applyKeyboxStatus(data: KeyboxInfoJson) {
   if (data.revoked) {
     statusEl.textContent = getTranslation('custom_kb_revoked') || 'Revoked';
     statusEl.className = 'kb-hero-status-text kb-hero-status-text--revoked';
+  } else if (data.cert_validity === 'not_yet_valid') {
+    statusEl.textContent = getTranslation('keybox_info_not_yet_valid') || 'Not yet valid';
+    statusEl.className = 'kb-hero-status-text kb-hero-status-text--revoked';
   } else if (data.expired) {
     statusEl.textContent = getTranslation('custom_kb_expired') || 'Expired';
     statusEl.className = 'kb-hero-status-text kb-hero-status-text--revoked';
   } else if (data.softbanned) {
     statusEl.textContent = getTranslation('custom_kb_softbanned') || 'Softbanned';
+    statusEl.className = 'kb-hero-status-text kb-hero-status-text--softbanned';
+  } else if (data.cert_validity !== 'valid') {
+    statusEl.textContent = getTranslation('keybox_info_validity_unknown') || 'Certificate validity unknown';
     statusEl.className = 'kb-hero-status-text kb-hero-status-text--softbanned';
   } else {
     statusEl.textContent = getTranslation('custom_kb_active') || 'Active';

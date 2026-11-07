@@ -24,6 +24,7 @@ export interface KeyboxInfoJson {
   rkp?: boolean;
   expires_at?: string | null;
   expired?: boolean;
+  cert_validity?: 'valid' | 'expired' | 'not_yet_valid' | 'unknown';
   checked_at?: string;
   revocation_status?: string;
   revocation_reason?: string;

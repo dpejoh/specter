@@ -84,6 +84,7 @@ if [ "$_if_needed" = "1" ]; then
      ! grep -q '"revoked": true' "$_ki_info" &&
      ! grep -q '"softbanned": true' "$_ki_info" &&
      ! grep -q '"expired": true' "$_ki_info" &&
+     [ "$(keybox_cert_validity "$KSM_KEYBOX")" = "valid" ] &&
      ! keybox_rkp_expired "$_ki_json"; then
     log_i "KEYBOX" "Current keybox is healthy, skipping refresh"
     exit 0
@@ -128,6 +129,12 @@ _try_keybox_url() {
   [ "$_has_id" -eq 0 ] && { log_e "KEYBOX" "No identifier field found (serial/DeviceID)"; return 1; }
   [ -n "$_has_ecdsa" ] || log_w "KEYBOX" "Missing ECDSA key block"
   [ -n "$_has_rsa" ] || log_w "KEYBOX" "Missing RSA key block"
+
+  _cert_validity=$(keybox_cert_validity "$DECODE_FILE")
+  if [ "$_cert_validity" != "valid" ]; then
+    log_w "KEYBOX" "Keybox certificate validity: $_cert_validity; skipping"
+    return 1
+  fi
 
   _serial=$(decode_keybox_serial "$DECODE_FILE" 2>/dev/null || echo "")
   if [ -n "$_serial" ]; then

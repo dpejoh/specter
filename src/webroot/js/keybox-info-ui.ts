@@ -23,6 +23,7 @@ function statusOf(data: KeyboxInfoJson): { label: string; tone: InfoTone } {
       tone: 'error',
     };
   }
+  if (data.cert_validity === 'not_yet_valid') return { label: t('keybox_info_not_yet_valid', 'Not yet valid'), tone: 'error' };
   if (data.expired) return { label: t('custom_kb_expired', 'Expired'), tone: 'error' };
   if (data.softbanned) {
     return {
@@ -32,6 +33,7 @@ function statusOf(data: KeyboxInfoJson): { label: string; tone: InfoTone } {
       tone: 'warning',
     };
   }
+  if (data.cert_validity !== 'valid') return { label: t('keybox_info_validity_unknown', 'Certificate validity unknown'), tone: 'warning' };
   return { label: t('custom_kb_active', 'Active'), tone: 'default' };
 }
 

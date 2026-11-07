@@ -17,7 +17,15 @@ unset _kw_arg
 
 log_d "KEYBOX_WATCH" "Starting keybox watch"
 
-sh "$INFO_SCRIPT" >/dev/null 2>&1 || true
+if ! sh "$INFO_SCRIPT" >/dev/null 2>&1; then
+  log_w "KEYBOX_WATCH" "Keybox info refresh failed; skipping replacement"
+  exit 1
+fi
+
+if [ ! -s "$INFO_PATH" ]; then
+  log_w "KEYBOX_WATCH" "Keybox info unavailable; skipping replacement"
+  exit 1
+fi
 
 _info=""
 [ -f "$INFO_PATH" ] && _info=$(tr -d '\n\r' < "$INFO_PATH" 2>/dev/null || true)
@@ -28,7 +36,11 @@ if printf '%s' "$_info" | grep -qE '"revoked"[[:space:]]*:[[:space:]]*true|"expi
 fi
 
 if [ "$_needs_replace" != "1" ]; then
-  log_d "KEYBOX_WATCH" "Keybox is healthy"
+  if printf '%s' "$_info" | grep -qE '"cert_validity"[[:space:]]*:[[:space:]]*"valid"'; then
+    log_d "KEYBOX_WATCH" "Keybox is healthy"
+  else
+    log_w "KEYBOX_WATCH" "Keybox certificate validity is unknown"
+  fi
   exit 0
 fi
 

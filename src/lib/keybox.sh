@@ -1,6 +1,69 @@
 # shellcheck shell=sh
 # Alphabet variables are defined in decode.sh (sourced via common.sh)
 
+# Report validity of every PEM certificate in a keybox. Android does not
+# consistently provide openssl, so read the X.509 DER validity fields with
+# standard shell tools. Unknown or malformed certificates fail closed.
+keybox_cert_validity() {
+  (
+    _kv_dir=$(mktemp -d "${TMPDIR:-/data/local/tmp}/specter-cert.XXXXXX") || { echo unknown; exit; }
+    trap 'rm -rf "$_kv_dir"; rm -f "$_kv_dir.der"' EXIT
+    awk -v dir="$_kv_dir" '
+      /-----BEGIN CERTIFICATE-----/ { if (inside) { bad=1; exit } inside=1; n++; next }
+      /-----END CERTIFICATE-----/ { if (!inside) { bad=1; exit } close(dir "/" n); inside=0; next }
+      inside { gsub(/[[:space:]]/, ""); print > (dir "/" n) }
+      END { if (bad || inside || !n) exit 1 }
+    ' "$1" || { echo unknown; exit; }
+    _kv_now=${2:-$(date -u +%Y%m%d%H%M%S 2>/dev/null)}
+    case "$_kv_now" in *[!0-9]*|"") echo unknown; exit ;; esac
+    _kv_result=valid
+    for _kv_file in "$_kv_dir"/*; do
+      base64 -d < "$_kv_file" > "$_kv_dir.der" 2>/dev/null || { _kv_result=unknown; break; }
+      _kv_status=$(od -An -v -tx1 "$_kv_dir.der" | tr -d ' \n' | awk -v now="$_kv_now" '
+        function byte(p) { return index("0123456789abcdef", substr(hex,p,1))-1 }
+        function number(p) { return byte(p)*16+byte(p+1) }
+        function tlv(p, limit,  len,n,i) {
+          if (p+3>limit || byte(p)<0 || byte(p+1)<0) return 0
+          tag=substr(hex,p,2); len=number(p+2); p+=4
+          if (len>=128) {
+            n=len-128; if (n<1 || n>4 || p+n*2-1>limit) return 0
+            len=0; for (i=0;i<n;i++) len=len*256+number(p+i*2); p+=n*2
+          }
+          start=p; end=p+len*2-1; nextpos=end+1
+          return end<=limit
+        }
+        function xtime(p,e,  s,i,c,y) {
+          s=""; for (i=p;i<=e;i+=2) { c=number(i); if(c<0 || c>127) return ""; s=s sprintf("%c",c) }
+          if (tag=="17" && s ~ /^[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]Z$/) {
+            y=substr(s,1,2)+0; return (y>=50 ? "19" : "20") substr(s,1,12)
+          }
+          if (tag=="18" && s ~ /^[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]Z$/) return substr(s,1,14)
+          return ""
+        }
+        { hex=tolower($0); limit=length(hex)
+          if (!tlv(1,limit) || tag!="30" || nextpos!=limit+1) exit 1
+          if (!tlv(start,end) || tag!="30") exit 1
+          tbsend=end; p=start
+          if (!tlv(p,tbsend)) exit 1
+          if (tag=="a0") { p=nextpos; if (!tlv(p,tbsend)) exit 1 }
+          if (tag!="02") exit 1
+          p=nextpos; if (!tlv(p,tbsend) || tag!="30") exit 1
+          p=nextpos; if (!tlv(p,tbsend) || tag!="30") exit 1
+          p=nextpos; if (!tlv(p,tbsend) || tag!="30") exit 1
+          vend=end; p=start
+          if (!tlv(p,vend)) exit 1; before=xtime(start,end); p=nextpos
+          if (!tlv(p,vend)) exit 1; after=xtime(start,end)
+          if (before=="" || after=="" || before>after) exit 1
+          if (now<before) print "not_yet_valid"; else if (now>after) print "expired"; else print "valid"
+        }
+      ') || _kv_status=unknown
+      case "$_kv_status" in valid) ;; expired|not_yet_valid) _kv_result=$_kv_status; break ;; *) _kv_result=unknown; break ;; esac
+    done
+    rm -f "$_kv_dir.der"
+    echo "$_kv_result"
+  )
+}
+
 decode_keybox_blob() {
   _dkb_in="$1" _dkb_out="$2"
   _dkb_tmp="/data/local/tmp/_dkb_$$.tmp"
