@@ -7,6 +7,7 @@
  */
 
 import { LitElement, css, html, nothing } from 'lit';
+import { defineUiComponent } from './define.js';
 
 export type SpSettingsRowVariant =
   | 'navigation'
@@ -418,9 +419,13 @@ export class SpSettingsRow extends LitElement {
   }
 
   #syncHostState(): void {
-    this.toggleAttribute('data-has-icon', this.hasIcon);
-    this.toggleAttribute('data-has-leading', this.hasLeading);
-    this.toggleAttribute('data-has-supporting', this.hasSupporting || this.supportingText.length > 0);
+    this.#syncHostFlag('data-has-icon', this.hasIcon);
+    this.#syncHostFlag('data-has-leading', this.hasLeading);
+    this.#syncHostFlag('data-has-supporting', this.hasSupporting || this.supportingText.length > 0);
+  }
+
+  #syncHostFlag(name: string, value: boolean): void {
+    if (this.hasAttribute(name) !== value) this.toggleAttribute(name, value);
   }
 
   #rowElement(): HTMLElement | null {
@@ -564,7 +569,8 @@ export class SpSettingsRow extends LitElement {
 
   #handleIconSlotChange(event: Event): void {
     const slot = event.target as HTMLSlotElement;
-    this.hasIcon = slot.assignedElements({ flatten: true }).length > 0;
+    const hasIcon = slot.assignedElements({ flatten: true }).length > 0;
+    if (this.hasIcon !== hasIcon) this.hasIcon = hasIcon;
   }
 
   #handleLeadingSlotChange(): void {
@@ -580,12 +586,14 @@ export class SpSettingsRow extends LitElement {
 
   #handleHeadlineSlotChange(event: Event): void {
     const slot = event.target as HTMLSlotElement;
-    this.hasHeadline = slot.assignedElements({ flatten: true }).length > 0;
+    const hasHeadline = slot.assignedElements({ flatten: true }).length > 0;
+    if (this.hasHeadline !== hasHeadline) this.hasHeadline = hasHeadline;
   }
 
   #handleSupportingSlotChange(event: Event): void {
     const slot = event.target as HTMLSlotElement;
-    this.hasSupporting = slot.assignedElements({ flatten: true }).length > 0;
+    const hasSupporting = slot.assignedElements({ flatten: true }).length > 0;
+    if (this.hasSupporting !== hasSupporting) this.hasSupporting = hasSupporting;
   }
 
   #handleTrailingSlotChange(): void {
@@ -620,13 +628,14 @@ export class SpSettingsRow extends LitElement {
     if (this.#trailingControl) {
       this.#trailingControl.addEventListener('change', this.#handleTrailingChange);
       const state = this.#getControlState(this.#trailingControl);
-      if (typeof state === 'boolean') this.selected = state;
+      if (typeof state === 'boolean' && this.selected !== state) this.selected = state;
     }
   }
 
   #handleTrailingChange = (): void => {
     if (!this.#trailingControl || this.#syncingTrailing) return;
-    this.selected = this.#getControlState(this.#trailingControl) ?? false;
+    const selected = this.#getControlState(this.#trailingControl) ?? false;
+    if (this.selected !== selected) this.selected = selected;
     this.#emitChange();
   };
 
@@ -775,9 +784,7 @@ export class SpSettingsRow extends LitElement {
   }
 }
 
-if (!customElements.get('sp-settings-row')) {
-  customElements.define('sp-settings-row', SpSettingsRow);
-}
+defineUiComponent('sp-settings-row', SpSettingsRow);
 
 declare global {
   interface HTMLElementTagNameMap {

@@ -7,6 +7,7 @@
  */
 
 import { LitElement, css, html } from 'lit';
+import { defineUiComponent } from './define.js';
 
 type RowPosition = 'only' | 'first' | 'middle' | 'last';
 
@@ -107,10 +108,12 @@ export class SpSettingsSection extends LitElement {
   override connectedCallback(): void {
     super.connectedCallback();
     this.#observer = new MutationObserver(() => this.#scheduleUpdate());
+    // Row visibility lives on direct children, so attributes need subtree
+    // traversal; the narrow filter keeps the observed mutation set small.
     this.#observer.observe(this, {
       childList: true,
-      subtree: true,
       attributes: true,
+      subtree: true,
       attributeFilter: ['hidden', 'aria-hidden'],
     });
 
@@ -226,9 +229,7 @@ export class SpSettingsSection extends LitElement {
   }
 }
 
-if (!customElements.get('sp-settings-section')) {
-  customElements.define('sp-settings-section', SpSettingsSection);
-}
+defineUiComponent('sp-settings-section', SpSettingsSection);
 
 declare global {
   interface HTMLElementTagNameMap {

@@ -6,6 +6,7 @@
  */
 
 import { LitElement, css, html } from 'lit';
+import { defineUiComponent } from './define.js';
 
 export type SpTooltipPosition = 'above' | 'below' | 'before' | 'after';
 
@@ -372,9 +373,7 @@ export class SpTooltip extends LitElement {
   }
 }
 
-if (!customElements.get('sp-tooltip')) {
-  customElements.define('sp-tooltip', SpTooltip);
-}
+defineUiComponent('sp-tooltip', SpTooltip);
 
 declare global {
   interface HTMLElementTagNameMap {

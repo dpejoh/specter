@@ -6,6 +6,7 @@
  */
 
 import { LitElement, css, html } from 'lit';
+import { defineUiComponent } from './define.js';
 
 export type SpSkeletonVariant = 'text' | 'rectangular' | 'rounded' | 'circular';
 export type SpSkeletonAnimation = 'pulse' | 'wave' | 'none';
@@ -209,9 +210,7 @@ export class SpSkeleton extends LitElement {
   }
 }
 
-if (!customElements.get('sp-skeleton')) {
-  customElements.define('sp-skeleton', SpSkeleton);
-}
+defineUiComponent('sp-skeleton', SpSkeleton);
 
 declare global {
   interface HTMLElementTagNameMap {

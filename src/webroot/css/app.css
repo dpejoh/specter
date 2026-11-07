@@ -192,6 +192,12 @@ code, pre {
   display: none;
 }
 
+/* First-visit skeleton: keep the destination page light and visibly loading
+   until its components and wiring are ready. */
+#pages > section.page--loading > :not(sp-page-skeleton) {
+  display: none;
+}
+
 .hero-card__body {
   display: flex;
   align-items: center;
@@ -439,7 +445,8 @@ sp-settings-row {
 sp-settings-section:not(:defined),
 sp-settings-row:not(:defined),
 sp-tooltip:not(:defined),
-sp-skeleton:not(:defined) {
+sp-skeleton:not(:defined),
+sp-page-skeleton:not(:defined) {
   display: none;
 }
 
