@@ -17,16 +17,20 @@ SPECTER_DATA="${SPECTER_DATA:-/data/adb/specter}"
 echo "=== Deploying: $ZIP"
 echo "Target: $MODULE_DIR"
 
-# Stop the old scheduler before the directory is replaced. It lives in the data
-# dir, not the module dir, and would otherwise keep running old code.
-_old_sched_pid=""
-[ -f "$SPECTER_DATA/scheduler.pid" ] && _old_sched_pid=$(cat "$SPECTER_DATA/scheduler.pid" 2>/dev/null || true)
-if [ -n "$_old_sched_pid" ]; then
-  kill "$_old_sched_pid" 2>/dev/null || true
-  sleep 1
-  rm -f "$SPECTER_DATA/scheduler.pid"
-fi
-unset _old_sched_pid
+# Stop every scheduler copy and watcher, not just the pid-file one: repeated
+# hot installs can leave older schedulers running against the old files.
+for _sched_pid in $(pgrep -f "$MODULE_DIR/lib/scheduler.sh" 2>/dev/null || true); do
+  for _child_pid in $(pgrep -P "$_sched_pid" 2>/dev/null || true); do
+    kill -9 "$_child_pid" 2>/dev/null || true
+  done
+  kill -9 "$_sched_pid" 2>/dev/null || true
+done
+for _watch_pid in $(pgrep -f "$MODULE_DIR/deps/inotifyd" 2>/dev/null || true); do
+  kill -9 "$_watch_pid" 2>/dev/null || true
+done
+rm -f "$SPECTER_DATA/scheduler.pid" "$SPECTER_DATA/.inotify_handler.sh"
+sleep 1
+unset _sched_pid _child_pid _watch_pid
 
 # Backup config if it exists
 if [ -f "$MODULE_DIR/config/specter.conf" ]; then
@@ -80,6 +84,11 @@ fi
 chmod -R 755 "$MODULE_DIR"
 chmod -R 644 "$MODULE_DIR/webroot"/*.html "$MODULE_DIR/webroot/assets"/*.css "$MODULE_DIR/webroot/assets"/*.js 2>/dev/null || true
 chmod 644 "$MODULE_DIR/webroot/json/"*.json 2>/dev/null || true
+
+# Hot installs skip customize.sh, so normalize the arch-specific watcher binary.
+if [ -f "$MODULE_DIR/lib/common.sh" ]; then
+  ( MODDIR="$MODULE_DIR"; . "$MODULE_DIR/lib/common.sh"; install_inotifyd "$MODULE_DIR" ) >/dev/null 2>&1 || true
+fi
 
 # Start the scheduler with the new task intervals/state code. Respect a
 # disabled scheduler so a hot install cannot silently re-enable it.

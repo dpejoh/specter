@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import logo from './specter-logo.svg?raw'
 import { BRAND_PALETTE, initBrand } from './brand.js'
 import { PRESETS } from './theme.js'
 
@@ -25,9 +26,24 @@ describe('theme-aware brand', () => {
     expect(Object.keys(BRAND_PALETTE).sort()).toEqual(Object.keys(PRESETS).sort())
   })
 
-  it('inlines one SVG and applies the preset palette', () => {
+  it('inlines one adaptive SVG', () => {
     expect(host.querySelectorAll('svg')).toHaveLength(1)
+    expect(host.dataset.ready).toBeUndefined()
+  })
 
+  it('ships the adaptive brand roles', () => {
+    const doc = new DOMParser().parseFromString(logo, 'image/svg+xml')
+    expect(doc.querySelector('.brand-halo')).not.toBeNull()
+    expect(doc.querySelector('.brand-accent')).not.toBeNull()
+    expect(doc.querySelectorAll('.brand-ink').length).toBeGreaterThan(0)
+  })
+
+  it('is idempotent', () => {
+    initBrand()
+    expect(host.querySelectorAll('svg')).toHaveLength(1)
+  })
+
+  it('applies the preset palette', () => {
     for (const [preset, swatch] of Object.entries(BRAND_PALETTE)) {
       applyTheme(preset)
       expect(brandVars(host)).toEqual(swatch)

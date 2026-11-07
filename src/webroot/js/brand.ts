@@ -22,20 +22,32 @@ export const BRAND_PALETTE: Record<string, Swatch> & { blue: Swatch } = {
   grey:   { accent: '#808080', tint: '#e3e2e2', hi: '#aaaaaa', mid: '#464646', low: '#636363', deep: '#151515' },
 };
 
+let host: HTMLElement | null = null;
+let listening = false;
+
+function applyPreset(event: Event): void {
+  if (!host) return;
+  const { preset } = (event as CustomEvent<{ preset: string }>).detail;
+  const swatch = (Object.hasOwn(BRAND_PALETTE, preset) ? BRAND_PALETTE[preset] : undefined) ?? BRAND_PALETTE.blue;
+  for (const [name, value] of Object.entries(swatch)) {
+    host.style.setProperty(`--brand-${name}`, value);
+  }
+  host.dataset.ready = '1';
+}
+
 /**
- * Inlines the logo once. Light/dark is resolved in CSS (app.css), so only a
- * preset change needs a repaint.
+ * Inlines the logo once and keeps its palette in sync with the active preset.
+ * Light/dark is resolved in CSS (app.css), so a mode change needs no JS.
  */
 export function initBrand(): void {
-  const host = document.getElementById('app-brand');
-  if (!host) return;
-  host.innerHTML = logo;
-  document.addEventListener('specter-theme-applied', (event) => {
-    const { preset } = (event as CustomEvent<{ preset: string }>).detail;
-    const swatch = (Object.hasOwn(BRAND_PALETTE, preset) ? BRAND_PALETTE[preset] : undefined) ?? BRAND_PALETTE.blue;
-    for (const [name, value] of Object.entries(swatch)) {
-      host.style.setProperty(`--brand-${name}`, value);
-    }
-    host.dataset.ready = '1';
-  });
+  const el = document.getElementById('app-brand');
+  if (!el) return;
+  if (el !== host) {
+    host = el;
+    el.innerHTML = logo;
+  }
+  if (!listening) {
+    document.addEventListener('specter-theme-applied', applyPreset);
+    listening = true;
+  }
 }
