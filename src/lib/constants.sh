@@ -91,7 +91,7 @@ toggle_action_force_keybox:0
 toggle_action_security_patch_device:1 toggle_action_security_patch_bulletin:1
 toggle_action_security_patch_synthetic:1
 toggle_action_gms_force_stop:1 toggle_action_gms_clear_data:0
-toggle_hma_target_user_apps:1 toggle_hma_live_reload:1 toggle_auto_hma:1
+toggle_auto_hma:1
 toggle_auto_target:1 toggle_keybox_info:1 toggle_autopif:0 toggle_autokeybox:0
 "
 

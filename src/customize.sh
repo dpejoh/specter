@@ -104,9 +104,6 @@ unset _arch _src _f
 # Copy shipped config files to data dir
 mkdir -p "$SPECTER_DIR/config"
 cp "$MODPATH/config/conflicts.txt" "$SPECTER_DIR/config/conflicts.txt" 2>/dev/null || true
-# Hide list is user-editable; never overwrite an existing copy.
-[ -f "$SPECTER_DIR/config/hma-hide-list.txt" ] || \
-  cp "$MODPATH/config/hma-hide-list.txt" "$SPECTER_DIR/config/hma-hide-list.txt" 2>/dev/null || true
 
 # Hot install — ksu-only, update-already-present: move staging into the
 # live dir and re-apply without a reboot. no-op on apatch/magisk/first install.

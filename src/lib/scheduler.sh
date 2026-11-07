@@ -34,8 +34,10 @@ log_i "SCHED" "Started (PID $$)"
 # valid working directory.
 cd / 2>/dev/null || true
 
-# Launch inotifyd for app install detection if available (skip if method=polling)
-if [ "$(cfg_get toggle_auto_target 1)" = "1" ] && [ "$(cfg_get auto_target_method instant)" != "polling" ]; then
+# Launch inotifyd for app install detection if available. The same watcher
+# serves instant auto-target and auto-HMA; polling auto-target disables only
+# its own handler path.
+if { [ "$(cfg_get toggle_auto_target 1)" = "1" ] && [ "$(cfg_get auto_target_method instant)" != "polling" ]; } || [ "$(cfg_get toggle_auto_hma 1)" = "1" ]; then
   _inotify_bin="$MODDIR/deps/inotifyd"
 
   if [ -x "$_inotify_bin" ]; then
@@ -43,9 +45,15 @@ if [ "$(cfg_get toggle_auto_target 1)" = "1" ] && [ "$(cfg_get auto_target_metho
 #!/system/bin/sh
 MODDIR='${MODDIR}'
 SPECTER_DIR='${SPECTER_DIR}'
-_cg_val="\$(su -c "cat \${SPECTER_DIR}/config/val/toggle_auto_target.val" 2>/dev/null)"
-[ "\${_cg_val:-1}" = "1" ] || exit 0
-su -c "sh \${MODDIR}/features/auto_target.sh" 2>/dev/null || true
+_at_val="\$(su -c "cat \${SPECTER_DIR}/config/val/toggle_auto_target.val" 2>/dev/null)"
+_at_method="\$(su -c "cat \${SPECTER_DIR}/config/val/auto_target_method.val" 2>/dev/null)"
+if [ "\${_at_val:-1}" = "1" ] && [ "\${_at_method:-instant}" != "polling" ]; then
+  su -c "sh \${MODDIR}/features/auto_target.sh" 2>/dev/null || true
+fi
+_hma_val="\$(su -c "cat \${SPECTER_DIR}/config/val/toggle_auto_hma.val" 2>/dev/null)"
+if [ "\${_hma_val:-1}" = "1" ]; then
+  su -c "sh \${MODDIR}/features/hma.sh --watch >> '\${SPECTER_DIR}/log/sched_hma.log' 2>&1" 2>/dev/null || true
+fi
 . "\${MODDIR}/lib/common.sh" 2>/dev/null
 . "\${MODDIR}/lib/desc.sh" 2>/dev/null
 refresh_module_description 2>/dev/null || true
@@ -132,6 +140,14 @@ while true; do
     [ "$(cfg_get "$_toggle" "$_toggle_default")" = "0" ] && continue
 
     _last_run=$(cat "$TASKS_DIR/${_name}_last" 2>/dev/null || echo "0")
+    if [ "$_name" = "hma" ]; then
+      _hma_cfg_ok=0
+      for _hma_cfg in "$HMAOSS_BASE"/hide_my_applist*/config.json; do
+        [ -s "$_hma_cfg" ] && { _hma_cfg_ok=1; break; }
+      done
+      [ "$_hma_cfg_ok" = "1" ] || _last_run=0
+      unset _hma_cfg _hma_cfg_ok
+    fi
     _cfg_interval=$(cfg_get "${_name}_interval" "$_default_interval")
     [ "$_cfg_interval" -lt 10 ] && _cfg_interval=10
     [ "$_name" = "keybox_watch" ] && [ "$_cfg_interval" -lt 60 ] && _cfg_interval=60
@@ -139,12 +155,19 @@ while true; do
     if [ "$_now" -ge "$((_last_run + _cfg_interval))" ]; then
       log_rotate "$SPECTER_DIR/log/sched_${_name}.log"
       log_i "SCHED" "Running $_name"
+      _task_rc=0
       if [ "$_name" = "hma" ]; then
-        SPECTER_HMA_NO_UI_RELOAD=1 sh "$MODDIR/features/$_script" >"$SPECTER_DIR/log/sched_${_name}.log" 2>&1 || log_e "SCHED" "$_name failed"
+        sh "$MODDIR/features/$_script" >"$SPECTER_DIR/log/sched_${_name}.log" 2>&1 || _task_rc=$?
       else
-        sh "$MODDIR/features/$_script" >"$SPECTER_DIR/log/sched_${_name}.log" 2>&1 || log_e "SCHED" "$_name failed"
+        sh "$MODDIR/features/$_script" >"$SPECTER_DIR/log/sched_${_name}.log" 2>&1 || _task_rc=$?
       fi
-      printf '%s' "$_now" > "$TASKS_DIR/${_name}_last"
+      if [ "$_name" = "hma" ] && [ "$_task_rc" -ne 0 ]; then
+        log_e "SCHED" "$_name failed (rc $_task_rc), retrying in 5m"
+        printf '%s' "$((_now - _cfg_interval + 300))" > "$TASKS_DIR/${_name}_last"
+      else
+        printf '%s' "$_now" > "$TASKS_DIR/${_name}_last"
+      fi
+      unset _task_rc
 
       case "$_name" in
         keybox_watch|auto_target|autopif|autokeybox)

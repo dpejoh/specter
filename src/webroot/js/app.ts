@@ -2,7 +2,6 @@ import { initBridge, getDataDir, getModuleDir, exec } from './bridge.js';
 import { shellEscape, setDevMode, updateListContainerCorners, initCornerObserver, afterPaint, wireLazyClick } from './utils.js';
 import { setDataDir, migrateLocalStorage, cfgInit, cfgGet } from './cfg.js';
 import { initDevice, refreshDevice, refreshKeyboxStatus, refreshKeyboxWatch, refreshConflictStatus, reapplyKeyboxStatus } from './device.js';
-import { initNetwork, refreshNetworkStatus } from './network.js';
 import { initTheme } from './theme.js';
 import { initI18n, t } from './i18n.js';
 import { loadContributors } from './contributors.js';
@@ -13,6 +12,8 @@ import { renderActivityPreview } from './history.js';
 import { wireTopBarScroll, wireNavigation, onHomeShow, onPageActivate } from './navigation.js';
 import { initFonts } from './font.js';
 import { wireHomeCards } from './home-cards.js';
+import { initBrand } from './brand.js';
+import { initThemeToggle } from './theme-toggle.js';
 import { FEATURE_I18N_KEYS } from './constants.js';
 import { wireActions, buildFriendlyNames } from './actions.js';
 import { wireControlRows } from './control-ui.js';
@@ -37,6 +38,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   wireNavigation();
   initRedirect();
   wireHomeCards();
+  initBrand();
+  initThemeToggle();
   wireActions();
   buildFriendlyNames();
   updateListContainerCorners();
@@ -57,7 +60,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.addEventListener('languageChanged', () => {
     loadContributors().catch(() => {});
     renderActivityPreview();
-    refreshNetworkStatus();
     refreshKeyboxStatus().catch(() => {});
     void import('./pif-choose-desc.js').then(m => m.refreshPifChooseDesc()).catch(() => {});
     import('./dark-theme-ui.js').then(m => m.updateDarkThemeSummary()).catch(() => {});
@@ -89,7 +91,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   afterPaint(() => {
-    initNetwork();
     initCornerObserver();
   });
 

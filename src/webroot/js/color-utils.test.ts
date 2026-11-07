@@ -60,6 +60,10 @@ describe('presetClosestTo', () => {
     expect(presetClosestTo('#604D46')).toBe('orange')
   })
 
+  it('maps the gold yellow seed to yellow', () => {
+    expect(presetClosestTo('#be9108')).toBe('yellow')
+  })
+
   it('keeps the Android 13 Realme accent on the cyan side', () => {
     expect(presetClosestTo('#26818B')).toBe('cyan')
   })

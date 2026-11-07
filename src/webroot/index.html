@@ -61,7 +61,7 @@
       var cachedSeed = localStorage.getItem('specter_theme_seed');
       var expectedSeed = preset === 'monet'
         ? (localStorage.getItem('monet_seed') || '#1157CE')
-        : (preset === 'blue' ? '#1157CE' : preset === 'yellow' ? '#8F4E06' : preset === 'red' ? '#B3251E' : preset === 'purple' ? '#7438D2' : preset === 'green' ? '#006C35' : preset === 'orange' ? '#9A4600' : preset === 'pink' ? '#B60D6E' : preset === 'cyan' ? '#00687C' : preset === 'grey' ? '#5E5E5E' : null);
+        : (preset === 'blue' ? '#1157CE' : preset === 'yellow' ? '#be9108' : preset === 'red' ? '#B3251E' : preset === 'purple' ? '#7438D2' : preset === 'green' ? '#006C35' : preset === 'orange' ? '#9A4600' : preset === 'pink' ? '#B60D6E' : preset === 'cyan' ? '#00687C' : preset === 'grey' ? '#5E5E5E' : null);
       if (cachedVars && cachedSeed && cachedSeed === expectedSeed) {
         try {
           var vars = JSON.parse(cachedVars);
@@ -113,7 +113,7 @@
       // Per-preset primary colors (approximate, covers first visit before JS loads)
       var P = {
         blue:   { dark: '#88abe7', light: '#1157CE' },
-        yellow: { dark: '#c7a783', light: '#8F4E06' },
+        yellow: { dark: '#e8c26c', light: '#be9108' },
         red:    { dark: '#d9928f', light: '#B3251E' },
         purple: { dark: '#ba9ce9', light: '#7438D2' },
         green:  { dark: '#80b69a', light: '#006C35' },
@@ -139,13 +139,14 @@
 
     <header class="app-top-bar" id="top-bar">
       <div class="app-top-bar-inner">
-        <h1 class="md-typescale-headline-medium app-title" data-i18n="app_title">Specter</h1>
+        <h1 class="md-typescale-headline-medium app-title">
+          <img id="app-brand" class="app-brand" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" alt="" />
+          <span class="sr-only" data-i18n="app_title">Specter</span>
+        </h1>
         <div class="spacer"></div>
-        <span id="network-chip" class="network-chip">
-          <md-icon aria-hidden="true">wifi</md-icon>
-          <span id="network-label">Online</span>
-        </span>
-        <span id="network-announce" aria-live="polite" class="sr-only"></span>
+        <md-icon-button id="theme-toggle" class="app-header-action" aria-label="Switch theme" title="Switch theme">
+          <md-icon aria-hidden="true">dark_mode</md-icon>
+        </md-icon-button>
       </div>
     </header>
 

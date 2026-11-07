@@ -3,7 +3,7 @@ import { Hct } from '@material/material-color-utilities'
 import { hctHueChroma } from './hct.js'
 
 const COLORS = [
-  '#B3251E', '#9A4600', '#8F4E06', '#006C35', '#00687C',
+  '#B3251E', '#9A4600', '#be9108', '#006C35', '#00687C',
   '#1157CE', '#7438D2', '#B60D6E', '#5E5E5E', '#000000',
   '#FFFFFF', '#A7B82C', '#FEF20F', '#D1A5D5', '#179583',
 ]
