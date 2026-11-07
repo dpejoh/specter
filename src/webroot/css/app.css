@@ -123,17 +123,29 @@ code, pre {
 
 .app-brand {
   display: block;
-  height: 30px;
-  width: auto;
-  max-width: 150px;
   flex-shrink: 0;
-  object-fit: contain;
   opacity: 0;
   transition: opacity 0.15s ease;
+  /* Light mode; brand.ts supplies the --brand-* palette for the active preset. */
+  --brand-body: #fff;
+  --brand-ink: var(--brand-deep);
+  --brand-halo-display: none;
+}
+
+[data-theme-resolved="dark"] .app-brand {
+  --brand-body: var(--brand-tint);
+  --brand-ink: var(--brand-tint);
+  --brand-halo-display: inline;
 }
 
 .app-brand[data-ready="1"] {
   opacity: 1;
+}
+
+.app-brand svg {
+  display: block;
+  height: 30px;
+  width: auto;
 }
 
 .app-header-action {
@@ -143,9 +155,8 @@ code, pre {
 }
 
 @media (max-width: 420px) {
-  .app-brand {
+  .app-brand svg {
     height: 26px;
-    max-width: 130px;
   }
 }
 
