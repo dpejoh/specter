@@ -1,6 +1,5 @@
 import { t } from './i18n.js';
 import { openSubPage } from './subpage.js';
-import { row } from './ui-row.js';
 import { mountLocalKeyboxForm, type KeyboxLocalHandle } from './keybox-local-ui.js';
 import { wireRowActivation } from './utils.js';
 
@@ -30,35 +29,31 @@ export async function openKeyboxPage() {
               container.parentElement?.classList.add('kb-page-container');
               container.innerHTML = `
                 <h2 class="list-title">${t('kb_remote_section', 'Specter source')}</h2>
-                <div class="list-container">
-                  ${row({
-                    tag: 'button',
-                    id: 'kb-remote-open',
-                    icon: 'cloud_download',
-                    title: t('kb_specter_keyboxes', 'Specter keyboxes'),
-                    description: t('menu_import_keybox_desc', 'Browse available keyboxes and install one'),
-                  })}
-                </div>
+                <sp-settings-section id="kb-remote-section"></sp-settings-section>
 
                 <h2 class="list-title">${t('kb_local_section', 'Custom source')}</h2>
-                <div class="list-container" id="kb-local-content"></div>
+                <sp-settings-section id="kb-local-content"></sp-settings-section>
                 <md-filled-button id="kb-local-apply" class="kb-install-btn" disabled>
                   <md-icon slot="icon" aria-hidden="true">check</md-icon>
                   ${t('kb_catalog_install', 'Install')}
                 </md-filled-button>
               `;
 
-              const remoteOpen = container.querySelector('#kb-remote-open') as HTMLElement | null;
               const openRemote = () => {
                 void import('./keybox-catalog-ui.js').then(m => m.openKeyboxCatalogPage());
               };
-              remoteOpen?.addEventListener('click', openRemote);
-              remoteOpen?.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  openRemote();
-                }
-              });
+              const remoteRow = document.createElement('sp-settings-row');
+              remoteRow.id = 'kb-remote-open';
+              remoteRow.setAttribute('variant', 'navigation');
+              remoteRow.setAttribute('headline', t('kb_specter_keyboxes', 'Specter keyboxes'));
+              remoteRow.setAttribute('supporting-text', t('menu_import_keybox_desc', 'Browse available keyboxes and install one'));
+              const remoteIcon = document.createElement('md-icon');
+              remoteIcon.setAttribute('slot', 'icon');
+              remoteIcon.setAttribute('aria-hidden', 'true');
+              remoteIcon.textContent = 'cloud_download';
+              remoteRow.append(remoteIcon);
+              remoteRow.addEventListener('sp-activate', openRemote);
+              container.querySelector('#kb-remote-section')?.append(remoteRow);
             },
           },
         ],

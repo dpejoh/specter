@@ -4,11 +4,10 @@ import { showToast } from './toast.js';
 import { shellEscape, wireRowActivation } from './utils.js';
 import { runAction } from './actions.js';
 import { openSubPage } from './subpage.js';
-import { row } from './ui-row.js';
 
 function renderOmkRestartRow(
   container: HTMLElement,
-  posClass: string | undefined,
+  _posClass: string | undefined,
   id: string,
   icon: string,
   title: string,
@@ -16,41 +15,33 @@ function renderOmkRestartRow(
   script: string,
   friendlyNameKey: string,
 ) {
-  container.innerHTML = row({
-    id,
-    className: posClass || 'list-item--first',
-    icon,
-    title,
-    description,
-    spinner: true,
-    role: 'button',
-    tabindex: '0',
-  });
+  const row = document.createElement('sp-settings-row');
+  row.id = id;
+  row.setAttribute('variant', 'action');
+  row.setAttribute('headline', title);
+  row.setAttribute('supporting-text', description);
+  const rowIcon = document.createElement('md-icon');
+  rowIcon.setAttribute('slot', 'icon');
+  rowIcon.setAttribute('aria-hidden', 'true');
+  rowIcon.textContent = icon;
+  row.append(rowIcon);
 
-  const rowEl = container.querySelector(`#${id}`) as HTMLElement | null;
-  if (!rowEl) return;
   let running = false;
   const run = async () => {
     if (running) return;
     running = true;
-    rowEl.setAttribute('aria-disabled', 'true');
-    const spinner = rowEl.querySelector('.action-spinner');
-    spinner?.classList.remove('hidden');
+    row.disabled = true;
+    row.loading = true;
     try {
       await runAction(script, friendlyNameKey);
     } finally {
       running = false;
-      rowEl.removeAttribute('aria-disabled');
-      spinner?.classList.add('hidden');
+      row.disabled = false;
+      row.loading = false;
     }
   };
-  rowEl.addEventListener('click', run);
-  rowEl.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      run();
-    }
-  });
+  row.addEventListener('sp-activate', () => { void run(); });
+  container.replaceWith(row);
 }
 
 export function wireOmkRestart() {

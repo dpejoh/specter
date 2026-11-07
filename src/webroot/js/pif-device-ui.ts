@@ -22,7 +22,6 @@ import { t } from './i18n.js';
 import { refreshPifChooseDesc as refreshChooseDesc } from './pif-choose-desc.js';
 import { openSubPage } from './subpage.js';
 import { closeMenu, wireMenuTrigger } from './menu-utils.js';
-import { rowContent, rowShell } from './ui-row.js';
 
 const tf = (key: string, fallback: string, value: string): string =>
   t(key, fallback).replaceAll('{0}', value);
@@ -274,35 +273,20 @@ export async function openPifDeviceSubpage() {
           : '';
         html += `
           <h2 class="list-title">${escapeHtml(defaultLabel)}</h2>
-          <div class="list-container">
-            ${rowShell({
-              className: 'list-item--only pif-device-row',
-              leading: `<md-radio name="pif-device" value="" ${isChecked ? 'checked' : ''} aria-label="${escapeHtml(randomLabel)}"></md-radio>`,
-              content: rowContent({
-                title: randomLabel,
-                description: t('menu_pif_random_desc', 'Randomly emulate any Pixel Canary model') + blNotice,
-              }),
-              role: 'button',
-              tabindex: '0',
-              attributes: { 'data-product': '' },
-            })}
-          </div>
+          <sp-settings-section>
+            <sp-settings-row class="pif-device-row" data-product="" variant="navigation">
+              <md-radio slot="leading" name="pif-device" value="" ${isChecked ? 'checked' : ''} aria-label="${escapeHtml(randomLabel)}"></md-radio>
+              <span slot="headline">${escapeHtml(randomLabel)}</span>
+              <span slot="supporting">${escapeHtml(t('menu_pif_random_desc', 'Randomly emulate any Pixel Canary model') + blNotice)}</span>
+            </sp-settings-row>
+          </sp-settings-section>
         `;
       }
 
       const renderGroup = (title: string, list: PifDevice[]) => {
         if (list.length === 0) return '';
         const itemsHtml = list
-          .map((d, i) => {
-            const total = list.length;
-            const posClass =
-              total === 1
-                ? 'list-item--only'
-                : i === 0
-                ? 'list-item--first'
-                : i === total - 1
-                ? 'list-item--last'
-                : 'list-item--middle';
+          .map(d => {
             const isChecked = selectedProduct === d.product;
             const isGreyedOut = selectedProduct === '' && blacklist.has(d.product);
             const greyClass = isGreyedOut ? ' pif-device-row--blacklisted' : '';
@@ -310,32 +294,29 @@ export async function openPifDeviceSubpage() {
               ? t('menu_pif_choose_imported', 'Imported')
               : d.product;
             const trash = d.imported
-              ? `<md-icon-button class="pif-dev-trash" data-id="${escapeHtml(
+              ? `<md-icon-button slot="trailing" class="pif-dev-trash" data-id="${escapeHtml(
                   d.product.slice(IMPORTED_PREFIX.length)
-                )}" aria-label="${t('menu_pif_choose_delete', 'Remove imported device')}">
+                )}" aria-label="${escapeHtml(t('menu_pif_choose_delete', 'Remove imported device'))}">
                   <md-icon aria-hidden="true">delete</md-icon>
                 </md-icon-button>`
               : '';
 
             return `
-              ${rowShell({
-                className: `${posClass} pif-device-row${greyClass}`,
-                leading: `<md-radio name="pif-device" value="${escapeHtml(d.product)}" ${isChecked ? 'checked' : ''} aria-label="${escapeHtml(d.model)}"></md-radio>`,
-                content: rowContent({ title: d.model, description: subText }),
-                trailing: trash,
-                role: 'button',
-                tabindex: '0',
-                attributes: { 'data-product': d.product },
-              })}
+              <sp-settings-row class="pif-device-row${greyClass}" data-product="${escapeHtml(d.product)}" variant="navigation">
+                <md-radio slot="leading" name="pif-device" value="${escapeHtml(d.product)}" ${isChecked ? 'checked' : ''} aria-label="${escapeHtml(d.model)}"></md-radio>
+                <span slot="headline">${escapeHtml(d.model)}</span>
+                <span slot="supporting">${escapeHtml(subText)}</span>
+                ${trash}
+              </sp-settings-row>
             `;
           })
           .join('');
 
         return `
           <h2 class="list-title">${escapeHtml(title)} (${list.length})</h2>
-          <div class="list-container">
+          <sp-settings-section>
             ${itemsHtml}
-          </div>
+          </sp-settings-section>
         `;
       };
 
@@ -365,13 +346,7 @@ export async function openPifDeviceSubpage() {
           void selectProduct(product);
         };
 
-        row.addEventListener('click', handleTrigger);
-        row.addEventListener('keydown', (ev: KeyboardEvent) => {
-          if (ev.key === 'Enter' || ev.key === ' ') {
-            ev.preventDefault();
-            handleTrigger(ev);
-          }
-        });
+        row.addEventListener('sp-activate', handleTrigger);
       });
 
       // Wire trash buttons
@@ -427,16 +402,7 @@ export async function openPifDeviceSubpage() {
       const renderBlacklistGroup = (title: string, list: PifDevice[]) => {
         if (list.length === 0) return '';
         const itemsHtml = list
-          .map((d, i) => {
-            const total = list.length;
-            const posClass =
-              total === 1
-                ? 'list-item--only'
-                : i === 0
-                ? 'list-item--first'
-                : i === total - 1
-                ? 'list-item--last'
-                : 'list-item--middle';
+          .map(d => {
             const isBlacklisted = blacklist.has(d.product);
             const subText = d.imported
               ? t('menu_pif_choose_imported', 'Imported')
@@ -444,23 +410,20 @@ export async function openPifDeviceSubpage() {
             const excludedClass = isBlacklisted ? ' pif-blacklist-row--excluded' : '';
 
             return `
-              ${rowShell({
-                className: `${posClass} pif-blacklist-row${excludedClass}`,
-                leading: `<md-checkbox touch-target="wrapper" data-product="${escapeHtml(d.product)}" ${isBlacklisted ? 'checked' : ''} aria-label="${escapeHtml(d.model)}"></md-checkbox>`,
-                content: rowContent({ title: d.model, description: subText }),
-                role: 'button',
-                tabindex: '0',
-                attributes: { 'data-product': d.product },
-              })}
+              <sp-settings-row class="pif-blacklist-row${excludedClass}" data-product="${escapeHtml(d.product)}" variant="navigation">
+                <md-checkbox slot="leading" touch-target="wrapper" data-product="${escapeHtml(d.product)}" ${isBlacklisted ? 'checked' : ''} aria-label="${escapeHtml(d.model)}"></md-checkbox>
+                <span slot="headline">${escapeHtml(d.model)}</span>
+                <span slot="supporting">${escapeHtml(subText)}</span>
+              </sp-settings-row>
             `;
           })
           .join('');
 
         return `
           <h2 class="list-title">${escapeHtml(title)}</h2>
-          <div class="list-container">
+          <sp-settings-section>
             ${itemsHtml}
-          </div>
+          </sp-settings-section>
         `;
       };
 
@@ -493,13 +456,7 @@ export async function openPifDeviceSubpage() {
           void toggleBlacklistDevice(product);
         };
 
-        row.addEventListener('click', handleTrigger);
-        row.addEventListener('keydown', (ev: KeyboardEvent) => {
-          if (ev.key === 'Enter' || ev.key === ' ') {
-            ev.preventDefault();
-            handleTrigger(ev);
-          }
-        });
+        row.addEventListener('sp-activate', handleTrigger);
       });
     }
   };

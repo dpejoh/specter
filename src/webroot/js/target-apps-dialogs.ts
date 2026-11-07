@@ -3,13 +3,11 @@
 // openTeesimModeDialog only shells out to teesim_mode.sh.
 import { exec, getModuleDir } from './bridge.js';
 import { cfgSet } from './cfg.js';
-import { shellEscape } from './utils.js';
+import { escapeHtml, shellEscape } from './utils.js';
 import { showToast } from './toast.js';
 import { t } from './i18n.js';
 import { appendToOutput } from './terminal.js';
 import { showDialog } from './dialog.js';
-import { rowContent, rowIcon, rowShell } from './ui-row.js';
-import { escapeHtml } from './utils.js';
 import type { TargetApp, AppState } from './target-apps.js';
 
 
@@ -103,15 +101,17 @@ function paintSeg(root: HTMLElement): void {
   }
 
 export function openModeDialog(ctx: TargetDialogsContext) {
-    const overrideRow = rowShell({
-      className: 'list-item--toggle',
-      leading: rowIcon('compare_arrows'),
-      content: rowContent({
-        title: t('ta_mode_override_label', 'Override existing'),
-        description: t('ta_mode_override_desc', 'Apply this mode to all currently selected apps'),
-      }),
-      trailing: '<md-switch icons id="ta-mode-do-override"></md-switch>',
-    });
+    const overrideLabel = escapeHtml(t('ta_mode_override_label', 'Override existing'));
+    const overrideDesc = escapeHtml(t('ta_mode_override_desc', 'Apply this mode to all currently selected apps'));
+    const overrideRow = `
+      <sp-settings-section>
+        <sp-settings-row variant="toggle">
+          <md-icon slot="icon" aria-hidden="true">compare_arrows</md-icon>
+          <span slot="headline">${overrideLabel}</span>
+          <span slot="supporting">${overrideDesc}</span>
+          <md-switch slot="trailing" icons id="ta-mode-do-override" aria-label="${overrideLabel}"></md-switch>
+        </sp-settings-row>
+      </sp-settings-section>`;
     const d = showDialog(
       escapeHtml(t('ta_mode_settings', 'Default Mode')),
       `<div class="ta-mode-content">

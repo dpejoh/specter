@@ -57,12 +57,12 @@ describe('OMK restart page', () => {
     const instance = await (openSubPage.mock.results[0]!.value as Promise<{ overlay: HTMLElement }>)
     const container = instance.overlay.firstElementChild as HTMLElement
 
-    ;(container.querySelector('#omk-restart-keymint-row') as HTMLElement).click()
+    ;(container.querySelector('#omk-restart-keymint-row') as HTMLElement).dispatchEvent(new CustomEvent('sp-activate', { bubbles: true }))
     await new Promise(resolve => setTimeout(resolve, 0))
     expect(runAction).toHaveBeenCalledWith('omk_restart_keymint.sh', 'tools_restart_omk_keymint')
 
     runAction.mockClear()
-    ;(container.querySelector('#omk-restart-injector-row') as HTMLElement).click()
+    ;(container.querySelector('#omk-restart-injector-row') as HTMLElement).dispatchEvent(new CustomEvent('sp-activate', { bubbles: true }))
     await new Promise(resolve => setTimeout(resolve, 0))
     expect(runAction).toHaveBeenCalledWith('omk_restart_injector.sh', 'tools_restart_omk_injector')
   })

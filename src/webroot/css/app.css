@@ -1243,18 +1243,9 @@ md-dialog {
   --md-focus-ring-color: var(--md-sys-color-error);
 }
 
-.pif-blacklist-row--excluded {
-  background: var(--md-sys-color-error-container);
-  background: color-mix(in srgb, var(--md-sys-color-error) 10%, var(--md-sys-color-surface-container-high));
-}
-
-.pif-blacklist-row--excluded:hover {
-  background: var(--md-sys-color-error-container);
-  background: color-mix(in srgb, var(--md-sys-color-error) 15%, var(--md-sys-color-surface-container-high));
-}
-
-.pif-blacklist-row--excluded .toggle-text {
-  color: var(--md-sys-color-error);
+sp-settings-row.pif-blacklist-row--excluded {
+  --md-sys-color-surface-container-high: color-mix(in srgb, var(--md-sys-color-error) 10%, var(--md-sys-color-surface));
+  --md-sys-color-on-surface: var(--md-sys-color-error);
 }
 
 .pif-device-row--blacklisted {

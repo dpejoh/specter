@@ -4,7 +4,7 @@ import { showToast, closeToast } from './toast.js';
 import { API_URLS, defaultSecurityPatch } from './constants.js';
 import { fetchJson, shellEscape, wireRowActivation } from './utils.js';
 import { openSubPage } from './subpage.js';
-import { row } from './ui-row.js';
+import type { SpSettingsRow } from './ui/sp-settings-row.js';
 import type { KeystoreManagerJson } from './types.js';
 
 
@@ -62,8 +62,8 @@ export async function openSecurityPatchPage() {
 
   let inputEl: HTMLInputElement | null = null;
   let helpEl: HTMLElement | null = null;
-  let deviceRow: HTMLButtonElement | null = null;
-  let fetchRow: HTMLButtonElement | null = null;
+  let deviceRow: SpSettingsRow | null = null;
+  let fetchRow: SpSettingsRow | null = null;
   let quickButtons: HTMLButtonElement[] = [];
   let busy = false;
 
@@ -80,6 +80,7 @@ export async function openSecurityPatchPage() {
     for (const row of [deviceRow, fetchRow]) {
       if (!row) continue;
       row.disabled = next;
+      row.loading = next;
       row.setAttribute('aria-busy', next ? 'true' : 'false');
     }
   };
@@ -156,22 +157,25 @@ export async function openSecurityPatchPage() {
 
   const renderActionRow = (
     container: HTMLElement,
-    posClass: string | undefined,
+    _posClass: string | undefined,
     id: string,
     icon: string,
     title: string,
     description: string,
     onClick: () => void,
   ) => {
-    container.innerHTML = row({
-      tag: 'button',
-      id,
-      className: `sp-action-row ${posClass || ''}`.trim(),
-      icon,
-      title,
-      description,
-    });
-    container.querySelector(`#${id}`)?.addEventListener('click', onClick);
+    const row = document.createElement('sp-settings-row');
+    row.id = id;
+    row.setAttribute('variant', 'action');
+    row.setAttribute('headline', title);
+    row.setAttribute('supporting-text', description);
+    const rowIcon = document.createElement('md-icon');
+    rowIcon.setAttribute('slot', 'icon');
+    rowIcon.setAttribute('aria-hidden', 'true');
+    rowIcon.textContent = icon;
+    row.append(rowIcon);
+    row.addEventListener('sp-activate', onClick);
+    container.replaceWith(row);
   };
 
   const instance = await openSubPage({
@@ -324,8 +328,8 @@ export async function openSecurityPatchPage() {
     },
   });
 
-  deviceRow = instance.overlay.querySelector('#sp-device-row');
-  fetchRow = instance.overlay.querySelector('#sp-fetch-row');
+  deviceRow = instance.overlay.querySelector('#sp-device-row') as SpSettingsRow | null;
+  fetchRow = instance.overlay.querySelector('#sp-fetch-row') as SpSettingsRow | null;
 }
 
 export function wireSecurityPatch() {

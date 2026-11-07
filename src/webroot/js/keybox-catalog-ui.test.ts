@@ -76,9 +76,9 @@ describe('keybox catalog', () => {
     await catalog.load();
 
     const list = container.querySelector('#kb-catalog-list');
-    const rows = list ? [...list.querySelectorAll('.list-item')] : [];
-    const titles = rows.map(row => row.querySelector('.toggle-text')?.textContent?.trim());
-    const descriptions = rows.map(row => row.querySelector('.supporting-text')?.textContent?.trim());
+    const rows = list ? [...list.querySelectorAll('sp-settings-row')] : [];
+    const titles = rows.map(row => row.querySelector('[slot="headline"]')?.textContent?.trim());
+    const descriptions = rows.map(row => row.querySelector('[slot="supporting"]')?.textContent?.trim());
 
     const statusFilter = container.querySelector('[data-filter-id="kb-status-filter"]') as HTMLElement;
     const providerFilter = container.querySelector('[data-filter-id="kb-provider-filter"]') as HTMLElement;
@@ -115,7 +115,7 @@ describe('keybox catalog', () => {
 
     const providerFilter = container.querySelector('[data-filter-id="kb-provider-filter"]') as HTMLElement;
     expect(providerFilter.querySelector('.filter-trigger-label')?.textContent).toBe('All providers');
-    const sources = [...container.querySelectorAll('#kb-catalog-list .list-item .toggle-text')]
+    const sources = [...container.querySelectorAll('#kb-catalog-list sp-settings-row [slot="headline"]')]
       .map(el => el.textContent || '');
     expect(sources.some(text => text.includes('Yuri'))).toBe(true);
   })
@@ -131,8 +131,8 @@ describe('keybox catalog', () => {
       .find(option => option.querySelector('span')?.textContent?.trim() === 'All') as HTMLButtonElement;
     allOption.click();
 
-    const rows = [...container.querySelectorAll('#kb-catalog-list .list-item')];
-    const titles = rows.map(row => row.querySelector('.toggle-text')?.textContent?.trim());
+    const rows = [...container.querySelectorAll('#kb-catalog-list sp-settings-row')];
+    const titles = rows.map(row => row.querySelector('[slot="headline"]')?.textContent?.trim());
 
     expect(rows).toHaveLength(7);
     expect(titles).toEqual(expect.arrayContaining([
@@ -144,7 +144,7 @@ describe('keybox catalog', () => {
       'rkp r3',
       'rkp r4',
     ]));
-    const revoked = rows.find(row => row.querySelector('.toggle-text')?.textContent?.includes('TAKR v34'));
+    const revoked = rows.find(row => row.querySelector('[slot="headline"]')?.textContent?.includes('TAKR v34'));
     expect(revoked?.classList.contains('kb-catalog-row--disabled')).toBe(true);
     expect(revoked?.querySelector('md-radio')?.hasAttribute('disabled')).toBe(true);
   });
@@ -164,15 +164,15 @@ describe('keybox catalog', () => {
     };
 
     choose('Softbanned');
-    expect([...container.querySelectorAll('#kb-catalog-list .toggle-text')]
+    expect([...container.querySelectorAll('#kb-catalog-list sp-settings-row [slot="headline"]')]
       .map(el => el.textContent?.trim())).toEqual(['TAKR v35']);
 
     choose('Revoked');
-    expect([...container.querySelectorAll('#kb-catalog-list .toggle-text')]
+    expect([...container.querySelectorAll('#kb-catalog-list sp-settings-row [slot="headline"]')]
       .map(el => el.textContent?.trim())).toEqual(['TAKR v34']);
 
     choose('Active');
-    expect([...container.querySelectorAll('#kb-catalog-list .toggle-text')]
+    expect([...container.querySelectorAll('#kb-catalog-list sp-settings-row [slot="headline"]')]
       .map(el => el.textContent?.trim())).toContain('TAKR v36');
   })
 
@@ -193,8 +193,8 @@ describe('keybox catalog', () => {
       .find(option => option.querySelector('span')?.textContent?.trim() === 'TAKR') as HTMLButtonElement;
     takrOption.click();
 
-    const titles = [...container.querySelectorAll('#kb-catalog-list .list-item')]
-      .map(row => row.querySelector('.toggle-text')?.textContent?.trim());
+    const titles = [...container.querySelectorAll('#kb-catalog-list sp-settings-row')]
+      .map(row => row.querySelector('[slot="headline"]')?.textContent?.trim());
 
     expect(providerFilter.querySelector('.filter-trigger-label')?.textContent).toBe('TAKR');
     expect(titles).toEqual(['Automatic Recommended', 'TAKR v36', 'TAKR v35', 'TAKR v34']);
@@ -208,7 +208,7 @@ describe('keybox catalog', () => {
     const catalog = mountKeyboxCatalog(container);
     await catalog.load();
 
-    const rows = container.querySelectorAll('#kb-catalog-list .list-item');
+    const rows = container.querySelectorAll('#kb-catalog-list sp-settings-row');
     expect(exec.mock.calls[0]![0]).toContain('busybox wget');
     expect(rows).toHaveLength(4);
   });
@@ -219,9 +219,9 @@ describe('keybox catalog', () => {
     const catalog = mountKeyboxCatalog(container, { onInstalled });
     await catalog.load();
 
-    const row = [...container.querySelectorAll('#kb-catalog-list .list-item')]
-      .find(el => el.querySelector('.toggle-text')?.textContent?.includes('rkp r4')) as HTMLElement;
-    row.click();
+    const row = [...container.querySelectorAll('#kb-catalog-list sp-settings-row')]
+      .find(el => el.querySelector('[slot="headline"]')?.textContent?.includes('rkp r4')) as HTMLElement;
+    row.dispatchEvent(new CustomEvent('sp-activate', { bubbles: true }));
     await catalog.install();
 
     expect(runAction).toHaveBeenCalledWith('keybox.sh');
@@ -239,7 +239,7 @@ describe('keybox catalog', () => {
     expect(container.querySelector('#kb-catalog-filters')).not.toBeNull();
 
     await vi.waitFor(() => {
-      expect(container.querySelectorAll('#kb-catalog-list .list-item')).toHaveLength(4);
+      expect(container.querySelectorAll('#kb-catalog-list sp-settings-row')).toHaveLength(4);
     });
   });
 });

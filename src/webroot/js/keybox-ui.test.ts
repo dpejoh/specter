@@ -58,7 +58,8 @@ describe('keybox page', () => {
   it('opens the remote keybox page', async () => {
     await openKeyboxPage()
     const instance = await (openSubPage.mock.results[0]!.value as Promise<{ overlay: HTMLElement }>)
-    ;(instance.overlay.querySelector('#kb-remote-open') as HTMLElement).click()
+    ;(instance.overlay.querySelector('#kb-remote-open') as HTMLElement)
+      .dispatchEvent(new CustomEvent('sp-activate', { bubbles: true }))
     await new Promise(resolve => setTimeout(resolve, 0))
     expect(openKeyboxCatalogPage).toHaveBeenCalled()
   })

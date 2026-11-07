@@ -4,7 +4,6 @@ import { escapeHtml } from './utils.js';
 import { showToast } from './toast.js';
 import type { MdSwitch } from '@material/web/switch/switch.js';
 import { installKeybox } from './keybox-install.js';
-import { rowContent, rowIcon, rowShell, rowSpacer } from './ui-row.js';
 
 
 export interface KeyboxLocalOptions {
@@ -45,66 +44,85 @@ export async function mountLocalKeyboxForm(
     }
   };
 
-  container.innerHTML = [
-    rowShell({
-      id: 'kb-file-row',
-      className: 'list-item--first kb-file-row',
-      leading: `<div class="li-icon"><md-icon id="kb-file-icon" aria-hidden="true">${selectedFilePath ? 'vpn_key' : 'upload_file'}</md-icon></div>`,
-      content: rowContent({
-        title: t('custom_kb_file', 'Import File'),
-        description: selectedFilePath
-          ? (selectedFilePath.split('/').pop() || '')
-          : t('custom_kb_file_desc', 'Select a keybox XML file from your device'),
-        descriptionId: 'kb-file-subtitle',
-        descriptionClass: `kb-file-subtitle${selectedFilePath ? ' kb-file-subtitle--active' : ''}`,
-      }),
-      trailing: `${rowSpacer()}
-        <md-filled-tonal-button id="kb-browse-btn" class="kb-browse-btn">
-          <md-icon slot="icon" aria-hidden="true">folder_open</md-icon>
-          ${escapeHtml(t('custom_kb_browse', 'Browse Files'))}
-        </md-filled-tonal-button>`,
-    }),
-    rowShell({
-      className: 'list-item--middle kb-url-card',
-      content: `<div class="kb-url-row">
-        ${rowIcon('link')}
-        ${rowContent({
-          title: t('custom_kb_url', 'URL or Path'),
-          description: t('custom_kb_desc', 'Paste a download URL or enter a device path'),
-        })}
-      </div>
-      <div class="subpage-text-input-wrap">
-        <input type="text" id="kb-url-input" class="subpage-full-input"
-          placeholder="${escapeHtml(t('kb_url_placeholder', 'https://example.com/keybox.xml or /sdcard/keybox.xml'))}"
-          value="" aria-label="${escapeHtml(t('custom_kb_url', 'URL or Path'))}" />
-        <md-icon-button id="kb-paste-btn" aria-label="${escapeHtml(t('kb_paste_aria', 'Paste from clipboard'))}">
-          <md-icon aria-hidden="true">content_paste</md-icon>
-        </md-icon-button>
-      </div>`,
-    }),
-    rowShell({
-      id: 'kb-private-row',
-      className: 'list-item--toggle list-item--last',
-      leading: rowIcon('lock'),
-      content: rowContent({
-        title: t('custom_kb_private_toggle', 'Private Keybox'),
-        description: t('custom_kb_private_desc', 'Hide certificate subject and serial in keybox information'),
-      }),
-      trailing: `<md-switch icons id="kb-private-switch" ${privateVal === 'true' ? 'selected' : ''} aria-label="${escapeHtml(t('custom_kb_private_toggle', 'Private Keybox'))}"></md-switch>`,
-    }),
-  ].join('\n');
+  container.replaceChildren();
 
-  fileSubtitleEl = container.querySelector('#kb-file-subtitle');
-  fileIconEl = container.querySelector('#kb-file-icon');
-  urlInputEl = container.querySelector('#kb-url-input');
-  // Set the value as a property, never as an interpolated attribute.
-  if (urlInputEl) urlInputEl.value = selectedFilePath;
+  const fileRow = document.createElement('sp-settings-row');
+  fileRow.id = 'kb-file-row';
+  fileRow.className = 'kb-file-row';
+  fileRow.setAttribute('variant', 'navigation');
+  fileRow.setAttribute('headline', t('custom_kb_file', 'Import File'));
+  const fileIcon = document.createElement('md-icon');
+  fileIcon.id = 'kb-file-icon';
+  fileIcon.setAttribute('slot', 'icon');
+  fileIcon.setAttribute('aria-hidden', 'true');
+  fileIcon.textContent = selectedFilePath ? 'vpn_key' : 'upload_file';
+  fileRow.append(fileIcon);
+  const fileSubtitle = document.createElement('span');
+  fileSubtitle.id = 'kb-file-subtitle';
+  fileSubtitle.setAttribute('slot', 'supporting');
+  fileSubtitle.className = `kb-file-subtitle${selectedFilePath ? ' kb-file-subtitle--active' : ''}`;
+  fileSubtitle.textContent = selectedFilePath
+    ? (selectedFilePath.split('/').pop() || '')
+    : t('custom_kb_file_desc', 'Select a keybox XML file from your device');
+  fileRow.append(fileSubtitle);
+  const browseBtn = document.createElement('md-filled-tonal-button');
+  browseBtn.id = 'kb-browse-btn';
+  browseBtn.className = 'kb-browse-btn';
+  browseBtn.setAttribute('slot', 'trailing');
+  browseBtn.innerHTML = `<md-icon slot="icon" aria-hidden="true">folder_open</md-icon>${escapeHtml(t('custom_kb_browse', 'Browse Files'))}`;
+  fileRow.append(browseBtn);
 
-  const browseBtn = container.querySelector('#kb-browse-btn');
-  const fileRow = container.querySelector('#kb-file-row');
-  const pasteBtn = container.querySelector('#kb-paste-btn');
-  const privateSwitch = container.querySelector('#kb-private-switch') as MdSwitch | null;
-  const privateRow = container.querySelector('#kb-private-row');
+  const urlRow = document.createElement('sp-settings-row');
+  urlRow.className = 'kb-url-card';
+  urlRow.setAttribute('variant', 'custom');
+  urlRow.setAttribute('stacked', '');
+  urlRow.setAttribute('headline', t('custom_kb_url', 'URL or Path'));
+  urlRow.setAttribute('supporting-text', t('custom_kb_desc', 'Paste a download URL or enter a device path'));
+  const urlIcon = document.createElement('md-icon');
+  urlIcon.setAttribute('slot', 'icon');
+  urlIcon.setAttribute('aria-hidden', 'true');
+  urlIcon.textContent = 'link';
+  urlRow.append(urlIcon);
+  const urlWrap = document.createElement('div');
+  urlWrap.className = 'subpage-text-input-wrap';
+  urlWrap.setAttribute('slot', 'trailing');
+  const urlInput = document.createElement('input');
+  urlInput.type = 'text';
+  urlInput.id = 'kb-url-input';
+  urlInput.className = 'subpage-full-input';
+  urlInput.placeholder = t('kb_url_placeholder', 'https://example.com/keybox.xml or /sdcard/keybox.xml');
+  urlInput.value = selectedFilePath;
+  urlInput.setAttribute('aria-label', t('custom_kb_url', 'URL or Path'));
+  const pasteBtn = document.createElement('md-icon-button');
+  pasteBtn.id = 'kb-paste-btn';
+  pasteBtn.setAttribute('aria-label', t('kb_paste_aria', 'Paste from clipboard'));
+  pasteBtn.innerHTML = '<md-icon aria-hidden="true">content_paste</md-icon>';
+  urlWrap.append(urlInput, pasteBtn);
+  urlRow.append(urlWrap);
+
+  const privateRow = document.createElement('sp-settings-row');
+  privateRow.id = 'kb-private-row';
+  privateRow.setAttribute('variant', 'toggle');
+  privateRow.setAttribute('headline', t('custom_kb_private_toggle', 'Private Keybox'));
+  privateRow.setAttribute('supporting-text', t('custom_kb_private_desc', 'Hide certificate subject and serial in keybox information'));
+  const privateIcon = document.createElement('md-icon');
+  privateIcon.setAttribute('slot', 'icon');
+  privateIcon.setAttribute('aria-hidden', 'true');
+  privateIcon.textContent = 'lock';
+  privateRow.append(privateIcon);
+  const privateSwitch = document.createElement('md-switch') as MdSwitch;
+  privateSwitch.id = 'kb-private-switch';
+  privateSwitch.setAttribute('slot', 'trailing');
+  privateSwitch.setAttribute('icons', '');
+  privateSwitch.setAttribute('aria-label', t('custom_kb_private_toggle', 'Private Keybox'));
+  privateSwitch.selected = privateVal === 'true';
+  privateRow.append(privateSwitch);
+
+  container.append(fileRow, urlRow, privateRow);
+
+  fileSubtitleEl = fileSubtitle;
+  fileIconEl = fileIcon;
+  urlInputEl = urlInput;
   const hasValue = () => Boolean(urlInputEl?.value.trim() || selectedFilePath.trim());
 
   const onPick = () => {
@@ -120,8 +138,8 @@ export async function mountLocalKeyboxForm(
     });
   };
 
-  fileRow?.addEventListener('click', onPick);
-  browseBtn?.addEventListener('click', (e) => {
+  fileRow.addEventListener('sp-activate', onPick);
+  browseBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     onPick();
   });
@@ -149,12 +167,7 @@ export async function mountLocalKeyboxForm(
   const setPrivate = () => {
     cfgSet('keybox_private', privateSwitch?.selected ? 'true' : '');
   };
-  privateSwitch?.addEventListener('change', setPrivate);
-  privateRow?.addEventListener('click', (e) => {
-    if (e.composedPath().some(node => node instanceof Element && node.localName === 'md-switch')) return;
-    if (privateSwitch) privateSwitch.selected = !privateSwitch.selected;
-    setPrivate();
-  });
+  privateSwitch.addEventListener('change', setPrivate);
 
   options.onValueChange?.(hasValue());
 

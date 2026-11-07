@@ -2,11 +2,10 @@ import { exec } from './bridge.js';
 import { cfgSet } from './cfg.js';
 import { t } from './i18n.js';
 import { API_URLS } from './constants.js';
-import { escapeHtml, fetchJson, shellEscape, updateListContainerCorners } from './utils.js';
+import { fetchJson, shellEscape, updateListContainerCorners } from './utils.js';
 import { createFilterDropdown, type FilterDropdownHandle, type FilterOption } from './filter-dropdown.js';
 import { openSubPage } from './subpage.js';
 import { installKeybox } from './keybox-install.js';
-import { rowContent, rowIcon } from './ui-row.js';
 import type { CatalogEntry, CatalogJson } from './types.js';
 
 
@@ -170,27 +169,47 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
     badge?: string,
     disabled = false,
   ): HTMLElement => {
-    const row = document.createElement('div');
-    row.className = `list-item list-item--radio${disabled ? ' kb-catalog-row--disabled' : ''}`;
+    const row = document.createElement('sp-settings-row');
+    row.className = `kb-catalog-row${disabled ? ' kb-catalog-row--disabled' : ''}`;
     row.dataset.key = key;
+    row.setAttribute('variant', 'navigation');
     row.setAttribute('aria-disabled', disabled ? 'true' : 'false');
-    row.innerHTML = `
-      <md-radio name="kb-catalog" value="${escapeHtml(key)}" aria-label="${escapeHtml(title)}${badge ? `, ${escapeHtml(badge)}` : ''}" ${disabled ? 'disabled' : ''}></md-radio>
-      ${rowIcon(icon)}
-      ${rowContent({
-        title,
-        titleHtml: `${escapeHtml(title)}${badge ? ` <span class="subpage-radio-badge">${escapeHtml(badge)}</span>` : ''}`,
-        description,
-      })}
-      <md-ripple></md-ripple>
-    `;
-    const radio = row.querySelector('md-radio') as HTMLElement & { checked: boolean };
+    if (disabled) row.disabled = true;
+
+    const radio = document.createElement('md-radio');
+    radio.setAttribute('slot', 'leading');
+    radio.setAttribute('name', 'kb-catalog');
+    radio.setAttribute('value', key);
+    radio.setAttribute('aria-label', `${title}${badge ? `, ${badge}` : ''}`);
+    radio.disabled = disabled;
+    radio.toggleAttribute('disabled', disabled);
+    radio.checked = key === selectedKey;
+    row.append(radio);
+
+    const rowIcon = document.createElement('md-icon');
+    rowIcon.setAttribute('slot', 'icon');
+    rowIcon.setAttribute('aria-hidden', 'true');
+    rowIcon.textContent = icon;
+    row.append(rowIcon);
+
+    const headline = document.createElement('span');
+    headline.setAttribute('slot', 'headline');
+    headline.textContent = title;
+    if (badge) {
+      const badgeEl = document.createElement('span');
+      badgeEl.className = 'subpage-radio-badge';
+      badgeEl.textContent = badge;
+      headline.append(' ', badgeEl);
+    }
+    row.append(headline);
+
+    const supporting = document.createElement('span');
+    supporting.setAttribute('slot', 'supporting');
+    supporting.textContent = description;
+    row.append(supporting);
+
     if (!disabled) {
-      (radio as HTMLElement & { checked: boolean }).checked = key === selectedKey;
-      row.addEventListener('click', (event) => {
-        if (event.composedPath().some(node => node instanceof Element && node.localName === 'md-radio')) return;
-        selectRow(key);
-      });
+      row.addEventListener('sp-activate', () => selectRow(key));
       radio.addEventListener('change', () => {
         if (radio.checked) selectRow(key);
       });
@@ -228,7 +247,7 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
       selectedEntry = null;
     }
 
-    catalogBody.innerHTML = '<div class="list-container" id="kb-catalog-list"></div>';
+    catalogBody.innerHTML = '<sp-settings-section id="kb-catalog-list"></sp-settings-section>';
     const list = catalogBody.querySelector('#kb-catalog-list') as HTMLElement;
 
     if (autoAvailable) {
