@@ -134,13 +134,15 @@ export class SpSettingsRow extends LitElement {
       -webkit-tap-highlight-color: transparent;
     }
 
-    .row:hover {
-      background: var(--md-sys-color-surface-container-highest, #e6e0e9);
-      background: color-mix(
-        in srgb,
-        var(--md-sys-color-surface-container-high, #ece6f0),
-        var(--md-sys-color-on-surface, #1c1b1f) 8%
-      );
+    @media (hover: hover) {
+      .row:hover {
+        background: var(--md-sys-color-surface-container-highest, #e6e0e9);
+        background: color-mix(
+          in srgb,
+          var(--md-sys-color-surface-container-high, #ece6f0),
+          var(--md-sys-color-on-surface, #1c1b1f) 8%
+        );
+      }
     }
 
     .row:active {

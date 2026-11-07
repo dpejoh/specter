@@ -553,9 +553,11 @@ button.list-item {
   box-sizing: border-box;
 }
 
-.list-item:hover {
-  background: var(--md-sys-color-surface-container-highest);
-  background: color-mix(in srgb, var(--md-sys-color-surface-container-high), var(--md-sys-color-on-surface) 8%);
+@media (hover: hover) {
+  .list-item:hover {
+    background: var(--md-sys-color-surface-container-highest);
+    background: color-mix(in srgb, var(--md-sys-color-surface-container-high), var(--md-sys-color-on-surface) 8%);
+  }
 }
 .list-item:active {
   background: var(--md-sys-color-surface-container-highest);
@@ -1130,8 +1132,10 @@ md-dialog {
   overflow: hidden;
 }
 
-.fb-row:hover {
-  background-color: var(--md-sys-color-surface-container-high);
+@media (hover: hover) {
+  .fb-row:hover {
+    background-color: var(--md-sys-color-surface-container-high);
+  }
 }
 
 .fb-row:active {
@@ -1837,8 +1841,10 @@ md-filled-tonal-button {
   border-radius: 24px;
 }
 
-.ta-item:hover {
-  background: var(--md-sys-color-surface-container-highest);
+@media (hover: hover) {
+  .ta-item:hover {
+    background: var(--md-sys-color-surface-container-highest);
+  }
 }
 
 .ta-item-content {
@@ -2931,8 +2937,10 @@ md-filled-tonal-button {
   cursor: pointer;
 }
 
-.filter-option:hover {
-  background: var(--md-sys-color-surface-container-highest);
+@media (hover: hover) {
+  .filter-option:hover {
+    background: var(--md-sys-color-surface-container-highest);
+  }
 }
 
 .filter-option:focus-visible {
