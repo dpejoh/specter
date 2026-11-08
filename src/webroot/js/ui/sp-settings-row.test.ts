@@ -288,4 +288,75 @@ describe('sp-settings-row', () => {
 
     expect(row.selected).toBe(false);
   });
+
+  it('selects a radio row once and does not re-emit on a second click', async () => {
+    const row = makeRow();
+    row.variant = 'radio';
+    row.headline = 'Choice';
+    row.value = 'a';
+    await row.updateComplete;
+
+    const onChange = vi.fn();
+    row.addEventListener('sp-change', onChange);
+    const inner = row.shadowRoot!.querySelector('[part=row]') as HTMLElement;
+    expect(inner.getAttribute('role')).toBe('radio');
+
+    inner.click();
+    await row.updateComplete;
+    expect(row.selected).toBe(true);
+    expect(onChange).toHaveBeenCalledOnce();
+    expect((onChange.mock.calls[0]![0] as CustomEvent).detail).toEqual({ selected: true, value: 'a' });
+
+    inner.click();
+    await row.updateComplete;
+    expect(onChange).toHaveBeenCalledOnce();
+  });
+
+  it('syncs a slotted md-checkbox control', async () => {
+    const row = makeRow();
+    row.variant = 'toggle';
+    row.headline = 'Checkbox toggle';
+    await row.updateComplete;
+
+    const checkbox = document.createElement('md-checkbox') as HTMLElement & { checked: boolean };
+    checkbox.setAttribute('slot', 'trailing');
+    checkbox.checked = false;
+    row.appendChild(checkbox);
+    await row.updateComplete;
+    await tick();
+
+    (row.shadowRoot!.querySelector('[part=row]') as HTMLElement).click();
+    await row.updateComplete;
+    expect(row.selected).toBe(true);
+    expect(checkbox.checked).toBe(true);
+
+    checkbox.checked = false;
+    checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+    await row.updateComplete;
+    expect(row.selected).toBe(false);
+  });
+
+  it('opens links in a new tab with rel protection when target is _blank', async () => {
+    const row = makeRow();
+    row.variant = 'navigation';
+    row.headline = 'External';
+    row.href = 'https://example.com';
+    row.target = '_blank';
+    await row.updateComplete;
+
+    const link = row.shadowRoot!.querySelector('a[part=row]') as HTMLAnchorElement;
+    expect(link).not.toBeNull();
+    expect(link.getAttribute('rel')).toBe('noopener noreferrer');
+  });
+
+  it('focuses the inner row element', async () => {
+    const row = makeRow();
+    row.variant = 'navigation';
+    row.headline = 'Focusable';
+    await row.updateComplete;
+
+    row.focus();
+    const inner = row.shadowRoot!.querySelector('[part=row]') as HTMLElement;
+    expect(row.shadowRoot!.activeElement).toBe(inner);
+  });
 });

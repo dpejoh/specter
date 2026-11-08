@@ -86,6 +86,116 @@ describe('sp-tooltip', () => {
     expect(target.hasAttribute('aria-describedby')).toBe(false);
   });
 
+  it('shows and hides on hover', async () => {
+    const { target, tooltip } = setup();
+    tooltip.hideDelay = 0;
+    await tooltip.updateComplete;
+    await tick();
+
+    target.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    await tick();
+    await tooltip.updateComplete;
+    expect(tooltip.open).toBe(true);
+
+    target.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+    await tick();
+    await tooltip.updateComplete;
+    expect(tooltip.open).toBe(false);
+  });
+
+  it('toggles open and closed', async () => {
+    const { tooltip } = setup();
+    await tooltip.updateComplete;
+    await tick();
+
+    tooltip.toggle();
+    await tick();
+    await tooltip.updateComplete;
+    expect(tooltip.open).toBe(true);
+
+    tooltip.toggle();
+    await tooltip.updateComplete;
+    expect(tooltip.open).toBe(false);
+  });
+
+  it('closes on Escape pressed on the target', async () => {
+    const { target, tooltip } = setup();
+    await tooltip.updateComplete;
+    await tick();
+
+    await tooltip.show();
+    expect(tooltip.open).toBe(true);
+
+    target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await tooltip.updateComplete;
+    expect(tooltip.open).toBe(false);
+  });
+
+  it('waits for the show delay before opening', async () => {
+    const { target, tooltip } = setup();
+    tooltip.showDelay = 25;
+    await tooltip.updateComplete;
+    await tick();
+
+    target.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    expect(tooltip.open).toBe(false);
+
+    await new Promise(resolve => setTimeout(resolve, 40));
+    await tooltip.updateComplete;
+    expect(tooltip.open).toBe(true);
+  });
+
+  it('hides when disabled while open', async () => {
+    const { tooltip } = setup();
+    await tooltip.updateComplete;
+    await tick();
+
+    await tooltip.show();
+    expect(tooltip.open).toBe(true);
+
+    tooltip.disabled = true;
+    await tooltip.updateComplete;
+    expect(tooltip.open).toBe(false);
+  });
+
+  it('retargets when the for attribute changes', async () => {
+    const { target, tooltip } = setup();
+    await tooltip.updateComplete;
+    await tick();
+
+    const other = document.createElement('button');
+    other.id = 'tooltip-other';
+    document.body.append(other);
+    tooltip.targetId = 'tooltip-other';
+    await tooltip.updateComplete;
+    await tick();
+
+    expect(target.getAttribute('aria-describedby')).toBeNull();
+    expect(other.getAttribute('aria-describedby')).toContain('tooltip-test');
+  });
+
+  it('hides another open tooltip when shown', async () => {
+    const { tooltip } = setup();
+    await tooltip.updateComplete;
+    await tick();
+
+    const target2 = document.createElement('button');
+    target2.id = 'tooltip-target-2';
+    const tooltip2 = document.createElement('sp-tooltip') as SpTooltip;
+    tooltip2.id = 'tooltip-test-2';
+    tooltip2.targetId = 'tooltip-target-2';
+    document.body.append(target2, tooltip2);
+    await tooltip2.updateComplete;
+    await tick();
+
+    await tooltip.show();
+    expect(tooltip.open).toBe(true);
+
+    await tooltip2.show();
+    expect(tooltip2.open).toBe(true);
+    expect(tooltip.open).toBe(false);
+  });
+
   it('restores the original aria-describedby on disconnect', async () => {
     const { target, tooltip } = setup();
     target.setAttribute('aria-describedby', 'existing');
