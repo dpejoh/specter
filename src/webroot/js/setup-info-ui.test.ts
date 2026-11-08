@@ -33,6 +33,9 @@ vi.mock('./utils.js', async () => {
   return {
     ...actual,
     fetchJson: vi.fn(async () => state.data),
+    // Run the paint callback on the next tick so the snapshot fetch still
+    // starts strictly after the page render.
+    afterPaint: (fn: () => void) => { setTimeout(fn, 0); },
   };
 });
 

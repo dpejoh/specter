@@ -1,6 +1,7 @@
 import { openSubPage } from './subpage.js';
 import { t } from './i18n.js';
-import { escapeHtml, fetchJson } from './utils.js';
+import { afterPaint, escapeHtml, fetchJson } from './utils.js';
+import './ui/sp-skeleton.js';
 import { runScript } from './bridge.js';
 import { appendInfoSection, dash, formatDate, type ValueSpec } from './info-page.js';
 import type { SetupInfoJson, SetupInfoModule } from './types.js';
@@ -27,11 +28,48 @@ function appendModuleSection(host: HTMLElement, module: SetupInfoModule): void {
   appendInfoSection(host, module.name, rows);
 }
 
+function buildLoading(host: HTMLElement): void {
+  const mkSection = (rows: number): HTMLElement => {
+    const section = document.createElement('sp-settings-section');
+    section.setAttribute('aria-hidden', 'true');
+    for (let i = 0; i < rows; i++) {
+      const row = document.createElement('sp-settings-row');
+      row.className = 'kb-skeleton-row';
+      row.setAttribute('variant', 'custom');
+      const lead = document.createElement('span');
+      lead.setAttribute('slot', 'leading');
+      lead.className = 'kb-skeleton-lead';
+      const icon = document.createElement('sp-skeleton');
+      icon.setAttribute('variant', 'rounded');
+      icon.className = 'kb-skeleton-icon';
+      lead.append(icon);
+      row.append(lead);
+      const headline = document.createElement('span');
+      headline.setAttribute('slot', 'headline');
+      const title = document.createElement('sp-skeleton');
+      title.setAttribute('variant', 'text');
+      title.className = 'kb-skeleton-title';
+      headline.append(title);
+      row.append(headline);
+      const supporting = document.createElement('span');
+      supporting.setAttribute('slot', 'supporting');
+      const description = document.createElement('sp-skeleton');
+      description.setAttribute('variant', 'text');
+      description.className = 'kb-skeleton-desc';
+      supporting.append(description);
+      row.append(supporting);
+      section.append(row);
+    }
+    return section;
+  };
+  host.append(mkSection(4), mkSection(3));
+}
+
 function buildPage(host: HTMLElement, data: SetupInfoJson | null, loading: boolean): void {
   host.replaceChildren();
 
   if (loading) {
-    host.innerHTML = `<div class="subpage-info-note"><md-circular-progress indeterminate></md-circular-progress><div><strong>${escapeHtml(t('setup_loading', 'Collecting configuration...'))}</strong></div></div>`;
+    buildLoading(host);
     return;
   }
   if (!data) {
@@ -86,10 +124,11 @@ async function loadSetupInfo(): Promise<SetupInfoJson | null> {
 }
 
 export async function openSetupPage(): Promise<void> {
-  // Show the last snapshot immediately, then refresh from shell in the
-  // background. This keeps page open time independent of shell startup.
-  let latest = await fetchJson<SetupInfoJson>('./json/setup_info.json');
-  let loading = !latest;
+  // The page opens on skeleton rows; once it has painted, the last
+  // snapshot is fetched and rendered. The shell probe only runs when
+  // there is no snapshot to show.
+  let latest: SetupInfoJson | null = null;
+  let loading = true;
   let hostEl: HTMLElement | null = null;
 
   const render = () => {
@@ -133,11 +172,19 @@ export async function openSetupPage(): Promise<void> {
           host.parentElement?.classList.add('info-page-container');
           host.className = 'setup-info-page';
           render();
-          // The daemon rebuilds the snapshot when inputs change. Only run the
-          // probe here when there is no cached snapshot to show.
-          if (!latest) void refresh();
         },
       }],
     }],
   });
+
+  // First let the opened page and its skeleton paint, then fetch.
+  await new Promise<void>(resolve => afterPaint(resolve, 300));
+
+  latest = await fetchJson<SetupInfoJson>('./json/setup_info.json');
+  loading = false;
+  render();
+
+  // The daemon rebuilds the snapshot when inputs change. Only run the
+  // probe here when there is no cached snapshot to show.
+  if (!latest) void refresh();
 }
