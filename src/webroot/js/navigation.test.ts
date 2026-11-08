@@ -2,6 +2,17 @@ import { describe, expect, it, beforeEach } from 'vitest';
 import { wireNavigation } from './navigation.js';
 
 describe('wireNavigation directional animations', () => {
+// The track transform is applied from a requestAnimationFrame callback, so a
+// fixed sleep races it under load. Poll for the expected value instead; the
+// assertions themselves are unchanged.
+async function expectTransform(track: HTMLElement, expected: string): Promise<void> {
+  const deadline = Date.now() + 1000;
+  while (track.style.transform !== expected && Date.now() < deadline) {
+    await new Promise(r => setTimeout(r, 5));
+  }
+  expect(track.style.transform).toBe(expected);
+}
+
   beforeEach(() => {
     document.body.innerHTML = `
       <div id="top-bar"></div>
@@ -42,31 +53,23 @@ describe('wireNavigation directional animations', () => {
 
     // Switch Forward: Home (0) -> Tools (1)
     toolsTab.click();
-    await new Promise(r => setTimeout(r, 20));
-
+    await expectTransform(track, 'translate3d(-100%, 0, 0)');
     expect(toolsTab.classList.contains('nav-tab--active')).toBe(true);
-    expect(track.style.transform).toBe('translate3d(-100%, 0, 0)');
 
     // Switch Forward: Tools (1) -> Settings (3)
     settingsTab.click();
-    await new Promise(r => setTimeout(r, 20));
-
+    await expectTransform(track, 'translate3d(-300%, 0, 0)');
     expect(settingsTab.classList.contains('nav-tab--active')).toBe(true);
-    expect(track.style.transform).toBe('translate3d(-300%, 0, 0)');
 
     // Switch Backward: Settings (3) -> Control (2)
     controlTab.click();
-    await new Promise(r => setTimeout(r, 20));
-
+    await expectTransform(track, 'translate3d(-200%, 0, 0)');
     expect(controlTab.classList.contains('nav-tab--active')).toBe(true);
-    expect(track.style.transform).toBe('translate3d(-200%, 0, 0)');
 
     // Switch Backward: Control (2) -> Home (0)
     homeTab.click();
-    await new Promise(r => setTimeout(r, 20));
-
+    await expectTransform(track, 'translate3d(0%, 0, 0)');
     expect(homeTab.classList.contains('nav-tab--active')).toBe(true);
-    expect(track.style.transform).toBe('translate3d(0%, 0, 0)');
 
     // Wait for transition to finish
     await new Promise(r => setTimeout(r, 350));
@@ -112,9 +115,8 @@ describe('wireNavigation directional animations', () => {
     });
     document.dispatchEvent(touchEnd);
 
-    await new Promise(r => setTimeout(r, 20));
+    await expectTransform(track, 'translate3d(-100%, 0, 0)');
     expect(toolsTab.classList.contains('nav-tab--active')).toBe(true);
-    expect(track.style.transform).toBe('translate3d(-100%, 0, 0)');
 
     // Allow background dynamic imports to settle
     await new Promise(r => setTimeout(r, 150));
