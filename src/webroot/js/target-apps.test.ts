@@ -4,6 +4,7 @@ const state = vi.hoisted(() => ({
   listRawFails: false,
   blacklistFile: 'com.b.app\n',
   denylist: '',
+  userPkgs: null as string | null,
   km: { format: 'txt', perAppModes: true } as Record<string, unknown>,
 }));
 
@@ -64,7 +65,7 @@ function execImpl(cmd: string) {
       ? { stdout: '', stderr: 'boom', code: 1 }
       : { stdout: TARGET_LIST, stderr: '', code: 0 };
   }
-  if (cmd.includes('cmd package list packages')) return { stdout: USER_PKGS, stderr: '', code: 0 };
+  if (cmd.includes('cmd package list packages')) return { stdout: state.userPkgs ?? USER_PKGS, stderr: '', code: 0 };
   if (cmd.startsWith('cat ') && cmd.includes('blacklist.txt')) {
     return { stdout: state.blacklistFile, stderr: '', code: 0 };
   }
@@ -91,6 +92,7 @@ describe('target apps manager', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
     state.listRawFails = false;
+    state.userPkgs = null;
     state.blacklistFile = 'com.b.app\n';
     state.denylist = '';
     state.km = { format: 'txt', perAppModes: true };
@@ -137,6 +139,46 @@ describe('target apps manager', () => {
     expect(itemByPkg('com.a.app').state).toBe('force');
     click(circleOf('com.c.app')); // bare -> conditional; item handler must not also fire
     expect(itemByPkg('com.c.app').state).toBe('conditional');
+  });
+
+  it('shows a skeleton list while loading, then swaps in the apps', async () => {
+    await openTargetAppsManager();
+
+    const loading = document.querySelector('#ta-loading') as HTMLElement;
+    const section = loading.querySelector('sp-settings-section');
+    expect(section).not.toBeNull();
+    expect(section!.querySelectorAll('.ta-skeleton-row')).toHaveLength(8);
+    expect(section!.querySelector('.ta-skeleton-row [slot="leading"]')?.tagName).toBe('SP-SKELETON');
+    expect(section!.querySelector('.ta-skeleton-row [slot="trailing"]')?.getAttribute('variant')).toBe('circular');
+    expect(loading.style.display).toBe('none');
+
+    const list = document.querySelector('#ta-list') as HTMLElement;
+    expect(list.style.display).toBe('');
+    expect(items()).toHaveLength(4);
+  });
+
+  it('lazy-loads the list in chunks as the sentinel approaches', async () => {
+    const RealIO = globalThis.IntersectionObserver;
+    globalThis.IntersectionObserver = class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    } as unknown as typeof IntersectionObserver;
+    try {
+      state.userPkgs = Array.from({ length: 60 }, (_, i) => `package:com.x${i}.app`).join('\n') + '\n';
+      await openTargetAppsManager();
+
+      expect(items()).toHaveLength(48);
+      const list = document.querySelector('#ta-list') as HTMLElement;
+      expect(list.querySelector('.ta-sentinel')).not.toBeNull();
+
+      list.dispatchEvent(new Event('scroll'));
+      // 60 user packages plus the 3 target-list entries not among them.
+      expect(items()).toHaveLength(63);
+      expect(list.querySelector('.ta-sentinel')).toBeNull();
+    } finally {
+      globalThis.IntersectionObserver = RealIO;
+    }
   });
 
   it('renders apps as settings rows in a grouped section', async () => {

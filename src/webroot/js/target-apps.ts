@@ -15,6 +15,7 @@ import { overlayHeader } from './ui-overlay.js';
 import { createFilterDropdown, type FilterDropdownHandle, type FilterOption } from './filter-dropdown.js';
 import './ui/sp-settings-row.js';
 import './ui/sp-settings-section.js';
+import './ui/sp-skeleton.js';
 
 export type TargetState = 'unchecked' | 'bare' | 'conditional' | 'force';
 type BlacklistState = 'unchecked' | 'blacklisted';
@@ -155,6 +156,16 @@ async function resolvePackageNames(packages: string[]): Promise<Map<string, stri
 }
 
 function buildOverlayHTML(): string {
+  // Same skeleton pattern as the keybox catalog: rows inside a section so
+  // the loading state has the loaded list's grouped shape. The aria-hidden
+  // goes on the section, never the rows (see keybox-catalog-ui.ts).
+  const skeletonRow = `
+        <sp-settings-row variant="custom" class="ta-skeleton-row">
+          <sp-skeleton slot="leading" variant="rounded" class="ta-skeleton-icon"></sp-skeleton>
+          <span slot="headline"><sp-skeleton variant="text" class="ta-skeleton-title"></sp-skeleton></span>
+          <span slot="supporting"><sp-skeleton variant="text" class="ta-skeleton-desc"></sp-skeleton></span>
+          <sp-skeleton slot="trailing" variant="circular" class="ta-skeleton-state"></sp-skeleton>
+        </sp-settings-row>`;
   return `
     <div class="ta-inner">
       <div class="ptr-indicator" id="ptr-indicator">
@@ -208,12 +219,12 @@ function buildOverlayHTML(): string {
 
       <div class="ta-filters" id="ta-filters"></div>
 
-      <div class="ta-list" id="ta-list"></div>
-    </div>
+      <div class="ta-list" id="ta-list" style="display: none"></div>
 
-    <div class="ta-loading" id="ta-loading">
-      <md-circular-progress indeterminate></md-circular-progress>
-      <p>${t('ta_loading', 'Loading apps...')}</p>
+      <div class="ta-loading" id="ta-loading" role="status">
+        <sp-settings-section aria-hidden="true">${skeletonRow.repeat(8)}</sp-settings-section>
+        <p>${t('ta_loading', 'Loading apps...')}</p>
+      </div>
     </div>
 
     <md-fab id="ta-apply" class="ta-fab" label="${t('ta_apply', 'Apply')}">
@@ -279,6 +290,7 @@ export async function openTargetAppsManager() {
     },
   });
   overlay.querySelector('#ta-filters')!.appendChild(filterDropdown.element);
+  list.addEventListener('scroll', maybeAppendMore, { passive: true });
   const targetMap = new Map<string, AppState>();
   let blPkgs = new Set<string>();
 
@@ -289,6 +301,7 @@ export async function openTargetAppsManager() {
     closed = true;
     cleanupA11y();
     filterDropdown.dispose();
+    chunkObserver?.disconnect();
     iconMgr.destroy();
     window.isOverlayOpen = false;
     window.removeEventListener('popstate', closeOverlay);
@@ -551,7 +564,7 @@ export async function openTargetAppsManager() {
       applyFilters();
     } catch (e) {
       appendToOutput(`[TARGET] Failed to load app data: ${e}`, true);
-      loading.innerHTML = `<p>${t('ta_load_error', 'Failed to load apps')}</p>`;
+      loading.innerHTML = `<p class="ta-loading-error">${t('ta_load_error', 'Failed to load apps')}</p>`;
     }
   }
 
@@ -698,112 +711,24 @@ export async function openTargetAppsManager() {
     }
   }
 
+  // The list renders in chunks: the first chunk paints immediately and a
+  // sentinel near the bottom pulls in the next chunk as it approaches the
+  // viewport, so opening a few hundred apps never builds every row at once.
+  const CHUNK_SIZE = 48;
+  let renderedCount = 0;
+  let listSection: HTMLElement | null = null;
+  let sentinelEl: HTMLElement | null = null;
+  let chunkObserver: IntersectionObserver | null = null;
+
   function renderList() {
+    chunkObserver?.disconnect();
+    chunkObserver = null;
+    sentinelEl = null;
     list.innerHTML = '';
-    const section = document.createElement('sp-settings-section');
-    const fragment = document.createDocumentFragment();
-
-    for (const app of filteredApps) {
-      const item = document.createElement('sp-settings-row');
-      item.setAttribute('variant', 'custom');
-      item.className = 'ta-item';
-      item.dataset.package = app.packageName;
-      item.dataset.state = app.state;
-      item.setAttribute('role', 'button');
-      item.tabIndex = 0;
-
-      const { wrap: iconContainer } = iconMgr.createElements(app.packageName);
-      iconContainer.setAttribute('slot', 'leading');
-
-      const nameEl = document.createElement('span');
-      nameEl.setAttribute('slot', 'headline');
-      nameEl.className = 'ta-item-name';
-      nameEl.textContent = app.appName;
-
-      const pkgEl = document.createElement('span');
-      pkgEl.setAttribute('slot', 'supporting');
-      pkgEl.className = 'ta-item-pkg';
-      pkgEl.textContent = app.packageName;
-
-      const circle = document.createElement('div');
-      circle.setAttribute('slot', 'trailing');
-      circle.className = 'ta-state-circle';
-      circle.setAttribute('data-state', app.state);
-      circle.setAttribute('aria-hidden', 'true');
-
-      const stateIcon = stateIcons(app.state, mode);
-      const stateTextVal = stateText(app.state, mode);
-      item.setAttribute('aria-label', `${app.appName}, ${t(stateLabelKey(app.state, mode), stateTextVal || app.state)}`);
-      circle.innerHTML = stateIcon
-        ? `<md-icon class="ta-state-icon">${stateIcon}</md-icon>`
-        : stateTextVal
-          ? `<span class="ta-state-icon ta-state-text">${stateTextVal}</span>`
-          : '';
-
-      function applyAppState(newState: AppState) {
-        app.state = newState;
-        circle.setAttribute('data-state', newState);
-        item.setAttribute('aria-label', `${app.appName}, ${t(stateLabelKey(newState, mode), stateText(newState, mode) || newState)}`);
-        const iconEl = circle.querySelector('.ta-state-icon');
-        const ni = stateIcons(newState, mode);
-        const nt = stateText(newState, mode);
-        if (iconEl) {
-          if (ni) {
-            iconEl.outerHTML = `<md-icon class="ta-state-icon">${ni}</md-icon>`;
-          } else if (nt) {
-            iconEl.outerHTML = `<span class="ta-state-icon ta-state-text">${nt}</span>`;
-          } else {
-            iconEl.remove();
-          }
-        } else if (ni) {
-          circle.insertAdjacentHTML('beforeend', `<md-icon class="ta-state-icon">${ni}</md-icon>`);
-        } else if (nt) {
-          circle.insertAdjacentHTML('beforeend', `<span class="ta-state-icon ta-state-text">${nt}</span>`);
-        }
-        item.dataset.state = newState;
-        circle.classList.remove('ta-state-circle--anim');
-        void circle.offsetWidth;
-        circle.classList.add('ta-state-circle--anim');
-      }
-
-      circle.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (mode === 'blacklist') {
-          applyAppState(nextState(app.state));
-        } else if (app.state === 'unchecked') {
-          applyAppState('bare');
-        } else if (!supportsPerAppMode) {
-          applyAppState('unchecked');
-        } else {
-          const idx = TARGET_MODE_ORDER.indexOf(app.state as TargetState);
-          const next = TARGET_MODE_ORDER[(idx + 1) % TARGET_MODE_ORDER.length];
-          if (next) applyAppState(next);
-        }
-      });
-
-      item.addEventListener('click', () => {
-        if (mode === 'blacklist') {
-          applyAppState(app.state === 'unchecked' ? 'blacklisted' : 'unchecked');
-        } else {
-          const on = supportsPerAppMode ? (defaultMode as AppState) : 'bare';
-          applyAppState(app.state === 'unchecked' ? on : 'unchecked');
-        }
-      });
-      item.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-        e.preventDefault();
-        item.click();
-      });
-
-      item.appendChild(iconContainer);
-      item.appendChild(nameEl);
-      item.appendChild(pkgEl);
-      item.appendChild(circle);
-      fragment.appendChild(item);
-    }
-
-    section.appendChild(fragment);
-    list.appendChild(section);
+    renderedCount = 0;
+    listSection = document.createElement('sp-settings-section');
+    list.appendChild(listSection);
+    appendChunk();
 
     if (filteredApps.length === 0) {
       const empty = document.createElement('div');
@@ -811,8 +736,147 @@ export async function openTargetAppsManager() {
       empty.textContent = t('ta_no_results', 'No apps match your filter');
       list.appendChild(empty);
     }
+  }
 
-    iconMgr.watchAll();
+  function appendChunk() {
+    if (!listSection) return;
+    const next = filteredApps.slice(renderedCount, renderedCount + CHUNK_SIZE);
+    if (next.length > 0) {
+      const fragment = document.createDocumentFragment();
+      for (const app of next) fragment.appendChild(buildRow(app));
+      listSection.appendChild(fragment);
+      renderedCount += next.length;
+      iconMgr.watchAll();
+    }
+    syncSentinel();
+  }
+
+  function syncSentinel() {
+    if (renderedCount >= filteredApps.length) {
+      sentinelEl?.remove();
+      sentinelEl = null;
+      chunkObserver?.disconnect();
+      return;
+    }
+    if (!sentinelEl) {
+      sentinelEl = document.createElement('div');
+      sentinelEl.className = 'ta-sentinel';
+      sentinelEl.setAttribute('aria-hidden', 'true');
+      list.appendChild(sentinelEl);
+    }
+    if (typeof IntersectionObserver === 'function') {
+      if (!chunkObserver) {
+        chunkObserver = new IntersectionObserver((entries) => {
+          if (entries.some(entry => entry.isIntersecting)) appendChunk();
+        }, { root: list, rootMargin: '600px' });
+      }
+      chunkObserver.observe(sentinelEl);
+    }
+  }
+
+  function maybeAppendMore() {
+    if (!sentinelEl || renderedCount >= filteredApps.length) return;
+    const rect = sentinelEl.getBoundingClientRect();
+    if (rect.top < list.getBoundingClientRect().bottom + 600) appendChunk();
+  }
+
+  function buildRow(app: TargetApp): HTMLElement {
+    const item = document.createElement('sp-settings-row');
+    item.setAttribute('variant', 'custom');
+    item.className = 'ta-item';
+    item.dataset.package = app.packageName;
+    item.dataset.state = app.state;
+    item.setAttribute('role', 'button');
+    item.tabIndex = 0;
+
+    const { wrap: iconContainer } = iconMgr.createElements(app.packageName);
+    iconContainer.setAttribute('slot', 'leading');
+
+    const nameEl = document.createElement('span');
+    nameEl.setAttribute('slot', 'headline');
+    nameEl.className = 'ta-item-name';
+    nameEl.textContent = app.appName;
+
+    const pkgEl = document.createElement('span');
+    pkgEl.setAttribute('slot', 'supporting');
+    pkgEl.className = 'ta-item-pkg';
+    pkgEl.textContent = app.packageName;
+
+    const circle = document.createElement('div');
+    circle.setAttribute('slot', 'trailing');
+    circle.className = 'ta-state-circle';
+    circle.setAttribute('data-state', app.state);
+    circle.setAttribute('aria-hidden', 'true');
+
+    const stateIcon = stateIcons(app.state, mode);
+    const stateTextVal = stateText(app.state, mode);
+    item.setAttribute('aria-label', `${app.appName}, ${t(stateLabelKey(app.state, mode), stateTextVal || app.state)}`);
+    circle.innerHTML = stateIcon
+      ? `<md-icon class="ta-state-icon">${stateIcon}</md-icon>`
+      : stateTextVal
+        ? `<span class="ta-state-icon ta-state-text">${stateTextVal}</span>`
+        : '';
+
+    function applyAppState(newState: AppState) {
+      app.state = newState;
+      circle.setAttribute('data-state', newState);
+      item.setAttribute('aria-label', `${app.appName}, ${t(stateLabelKey(newState, mode), stateText(newState, mode) || newState)}`);
+      const iconEl = circle.querySelector('.ta-state-icon');
+      const ni = stateIcons(newState, mode);
+      const nt = stateText(newState, mode);
+      if (iconEl) {
+        if (ni) {
+          iconEl.outerHTML = `<md-icon class="ta-state-icon">${ni}</md-icon>`;
+        } else if (nt) {
+          iconEl.outerHTML = `<span class="ta-state-icon ta-state-text">${nt}</span>`;
+        } else {
+          iconEl.remove();
+        }
+      } else if (ni) {
+        circle.insertAdjacentHTML('beforeend', `<md-icon class="ta-state-icon">${ni}</md-icon>`);
+      } else if (nt) {
+        circle.insertAdjacentHTML('beforeend', `<span class="ta-state-icon ta-state-text">${nt}</span>`);
+      }
+      item.dataset.state = newState;
+      circle.classList.remove('ta-state-circle--anim');
+      void circle.offsetWidth;
+      circle.classList.add('ta-state-circle--anim');
+    }
+
+    circle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (mode === 'blacklist') {
+        applyAppState(nextState(app.state));
+      } else if (app.state === 'unchecked') {
+        applyAppState('bare');
+      } else if (!supportsPerAppMode) {
+        applyAppState('unchecked');
+      } else {
+        const idx = TARGET_MODE_ORDER.indexOf(app.state as TargetState);
+        const next = TARGET_MODE_ORDER[(idx + 1) % TARGET_MODE_ORDER.length];
+        if (next) applyAppState(next);
+      }
+    });
+
+    item.addEventListener('click', () => {
+      if (mode === 'blacklist') {
+        applyAppState(app.state === 'unchecked' ? 'blacklisted' : 'unchecked');
+      } else {
+        const on = supportsPerAppMode ? (defaultMode as AppState) : 'bare';
+        applyAppState(app.state === 'unchecked' ? on : 'unchecked');
+      }
+    });
+    item.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      item.click();
+    });
+
+    item.appendChild(iconContainer);
+    item.appendChild(nameEl);
+    item.appendChild(pkgEl);
+    item.appendChild(circle);
+    return item;
   }
 
   function applyFilters() {

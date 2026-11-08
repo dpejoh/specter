@@ -1760,16 +1760,14 @@ md-filled-tonal-button {
 }
 
 .ta-loading {
-  position: absolute;
-  inset: 0;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
   gap: 16px;
+  padding: 0 15px 24px;
   color: var(--md-sys-color-on-surface-variant);
-  z-index: 2;
-  background: var(--md-sys-color-surface);
 }
 
 .ta-empty {
@@ -1780,8 +1778,41 @@ md-filled-tonal-button {
 }
 
 .ta-loading p {
+  align-self: center;
   margin: 0;
   font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.ta-loading .ta-loading-error {
+  margin: auto;
+}
+
+.ta-skeleton-row {
+  pointer-events: none;
+}
+
+.ta-skeleton-icon {
+  width: 40px;
+  flex: none;
+  --sp-skeleton-height: 40px;
+  --sp-skeleton-shape: 12px;
+}
+
+.ta-skeleton-state {
+  --sp-skeleton-size: 36px;
+}
+
+.ta-skeleton-title {
+  width: 45%;
+}
+
+.ta-skeleton-desc {
+  width: 70%;
+}
+
+.ta-sentinel {
+  height: 1px;
 }
 
 .fb-menu,
