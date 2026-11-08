@@ -1,6 +1,6 @@
 import { spawnScript } from './bridge.js';
 import { appendToOutput } from './terminal.js';
-import { showToast } from './toast.js';
+import { showToast, showLoadingToast, updateToast } from './toast.js';
 import { showConfirm, showErrorDialog } from './dialog.js';
 import { addEntry } from './history.js';
 import { setFriendlyNames } from './utils.js';
@@ -16,26 +16,44 @@ async function confirmDestructive(friendlyName: string, msgKey?: string): Promis
 
 let actionChain: Promise<unknown> = Promise.resolve();
 
-export function runAction(scriptName: string, friendlyNameKey?: string): Promise<number> {
+export interface RunActionOptions {
+  /**
+   * 'dialog' (default): the blocking progress dialog owns the wait.
+   * 'toast': no dialog — one loading toast owns the whole lifecycle and
+   * morphs into the result, while the initiating control shows its own
+   * busy state. Use for actions launched from a button that can do so.
+   */
+  feedback?: 'dialog' | 'toast';
+  loadingLabel?: string;
+  successLabel?: string;
+}
+
+export function runAction(scriptName: string, friendlyNameKey?: string, options?: RunActionOptions): Promise<number> {
   const next = actionChain.then(
-    () => runActionInternal(scriptName, friendlyNameKey),
-    () => runActionInternal(scriptName, friendlyNameKey),
+    () => runActionInternal(scriptName, friendlyNameKey, options),
+    () => runActionInternal(scriptName, friendlyNameKey, options),
   );
   actionChain = next.catch(() => {});
   return next;
 }
 
-async function runActionInternal(scriptName: string, friendlyNameKey?: string): Promise<number> {
+async function runActionInternal(scriptName: string, friendlyNameKey?: string, options?: RunActionOptions): Promise<number> {
   const i18nKey = friendlyNameKey || getFriendlyName(scriptName);
   const friendlyName = getTranslation(i18nKey) || i18nKey;
   const lines: string[] = [];
   appendToOutput(`> ${friendlyName}`);
-  const dialog = document.getElementById('progress-dialog') as MdDialog | null;
-  const label = document.getElementById('progress-label');
-  const text = document.getElementById('progress-text');
-  if (label) label.textContent = friendlyName;
-  if (text) text.textContent = getTranslation('simple_dialog_wait') || 'This may take a moment';
-  if (dialog) dialog.show();
+  const useToast = options?.feedback === 'toast';
+  const dialog = useToast ? null : document.getElementById('progress-dialog') as MdDialog | null;
+  let loadingToast: HTMLElement | null = null;
+  if (useToast) {
+    loadingToast = showLoadingToast(options?.loadingLabel || friendlyName);
+  } else {
+    const label = document.getElementById('progress-label');
+    const text = document.getElementById('progress-text');
+    if (label) label.textContent = friendlyName;
+    if (text) text.textContent = getTranslation('simple_dialog_wait') || 'This may take a moment';
+    if (dialog) dialog.show();
+  }
 
   return new Promise<number>(resolve => {
     let settled = false;
@@ -54,19 +72,23 @@ async function runActionInternal(scriptName: string, friendlyNameKey?: string): 
       appendToOutput(line, true);
       lines.push('[!] ' + line);
     });
+    const settleToast = (message: string, toastOptions: Parameters<typeof showToast>[1]) => {
+      if (loadingToast) updateToast(loadingToast, message, toastOptions);
+      else showToast(message, toastOptions);
+    };
     child.on('exit', (code: number) => {
       const output = lines.join('\n');
       appendToOutput(`> ${friendlyName} exited (code: ${code})`);
       addEntry(scriptName, output, code);
       if (code !== 0) {
         const errorMsg = lines.find(l => l.includes('Error')) || lines[lines.length - 1] || friendlyName;
-        showToast(`${getTranslation('simple_toast_error') || 'Failed'}: ${errorMsg}`, {
+        settleToast(`${getTranslation('simple_toast_error') || 'Failed'}: ${errorMsg}`, {
           icon: 'error', type: 'error',
           action: getTranslation('simple_toast_view_details') || 'View Details', autoCloseDelay: 8000,
           onActionClick: () => showErrorDialog(getTranslation('error_dialog_title') || 'Error Details', output),
         });
       } else {
-        showToast(getTranslation('toast_success') || 'Done', { icon: 'check_circle', type: 'success', autoCloseDelay: 3000 });
+        settleToast(options?.successLabel || getTranslation('toast_success') || 'Done', { icon: 'check_circle', type: 'success', autoCloseDelay: 3000 });
       }
       finish(code);
     });
@@ -74,7 +96,7 @@ async function runActionInternal(scriptName: string, friendlyNameKey?: string): 
       const msg = err.message || getTranslation('simple_toast_error') || 'Failed';
       appendToOutput(`> Error: ${msg}`, true);
       addEntry(scriptName, msg, 1);
-      showToast(`${getTranslation('simple_toast_error') || 'Failed'}: ${friendlyName}`, {
+      settleToast(`${getTranslation('simple_toast_error') || 'Failed'}: ${friendlyName}`, {
         icon: 'error', type: 'error',
         action: getTranslation('simple_toast_view_details') || 'View Details', autoCloseDelay: 8000,
         onActionClick: () => showErrorDialog(getTranslation('error_dialog_title') || 'Error Details', msg),

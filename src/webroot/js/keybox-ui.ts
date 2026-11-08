@@ -73,11 +73,21 @@ export async function openKeyboxPage() {
 
   localApply?.addEventListener('click', async () => {
     if (!local || !localApply) return;
+    const originalContent = localApply.innerHTML;
     localApply.disabled = true;
+    localApply.classList.add('kb-install-btn--busy');
+    localApply.innerHTML = `
+      <md-icon slot="icon" aria-hidden="true">progress_activity</md-icon>
+      ${t('kb_installing_btn', 'Installing…')}
+    `;
     try {
       await local.apply();
     } finally {
-      if (localApply) localApply.disabled = false;
+      if (localApply) {
+        localApply.innerHTML = originalContent;
+        localApply.classList.remove('kb-install-btn--busy');
+        localApply.disabled = false;
+      }
     }
   });
 }

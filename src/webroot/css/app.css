@@ -431,6 +431,17 @@ sp-settings-section.kb-page-container {
   --md-filled-button-container-shape: 9999px;
 }
 
+.kb-install-btn--busy md-icon {
+  display: inline-block;
+  animation: kb-refresh-spin 0.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kb-install-btn--busy md-icon {
+    animation: none;
+  }
+}
+
 sp-settings-section.info-page-container {
   overflow: visible;
 }

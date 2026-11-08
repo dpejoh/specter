@@ -3,11 +3,14 @@ import { exec, getModuleDir } from './bridge.js';
 import { shellEscape } from './utils.js';
 import { refreshKeyboxStatus } from './device.js';
 import { runAction } from './actions.js';
+import { t } from './i18n.js';
 
 export interface InstallKeyboxOptions {
   /** Custom keybox URL/path. Omit when installing a catalog entry. */
   text?: string;
   privateKeybox?: boolean;
+  /** Display name of what is being installed, for the success toast. */
+  label?: string;
   onInstalled?: () => void;
 }
 
@@ -26,7 +29,13 @@ export async function installKeybox(options: InstallKeyboxOptions = {}): Promise
   const moddir = getModuleDir();
   if (!moddir) return false;
 
-  const code = await runAction('keybox.sh');
+  const code = await runAction('keybox.sh', undefined, {
+    feedback: 'toast',
+    loadingLabel: t('kb_installing', 'Installing keybox…'),
+    successLabel: options.label
+      ? `${options.label} · ${t('kb_installed_badge', 'Installed')}`
+      : t('kb_install_success', 'Keybox installed'),
+  });
   if (code !== 0) return false;
 
   await exec(`sh ${shellEscape(moddir + '/features/keybox_info.sh')}`).catch(() => {});

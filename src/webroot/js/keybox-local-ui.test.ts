@@ -57,7 +57,7 @@ describe('local keybox form', () => {
     await expect(form.apply()).resolves.toBe(true)
     expect(cfgSet).toHaveBeenCalledWith('keybox_custom_type', 'path')
     expect(cfgSet).toHaveBeenCalledWith('keybox_custom_value', '/sdcard/keybox.xml')
-    expect(runAction).toHaveBeenCalledWith('keybox.sh')
+    expect(runAction).toHaveBeenCalledWith('keybox.sh', undefined, expect.objectContaining({ feedback: 'toast' }))
     expect(onInstalled).toHaveBeenCalled()
   })
 

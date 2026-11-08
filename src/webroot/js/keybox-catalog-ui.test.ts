@@ -251,8 +251,38 @@ describe('keybox catalog', () => {
     row.dispatchEvent(new CustomEvent('sp-activate', { bubbles: true }));
     await catalog.install();
 
-    expect(runAction).toHaveBeenCalledWith('keybox.sh');
+    expect(runAction).toHaveBeenCalledWith('keybox.sh', undefined, expect.objectContaining({ feedback: 'toast' }));
     expect(onInstalled).toHaveBeenCalled();
+  });
+
+  it('marks the installed entry on its row', async () => {
+    fetchJson.mockImplementation((url: string) => Promise.resolve(
+      url.includes('keybox_info')
+        ? { installed: true, source: 'TAKR', source_version: '36' }
+        : CATALOG,
+    ));
+    const container = makeContainer();
+    const catalog = mountKeyboxCatalog(container);
+    await catalog.load();
+
+    const titles = [...container.querySelectorAll('#kb-catalog-list sp-settings-row [slot="headline"]')]
+      .map(el => el.textContent?.trim());
+    expect(titles).toContain('TAKR v36 Installed');
+    expect(titles).not.toContain('Yuri v8 Installed');
+  });
+
+  it('reports installing state around an install', async () => {
+    const onInstallingChange = vi.fn();
+    const container = makeContainer();
+    const catalog = mountKeyboxCatalog(container, { onInstallingChange });
+    await catalog.load();
+
+    const row = [...container.querySelectorAll('#kb-catalog-list sp-settings-row')]
+      .find(el => el.querySelector('[slot="headline"]')?.textContent?.includes('rkp r4')) as HTMLElement;
+    row.dispatchEvent(new CustomEvent('sp-activate', { bubbles: true }));
+    await catalog.install();
+
+    expect(onInstallingChange.mock.calls).toEqual([[true], [false]]);
   });
 
   it('opens the remote catalog page and mounts the catalog', async () => {

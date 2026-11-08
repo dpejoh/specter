@@ -13,6 +13,7 @@ import type { CatalogEntry, CatalogJson } from './types.js';
 export interface KeyboxCatalogOptions {
   refreshButton?: HTMLElement | null;
   onStateChange?: (canInstall: boolean) => void;
+  onInstallingChange?: (installing: boolean) => void;
   onInstalled?: () => void;
 }
 
@@ -81,7 +82,7 @@ async function fetchCatalog(): Promise<CatalogJson | null> {
 }
 
 export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalogOptions = {}): KeyboxCatalogHandle {
-  const { refreshButton = null, onStateChange, onInstalled } = options;
+  const { refreshButton = null, onStateChange, onInstallingChange, onInstalled } = options;
   type StatusFilter = 'active' | 'softbanned' | 'revoked' | 'all';
   let statusFilter: StatusFilter = 'active';
   let providerFilter = 'all';
@@ -93,6 +94,17 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
   let providerDropdown: FilterDropdownHandle | null = null;
   let loading = false;
   let installing = false;
+  let installedKey: string | null = null;
+
+  // The installed state belongs on the entry's row, not on the install
+  // button: read the keybox info snapshot and match source + version.
+  const refreshInstalledKey = async () => {
+    const info = await fetchJson<{ installed?: boolean; source?: string; source_version?: string }>('./json/keybox_info.json')
+      .catch(() => null);
+    installedKey = info?.installed && info.source
+      ? `${info.source}|${info.source_version || ''}`
+      : null;
+  };
 
   const visibleEntries = () => entries.filter(entry => {
     if (statusFilter === 'active' && !isActiveEntry(entry)) return false;
@@ -285,7 +297,7 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
         entryLabel(entry),
         entryDescription(entry),
         'vpn_key',
-        undefined,
+        entryKey(entry) === installedKey ? t('kb_installed_badge', 'Installed') : undefined,
         !active,
       ));
     }
@@ -329,6 +341,7 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
         (b.timestamp || '').localeCompare(a.timestamp || '') ||
         a.source.localeCompare(b.source) ||
         a.version.localeCompare(b.version, undefined, { numeric: true }));
+    await refreshInstalledKey();
     const sources = [...new Set(entries.map(entry => entry.source))];
     if (providerFilter !== 'all' && !sources.includes(providerFilter)) {
       providerFilter = 'all';
@@ -354,6 +367,7 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
 
     installing = true;
     updateFab();
+    onInstallingChange?.(true);
     try {
       cfgSet('keybox_custom_type', '');
       cfgSet('keybox_custom_value', '');
@@ -367,12 +381,20 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
         cfgSet('keybox_provider', providerFilter === 'all' ? 'auto' : providerFilter);
       }
 
-      await installKeybox({ onInstalled });
+      const ok = await installKeybox({
+        onInstalled,
+        label: entry ? entryLabel(entry) : t('kb_catalog_auto', 'Automatic'),
+      });
+      if (ok) {
+        await refreshInstalledKey();
+        renderCatalog();
+      }
     } finally {
       cfgSet('keybox_select_source', '');
       cfgSet('keybox_select_version', '');
       installing = false;
       updateFab();
+      onInstallingChange?.(false);
     }
   }
 
@@ -480,11 +502,29 @@ export async function openKeyboxCatalogPage() {
   const installButton = instance.overlay.querySelector('#kb-catalog-install') as
     | (HTMLElement & { disabled: boolean })
     | null;
+  const installButtonContent = installButton?.innerHTML ?? '';
+  let canInstallNow = false;
+  let installingNow = false;
+  // The button that started the install carries its loading state:
+  // disabled, spinner, state label — the page itself never blocks.
+  const renderInstallButton = () => {
+    if (!installButton) return;
+    installButton.disabled = installingNow || !canInstallNow;
+    installButton.classList.toggle('kb-install-btn--busy', installingNow);
+    installButton.innerHTML = installingNow
+      ? `<md-icon slot="icon" aria-hidden="true">progress_activity</md-icon> ${t('kb_installing_btn', 'Installing…')}`
+      : installButtonContent;
+  };
 
   catalog = mountKeyboxCatalog(catalogContent, {
     refreshButton,
     onStateChange: (canInstall) => {
-      if (installButton) installButton.disabled = !canInstall;
+      canInstallNow = canInstall;
+      renderInstallButton();
+    },
+    onInstallingChange: (installing) => {
+      installingNow = installing;
+      renderInstallButton();
     },
     onInstalled: () => instance.close(),
   });

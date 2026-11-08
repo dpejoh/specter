@@ -35,7 +35,7 @@ const h = vi.hoisted(() => ({
 }));
 
 const {
-  spawnScript, appendToOutput, showToast, showConfirm, showErrorDialog,
+  spawnScript, appendToOutput, showToast, showLoadingToast, updateToast, showConfirm, showErrorDialog,
   addEntry, setFriendlyNames, refreshControlToggles,
 } = vi.hoisted(() => ({
   spawnScript: vi.fn(() => {
@@ -45,6 +45,8 @@ const {
   }),
   appendToOutput: vi.fn(),
   showToast: vi.fn(),
+  showLoadingToast: vi.fn(() => ({})),
+  updateToast: vi.fn(),
   showConfirm: vi.fn(async () => h.confirmResult),
   showErrorDialog: vi.fn(),
   addEntry: vi.fn(),
@@ -56,7 +58,7 @@ const {
 
 vi.mock('./bridge.js', () => ({ spawnScript }));
 vi.mock('./terminal.js', () => ({ appendToOutput }));
-vi.mock('./toast.js', () => ({ showToast }));
+vi.mock('./toast.js', () => ({ showToast, showLoadingToast, updateToast }));
 vi.mock('./dialog.js', () => ({ showConfirm, showErrorDialog }));
 vi.mock('./history.js', () => ({ addEntry }));
 vi.mock('./utils.js', () => ({
@@ -113,6 +115,44 @@ describe('actions', () => {
     await expect(promise).resolves.toBe(0);
     expect(addEntry).toHaveBeenCalledWith('keybox.sh', 'working\n[!] a warning', 0);
     expect(showToast).toHaveBeenCalledWith('Done', expect.objectContaining({ type: 'success' }));
+  });
+
+  it('toast feedback: no dialog, one loading toast morphs into the result', async () => {
+    const dialog = setupProgressDialog();
+    const promise = runAction('keybox.sh', undefined, {
+      feedback: 'toast',
+      loadingLabel: 'Installing keybox…',
+      successLabel: 'TAKR v36 · Installed',
+    });
+    await vi.waitFor(() => expect(h.children).toHaveLength(1));
+
+    expect(dialog.show).not.toHaveBeenCalled();
+    expect(showLoadingToast).toHaveBeenCalledWith('Installing keybox…');
+    const loadingToast = showLoadingToast.mock.results[0]!.value;
+
+    h.children[0]!.emitExit(0);
+    await expect(promise).resolves.toBe(0);
+    expect(updateToast).toHaveBeenCalledWith(
+      loadingToast, 'TAKR v36 · Installed', expect.objectContaining({ type: 'success' }));
+    expect(showToast).not.toHaveBeenCalled();
+  });
+
+  it('toast feedback: failure morphs the loading toast into an error with details', async () => {
+    setupProgressDialog();
+    const promise = runAction('keybox.sh', undefined, { feedback: 'toast', loadingLabel: 'Installing keybox…' });
+    await vi.waitFor(() => expect(h.children).toHaveLength(1));
+
+    const child = h.children[0]!;
+    child.emitOut('Error: download failed');
+    child.emitExit(1);
+
+    await expect(promise).resolves.toBe(1);
+    expect(updateToast).toHaveBeenCalledWith(
+      expect.anything(), expect.stringContaining('Error: download failed'),
+      expect.objectContaining({ type: 'error', action: 'View Details' }));
+    const toastOpts = updateToast.mock.calls[0]![2] as { onActionClick: () => void };
+    toastOpts.onActionClick();
+    expect(showErrorDialog).toHaveBeenCalledWith('Error Details', 'Error: download failed');
   });
 
   it('reports failures with the first error line and offers details', async () => {
