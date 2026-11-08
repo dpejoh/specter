@@ -2803,6 +2803,29 @@ md-filled-tonal-button {
   width: 70%;
 }
 
+.sp-skeleton-row {
+  pointer-events: none;
+}
+
+.sp-skeleton-icon {
+  width: 40px;
+  flex: none;
+  --sp-skeleton-size: 40px;
+}
+
+.sp-skeleton-title {
+  width: 42%;
+}
+
+.sp-skeleton-desc {
+  width: 64%;
+}
+
+.sp-skeleton-input {
+  --sp-skeleton-height: 48px;
+  --sp-skeleton-shape: 14px;
+}
+
 .kb-catalog-status p {
   margin: 0;
   max-width: 360px;
