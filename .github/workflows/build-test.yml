@@ -80,19 +80,106 @@ jobs:
 
       - name: Send CI build to Telegram
         if: github.event_name != 'pull_request'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GITHUB_EVENT: ${{ toJson(github.event) }}
+          BRANCH: ${{ github.ref_name }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          ACTOR: ${{ github.actor }}
         run: |
-          COMMIT_MSG=$(git log -1 --pretty=%s | sed 's/`/'"'"'/g')
-          COMMIT_URL="https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
-          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          CAPTION=$(printf '```\n%s\n```\n[Commit](%s)\n[Workflow run](%s)' "$COMMIT_MSG" "$COMMIT_URL" "$RUN_URL")
-          HTTP_CODE=$(curl -s -o response.json -w "%{http_code}" \
-            -F chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+          set -euo pipefail
+
+          if [ -z "${TELEGRAM_BOT_TOKEN}" ] || [ -z "${TELEGRAM_CHAT_ID}" ]; then
+            echo "Missing Telegram secrets. Configure TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in repo secrets." >&2
+            exit 0
+          fi
+
+          CI_COUNT=$(git rev-list --count HEAD)
+
+          CAPTION=$(python3 - <<'PY'
+          import json, os
+
+          def escape_md(s):
+              for ch in ['\\', '_', '*', '[', '`']:
+                  s = s.replace(ch, '\\' + ch)
+              return s
+
+          event = json.loads(os.environ.get("GITHUB_EVENT", "{}"))
+          branch = os.environ.get("BRANCH", "main")
+          run_url = os.environ.get("RUN_URL", "")
+          ci_count = os.environ.get("CI_COUNT", "")
+          repo = os.environ.get("REPO", "")
+          sha = os.environ.get("SHA", "")
+          actor = os.environ.get("ACTOR", "")
+
+          commits = event.get("commits", [])
+          if commits:
+              commit_lines = []
+              i = len(commits)
+              for c in reversed(commits):
+                  msg = c.get("message", "").split("\n")[0].strip()
+                  if len(msg) > 100:
+                      msg = msg[:97] + "..."
+                  author = (
+                      c.get("author", {}).get("username")
+                      or c.get("author", {}).get("name")
+                      or actor
+                  )
+                  line = f"{escape_md(msg)} by {escape_md(author)}"
+                  if len(line) + 1 + sum(len(x) + 1 for x in commit_lines) > 600:
+                      commit_lines.append(f"(other {i} commits)")
+                      break
+                  commit_lines.append(line)
+                  i -= 1
+              commit_text = "\n".join(reversed(commit_lines))
+          else:
+              head = event.get("head_commit") or {}
+              msg = head.get("message", "").split("\n")[0].strip()
+              if not msg:
+                  import subprocess
+                  msg = subprocess.check_output(["git", "log", "-1", "--pretty=%s"]).decode().strip()
+              if len(msg) > 100:
+                  msg = msg[:97] + "..."
+              author = (
+                  head.get("author", {}).get("username")
+                  or head.get("author", {}).get("name")
+                  or actor
+              )
+              commit_text = f"{escape_md(msg)} by {escape_md(author)}"
+
+          compare_url = event.get("compare")
+          if compare_url:
+              diff_line = f"[Compare]({compare_url})"
+          else:
+              diff_line = f"[Commit](https://github.com/{repo}/commit/{sha})"
+
+          caption = f"""*Specter*
+Branch: {escape_md(branch)}
+#ci_{ci_count}
+
+{commit_text}
+{diff_line}
+[Workflow run]({run_url})""".strip()
+
+          if len(caption) > 1024:
+              caption = caption[:1021].rstrip() + "..."
+
+          print(caption)
+          PY
+          )
+
+          response_file=$(mktemp)
+          HTTP_CODE=$(curl --silent --show-error --output "${response_file}" --write-out "%{http_code}" \
+            -F chat_id="${TELEGRAM_CHAT_ID}" \
             -F document=@"${{ steps.get_name.outputs.artifact_name }}.zip" \
-            -F caption="$CAPTION" \
+            -F caption="${CAPTION}" \
             -F parse_mode="Markdown" \
-            "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument")
-          cat response.json
+            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument")
+          cat "${response_file}"
           if [ "$HTTP_CODE" != "200" ]; then
-            echo "Telegram send failed (HTTP $HTTP_CODE)"
+            echo "Telegram send failed (HTTP $HTTP_CODE)" >&2
             exit 1
           fi
