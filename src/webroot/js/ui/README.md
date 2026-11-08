@@ -22,6 +22,16 @@ that during navigation blocks the first paint.
 `navigation.ts` imports `sp-page-skeleton` directly because it needs the
 skeleton before any page module is opened.
 
+## Coverage
+
+Run `npm run test:coverage` from the repo root. The v8 coverage config in
+`vitest.config.ts` reports the whole WebUI and gates this directory: every
+file under `src/webroot/js/ui/` must stay above the configured line,
+statement, function, and branch thresholds. Production adoption is part of
+coverage too — `sp-tooltip` labels the icon-only buttons on Home, and
+`sp-skeleton` is the keybox catalog's loading placeholder; a component that
+is only exercised in the gallery is not covered in any meaningful sense.
+
 ## Registry
 
 `index.ts` exports `UI_COMPONENTS`. The registry test checks four things:
