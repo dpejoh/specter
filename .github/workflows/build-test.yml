@@ -89,6 +89,7 @@ jobs:
           REPO: ${{ github.repository }}
           SHA: ${{ github.sha }}
           ACTOR: ${{ github.actor }}
+          CI_COUNT: ${{ github.run_number }}
         run: |
           set -euo pipefail
 
@@ -97,15 +98,11 @@ jobs:
             exit 0
           fi
 
-          CI_COUNT=$(git rev-list --count HEAD)
-
           CAPTION=$(python3 - <<'PY'
           import json, os
 
-          def escape_md(s):
-              for ch in ['\\', '_', '*', '[', '`']:
-                  s = s.replace(ch, '\\' + ch)
-              return s
+          def escape_html(s):
+              return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
           event = json.loads(os.environ.get("GITHUB_EVENT", "{}"))
           branch = os.environ.get("BRANCH", "main")
@@ -128,7 +125,7 @@ jobs:
                       or c.get("author", {}).get("name")
                       or actor
                   )
-                  line = f"{escape_md(msg)} by {escape_md(author)}"
+                  line = f"{escape_html(msg)} by {escape_html(author)}"
                   if len(line) + 1 + sum(len(x) + 1 for x in commit_lines) > 600:
                       commit_lines.append(f"(other {i} commits)")
                       break
@@ -148,21 +145,23 @@ jobs:
                   or head.get("author", {}).get("name")
                   or actor
               )
-              commit_text = f"{escape_md(msg)} by {escape_md(author)}"
+              commit_text = f"{escape_html(msg)} by {escape_html(author)}"
 
           compare_url = event.get("compare")
           if compare_url:
-              diff_line = f"[Compare]({compare_url})"
+              diff_line = f'<a href="{escape_html(compare_url)}">Compare</a>'
           else:
-              diff_line = f"[Commit](https://github.com/{repo}/commit/{sha})"
+              diff_line = f'<a href="https://github.com/{repo}/commit/{sha}">Commit</a>'
 
-          caption = f"""*Specter*
-Branch: {escape_md(branch)}
-#ci_{ci_count}
-
-{commit_text}
-{diff_line}
-[Workflow run]({run_url})""".strip()
+          caption_lines = [
+              "<b>Specter</b>",
+              f"Branch: {escape_html(branch)}",
+              f"#ci_{ci_count}",
+              f"<pre>{commit_text}</pre>",
+              diff_line,
+              f'<a href="{escape_html(run_url)}">Workflow run</a>',
+          ]
+          caption = "\n".join(caption_lines)
 
           if len(caption) > 1024:
               caption = caption[:1021].rstrip() + "..."
@@ -171,13 +170,18 @@ Branch: {escape_md(branch)}
           PY
           )
 
+          MODULE_ZIP=$(ls Specter-*.zip 2>/dev/null | head -n 1 || true)
+          if [ -z "${MODULE_ZIP}" ] || [ ! -f "${MODULE_ZIP}" ]; then
+            MODULE_ZIP="${{ steps.get_name.outputs.artifact_name }}.zip"
+          fi
+
           response_file=$(mktemp)
           HTTP_CODE=$(curl --silent --show-error --output "${response_file}" --write-out "%{http_code}" \
-            -F chat_id="${TELEGRAM_CHAT_ID}" \
-            -F document=@"${{ steps.get_name.outputs.artifact_name }}.zip" \
-            -F caption="${CAPTION}" \
-            -F parse_mode="Markdown" \
-            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument")
+            -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument" \
+            -F "chat_id=${TELEGRAM_CHAT_ID}" \
+            -F "document=@${MODULE_ZIP}" \
+            -F "parse_mode=HTML" \
+            --form-string "caption=${CAPTION}")
           cat "${response_file}"
           if [ "$HTTP_CODE" != "200" ]; then
             echo "Telegram send failed (HTTP $HTTP_CODE)" >&2
