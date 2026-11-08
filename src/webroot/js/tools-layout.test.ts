@@ -56,10 +56,11 @@ describe('Tools layout', () => {
     expect(toolsHeadings()).not.toContain('Keybox')
   })
 
-  it('places the HMA-OSS scope navigation entry inside Module Configs', () => {
+  it('places the HMA-OSS scope entry inside Module Configs without a duplicate quick action', () => {
     const section = toolsSections().find(s => sectionLabel(s) === 'Module Configs')
     expect(section).toBeTruthy()
     const ids = [...section!.querySelectorAll(':scope > sp-settings-row')].map(el => el.id)
     expect(ids).toContain('hma-apps-btn')
+    expect(ids).not.toContain('module-config-hma')
   })
 })

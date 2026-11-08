@@ -12,7 +12,6 @@ export async function updateModuleConfigSectionVisibility(): Promise<void> {
 
   const rows: Array<[string, boolean]> = [
     ['hma-apps-btn', hma],
-    ['module-config-hma', hma],
     ['module-config-zygisk-next', zygiskNext],
   ];
   for (const [id, visible] of rows) {

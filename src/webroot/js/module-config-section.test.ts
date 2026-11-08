@@ -14,7 +14,6 @@ beforeEach(() => {
   document.body.innerHTML = `
     <sp-settings-section id="module-config-section" hidden>
       <sp-settings-row id="hma-apps-btn" hidden></sp-settings-row>
-      <sp-settings-row id="module-config-hma" hidden></sp-settings-row>
       <sp-settings-row id="module-config-zygisk-next" hidden></sp-settings-row>
     </sp-settings-section>
   `
@@ -25,13 +24,12 @@ function visible(id: string): boolean | null {
 }
 
 describe('updateModuleConfigSectionVisibility', () => {
-  it('shows only the HMA row when HMA-OSS is installed', async () => {
+  it('shows only the HMA scope entry when HMA-OSS is installed', async () => {
     vi.mocked(isAnyModuleInstalled).mockImplementation(async ids =>
       ids.includes('hma_oss_zygisk')
     )
     await updateModuleConfigSectionVisibility()
     expect(visible('hma-apps-btn')).toBe(true)
-    expect(visible('module-config-hma')).toBe(true)
     expect(visible('module-config-zygisk-next')).toBe(false)
     expect(visible('module-config-section')).toBe(true)
   })
@@ -42,16 +40,14 @@ describe('updateModuleConfigSectionVisibility', () => {
     )
     await updateModuleConfigSectionVisibility()
     expect(visible('hma-apps-btn')).toBe(false)
-    expect(visible('module-config-hma')).toBe(false)
     expect(visible('module-config-zygisk-next')).toBe(true)
     expect(visible('module-config-section')).toBe(true)
   })
 
-  it('shows both rows when both modules are installed', async () => {
+  it('shows both module entries when both modules are installed', async () => {
     vi.mocked(isAnyModuleInstalled).mockResolvedValue(true)
     await updateModuleConfigSectionVisibility()
     expect(visible('hma-apps-btn')).toBe(true)
-    expect(visible('module-config-hma')).toBe(true)
     expect(visible('module-config-zygisk-next')).toBe(true)
   })
 
@@ -59,7 +55,6 @@ describe('updateModuleConfigSectionVisibility', () => {
     vi.mocked(isAnyModuleInstalled).mockResolvedValue(false)
     await updateModuleConfigSectionVisibility()
     expect(visible('hma-apps-btn')).toBe(false)
-    expect(visible('module-config-hma')).toBe(false)
     expect(visible('module-config-zygisk-next')).toBe(false)
     expect(visible('module-config-section')).toBe(false)
   })
@@ -80,10 +75,10 @@ describe('Tools markup', () => {
     for (const id of [
       'module-config-section',
       'hma-apps-btn',
-      'module-config-hma',
       'module-config-zygisk-next',
     ]) {
       expect(doc.getElementById(id)?.hasAttribute('hidden')).toBe(true)
     }
+    expect(doc.getElementById('module-config-hma')).toBeNull()
   })
 })
