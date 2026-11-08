@@ -4,19 +4,25 @@
 # Report validity of every PEM certificate in a keybox. Android does not
 # consistently provide openssl, so read the X.509 DER validity fields with
 # standard shell tools. Unknown or malformed certificates fail closed.
+# Self-signed (root) certificates are trust anchors: verifiers do not gate
+# on their dates, so an expired root does not condemn the chain.
 keybox_cert_validity() {
   (
     _kv_dir=$(mktemp -d "${TMPDIR:-/data/local/tmp}/specter-cert.XXXXXX") || { echo unknown; exit; }
-    trap 'rm -rf "$_kv_dir"; rm -f "$_kv_dir.der"' EXIT
-    awk -v dir="$_kv_dir" '
+    trap 'rm -rf "$_kv_dir"; rm -f "$_kv_dir.der" "$_kv_dir.res"' EXIT
+    # Keybox XML may be minified, with PEM markers sharing a line with tags
+    # or with each other; isolate every marker on its own line first.
+    sed 's/-----BEGIN CERTIFICATE-----/\n-----BEGIN CERTIFICATE-----\n/g; s/-----END CERTIFICATE-----/\n-----END CERTIFICATE-----\n/g' "$1" \
+    | awk -v dir="$_kv_dir" '
       /-----BEGIN CERTIFICATE-----/ { if (inside) { bad=1; exit } inside=1; n++; next }
       /-----END CERTIFICATE-----/ { if (!inside) { bad=1; exit } close(dir "/" n); inside=0; next }
       inside { gsub(/[[:space:]]/, ""); print > (dir "/" n) }
       END { if (bad || inside || !n) exit 1 }
-    ' "$1" || { echo unknown; exit; }
+    ' || { echo unknown; exit; }
     _kv_now=${2:-$(date -u +%Y%m%d%H%M%S 2>/dev/null)}
     case "$_kv_now" in *[!0-9]*|"") echo unknown; exit ;; esac
     _kv_result=valid
+    : > "$_kv_dir.res"
     for _kv_file in "$_kv_dir"/*; do
       base64 -d < "$_kv_file" > "$_kv_dir.der" 2>/dev/null || { _kv_result=unknown; break; }
       _kv_status=$(od -An -v -tx1 "$_kv_dir.der" | tr -d ' \n' | awk -v now="$_kv_now" '
@@ -48,18 +54,44 @@ keybox_cert_validity() {
           if (tag=="a0") { p=nextpos; if (!tlv(p,tbsend)) exit 1 }
           if (tag!="02") exit 1
           p=nextpos; if (!tlv(p,tbsend) || tag!="30") exit 1
+          p=nextpos; ip=p; if (!tlv(p,tbsend) || tag!="30") exit 1
+          issuer=substr(hex,ip,nextpos-ip)
           p=nextpos; if (!tlv(p,tbsend) || tag!="30") exit 1
-          p=nextpos; if (!tlv(p,tbsend) || tag!="30") exit 1
-          vend=end; p=start
+          vnext=nextpos; vend=end; p=start
           if (!tlv(p,vend)) exit 1; before=xtime(start,end); p=nextpos
           if (!tlv(p,vend)) exit 1; after=xtime(start,end)
           if (before=="" || after=="" || before>after) exit 1
-          if (now<before) print "not_yet_valid"; else if (now>after) print "expired"; else print "valid"
+          p=vnext; sp=p; if (!tlv(p,tbsend) || tag!="30") exit 1
+          subject=substr(hex,sp,nextpos-sp)
+          if (now<before) _st="not_yet_valid"; else if (now>after) _st="expired"; else _st="valid"
+          print _st "|" issuer "|" subject
         }
       ') || _kv_status=unknown
-      case "$_kv_status" in valid) ;; expired|not_yet_valid) _kv_result=$_kv_status; break ;; *) _kv_result=unknown; break ;; esac
+      case "$_kv_status" in
+        valid\|*|expired\|*|not_yet_valid\|*) printf '%s\n' "$_kv_status" >> "$_kv_dir.res" ;;
+        *) _kv_result=unknown; break ;;
+      esac
     done
-    rm -f "$_kv_dir.der"
+    if [ "$_kv_result" = "valid" ]; then
+      # First out-of-date certificate wins, except a self-signed root that
+      # actually anchors another certificate in the file: trust anchors are
+      # not date-gated by verifiers, so its dates are ignored.
+      _kv_result=$(awk -F'|' '
+        { cst[NR]=$1; cis[NR]=$2; csb[NR]=$3 }
+        END {
+          for (i=1; i<=NR; i++) {
+            if (cst[i]=="valid") continue
+            if (cis[i]==csb[i]) {
+              anchored=0
+              for (j=1; j<=NR; j++) if (j!=i && cis[j]==csb[i]) anchored=1
+              if (anchored) continue
+            }
+            print cst[i]; exit
+          }
+          print "valid"
+        }' "$_kv_dir.res")
+    fi
+    rm -f "$_kv_dir.der" "$_kv_dir.res"
     echo "$_kv_result"
   )
 }
