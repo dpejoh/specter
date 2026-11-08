@@ -196,9 +196,11 @@ if (typeof window.ksu === 'undefined') {
 
         if (cmd.includes('playintegrityfix/module.prop')) {
           cb(0, 'name=Play Integrity Fix [INJECT]\n', '');
-        } else if (cmd.includes('target.sh --set')) {
+        } else if (cmd.includes('target.sh') && cmd.includes('--set')) {
           cb(0, '', '');
-        } else if (cmd.includes('target.sh --list-raw') || cmd.includes('target.txt')) {
+        } else if ((cmd.includes('target.sh') && cmd.includes('--list-raw')) || cmd.includes('target.txt')) {
+          // Commands arrive shell-escaped (target.sh' --list-raw), so the
+          // flag must be matched separately from the script name.
           cb(0, MOCK_TARGET_TXT, '');
         } else if (cmd.includes('pm list packages -3')) {
           cb(0, MOCK_USER_PKGS, '');
