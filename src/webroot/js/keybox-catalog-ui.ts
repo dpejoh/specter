@@ -6,6 +6,7 @@ import { fetchJson, shellEscape, updateListContainerCorners } from './utils.js';
 import { createFilterDropdown, type FilterDropdownHandle, type FilterOption } from './filter-dropdown.js';
 import { openSubPage } from './subpage.js';
 import { installKeybox } from './keybox-install.js';
+import './ui/sp-skeleton.js';
 import type { CatalogEntry, CatalogJson } from './types.js';
 
 
@@ -132,8 +133,10 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
   const renderLoading = () => {
     if (!catalogBody) return;
     catalogBody.innerHTML = `
-      <div class="kb-catalog-status">
-        <md-circular-progress indeterminate></md-circular-progress>
+      <div class="kb-catalog-status kb-catalog-loading" role="status">
+        <sp-skeleton variant="rounded"></sp-skeleton>
+        <sp-skeleton variant="rounded"></sp-skeleton>
+        <sp-skeleton variant="rounded"></sp-skeleton>
         <p>${t('kb_catalog_loading', 'Loading keyboxes...')}</p>
       </div>
     `;
