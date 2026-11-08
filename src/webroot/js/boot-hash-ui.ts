@@ -75,42 +75,46 @@ export async function openBootHashSubpage() {
           {
             type: 'custom',
             id: 'bh-custom-input-card',
-            render: (container, _isEnabled, posClass) => {
-              container.innerHTML = `
-                <div class="list-item bh-card ${posClass || 'list-item--only'}">
-                  <div class="bh-row">
-                    <div class="li-icon"><md-icon aria-hidden="true">tag</md-icon></div>
-                    <div class="list-item-content">
-                      <div class="toggle-text">${t('boot_hash_custom_title', 'Custom Hash')}</div>
-                      <span class="supporting-text">${t('boot_hash_custom_desc', 'Spoof custom SHA-256 digest')}</span>
-                    </div>
-                  </div>
-                  <div class="subpage-text-input-wrap">
-                    <input
-                      type="text"
-                      id="bh-input"
-                      class="subpage-full-input bh-mono"
-                      maxlength="64"
-                      autocapitalize="none"
-                      autocomplete="off"
-                      spellcheck="false"
-                      placeholder="${t('boot_hash_placeholder', 'Empty for auto')}"
-                      value="${escapeHtml(savedCustom)}"
-                      aria-label="${t('boot_hash_custom_title', 'Custom Hash')}"
-                    />
-                    <md-icon-button id="bh-paste-btn" aria-label="${t('kb_paste_aria', 'Paste from clipboard')}">
-                      <md-icon aria-hidden="true">content_paste</md-icon>
-                    </md-icon-button>
-                    <md-icon-button id="bh-zero-btn" aria-label="${t('boot_hash_zero_aria', 'Set to zeros')}">
-                      <md-icon aria-hidden="true">restart_alt</md-icon>
-                    </md-icon-button>
-                  </div>
-                </div>
+            render: (container, _isEnabled) => {
+              const row = document.createElement('sp-settings-row');
+              row.setAttribute('variant', 'custom');
+              row.setAttribute('stacked', '');
+              row.setAttribute('headline', t('boot_hash_custom_title', 'Custom Hash'));
+              row.setAttribute('supporting-text', t('boot_hash_custom_desc', 'Spoof custom SHA-256 digest'));
+              const icon = document.createElement('md-icon');
+              icon.setAttribute('slot', 'icon');
+              icon.setAttribute('aria-hidden', 'true');
+              icon.textContent = 'tag';
+              row.append(icon);
+              const wrap = document.createElement('div');
+              wrap.className = 'subpage-text-input-wrap';
+              wrap.setAttribute('slot', 'trailing');
+              wrap.innerHTML = `
+                <input
+                  type="text"
+                  id="bh-input"
+                  class="subpage-full-input bh-mono"
+                  maxlength="64"
+                  autocapitalize="none"
+                  autocomplete="off"
+                  spellcheck="false"
+                  placeholder="${t('boot_hash_placeholder', 'Empty for auto')}"
+                  value="${escapeHtml(savedCustom)}"
+                  aria-label="${t('boot_hash_custom_title', 'Custom Hash')}"
+                />
+                <md-icon-button id="bh-paste-btn" aria-label="${t('kb_paste_aria', 'Paste from clipboard')}">
+                  <md-icon aria-hidden="true">content_paste</md-icon>
+                </md-icon-button>
+                <md-icon-button id="bh-zero-btn" aria-label="${t('boot_hash_zero_aria', 'Set to zeros')}">
+                  <md-icon aria-hidden="true">restart_alt</md-icon>
+                </md-icon-button>
               `;
+              row.append(wrap);
+              container.replaceWith(row);
 
-              hashInputEl = container.querySelector('#bh-input');
-              const pasteBtn = container.querySelector('#bh-paste-btn');
-              const zeroBtn = container.querySelector('#bh-zero-btn');
+              hashInputEl = row.querySelector('#bh-input');
+              const pasteBtn = row.querySelector('#bh-paste-btn');
+              const zeroBtn = row.querySelector('#bh-zero-btn');
 
               pasteBtn?.addEventListener('click', async () => {
                 try {
@@ -136,53 +140,62 @@ export async function openBootHashSubpage() {
           {
             type: 'custom',
             id: 'bh-active-status-card',
-            render: (container, _isEnabled, posClass) => {
-              container.innerHTML = `
-                <div class="list-item bh-card bh-card--compact ${posClass || 'list-item--first'}">
-                  <div class="bh-row">
-                    <div class="li-icon"><md-icon aria-hidden="true">verified_user</md-icon></div>
-                    <div class="list-item-content">
-                      <div class="toggle-text">${t('boot_hash_active_label', 'Active (ro.boot.vbmeta.digest)')}</div>
-                      <span class="supporting-text bh-mono bh-mono--block bh-mono--primary" id="bh-active-val">
-                        ${escapeHtml(activeHash || t('boot_hash_active_empty', 'None'))}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              `;
-              activeHashEl = container.querySelector('#bh-active-val');
+            render: (container, _isEnabled) => {
+              const row = document.createElement('sp-settings-row');
+              row.setAttribute('variant', 'custom');
+              row.setAttribute('headline', t('boot_hash_active_label', 'Active (ro.boot.vbmeta.digest)'));
+              const icon = document.createElement('md-icon');
+              icon.setAttribute('slot', 'icon');
+              icon.setAttribute('aria-hidden', 'true');
+              icon.textContent = 'verified_user';
+              row.append(icon);
+              const value = document.createElement('span');
+              value.id = 'bh-active-val';
+              value.className = 'bh-mono bh-mono--block bh-mono--primary';
+              value.setAttribute('slot', 'supporting');
+              value.textContent = activeHash || t('boot_hash_active_empty', 'None');
+              row.append(value);
+              container.replaceWith(row);
+              activeHashEl = value;
             },
           },
           {
             type: 'custom',
             id: 'bh-cache-status-card',
-            render: (container, _isEnabled, posClass) => {
-              container.innerHTML = `
-                <div class="list-item bh-card ${posClass || 'list-item--last'}">
-                  <div class="bh-row">
-                    <div class="li-icon"><md-icon aria-hidden="true">storage</md-icon></div>
-                    <div class="list-item-content bh-content-flex">
-                      <div class="toggle-text">${t('boot_hash_cache_title', 'Cached Hash')}</div>
-                      <span class="supporting-text bh-mono bh-mono--block" id="bh-cache-val">
-                        ${escapeHtml(cachedHash || t('boot_hash_cache_empty', 'None'))}
-                      </span>
-                    </div>
-                  </div>
-                  <div class="bh-actions-row">
-                    <md-text-button id="bh-refresh-cache-btn" class="bh-pill-button">
-                      <md-icon slot="icon" aria-hidden="true">refresh</md-icon>
-                      ${t('boot_hash_refresh_btn', 'Refresh')}
-                    </md-text-button>
-                    <md-filled-tonal-button id="bh-clear-cache-btn" class="bh-pill-button" ${!cachedHash ? 'disabled' : ''}>
-                      <md-icon slot="icon" aria-hidden="true">delete_sweep</md-icon>
-                      ${t('boot_hash_clear_cache', 'Clear Cache')}
-                    </md-filled-tonal-button>
-                  </div>
-                </div>
+            render: (container, _isEnabled) => {
+              const row = document.createElement('sp-settings-row');
+              row.setAttribute('variant', 'custom');
+              row.setAttribute('stacked', '');
+              row.setAttribute('headline', t('boot_hash_cache_title', 'Cached Hash'));
+              const icon = document.createElement('md-icon');
+              icon.setAttribute('slot', 'icon');
+              icon.setAttribute('aria-hidden', 'true');
+              icon.textContent = 'storage';
+              row.append(icon);
+              const value = document.createElement('span');
+              value.id = 'bh-cache-val';
+              value.className = 'bh-mono bh-mono--block';
+              value.setAttribute('slot', 'supporting');
+              value.textContent = cachedHash || t('boot_hash_cache_empty', 'None');
+              row.append(value);
+              const actions = document.createElement('div');
+              actions.className = 'bh-actions-row';
+              actions.setAttribute('slot', 'trailing');
+              actions.innerHTML = `
+                <md-text-button id="bh-refresh-cache-btn" class="bh-pill-button">
+                  <md-icon slot="icon" aria-hidden="true">refresh</md-icon>
+                  ${t('boot_hash_refresh_btn', 'Refresh')}
+                </md-text-button>
+                <md-filled-tonal-button id="bh-clear-cache-btn" class="bh-pill-button" ${!cachedHash ? 'disabled' : ''}>
+                  <md-icon slot="icon" aria-hidden="true">delete_sweep</md-icon>
+                  ${t('boot_hash_clear_cache', 'Clear Cache')}
+                </md-filled-tonal-button>
               `;
-              cacheHashEl = container.querySelector('#bh-cache-val');
-              clearCacheBtn = container.querySelector('#bh-clear-cache-btn');
-              const refreshBtn = container.querySelector('#bh-refresh-cache-btn');
+              row.append(actions);
+              container.replaceWith(row);
+              cacheHashEl = value;
+              clearCacheBtn = row.querySelector('#bh-clear-cache-btn');
+              const refreshBtn = row.querySelector('#bh-refresh-cache-btn');
 
               clearCacheBtn?.addEventListener('click', async () => {
                 if (moddir) {
