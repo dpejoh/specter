@@ -1977,7 +1977,8 @@ sp-snackbar.sp-snackbar--error .sp-snackbar__leading md-icon {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 140px;
+  flex: 0 0 auto;
+  max-width: 100%;
   min-width: 0;
 }
 
@@ -2000,7 +2001,11 @@ sp-snackbar.sp-snackbar--error .sp-snackbar__leading md-icon {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 120px;
+  /* No fixed cap: a zero basis keeps the name's hypothetical size out of
+     the row's line-breaking, so it never wraps to its own row; it grows
+     into whatever width the row has left after the version and "by" and
+     truncates only at the card edge. */
+  flex: 1 1 0%;
   min-width: 0;
 }
 
