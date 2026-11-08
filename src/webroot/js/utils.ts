@@ -85,8 +85,9 @@ const isSwitchEvent = (e: Event) =>
     (n.localName === 'md-switch' || n.localName === 'md-checkbox' || n.localName === 'md-radio'));
 
 /**
- * Wire activation for both the legacy `.list-item` rows and the new
- * `sp-settings-row` custom element.
+ * Wire activation for a clickable row or button: `sp-settings-row`
+ * elements emit `sp-activate`; anything else gets click/Enter/Space
+ * listeners with switch-event filtering.
  */
 export function wireRowActivation(el: HTMLElement, activate: () => void): void {
   if (el.localName === 'sp-settings-row') {

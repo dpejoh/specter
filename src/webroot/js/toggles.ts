@@ -1,7 +1,7 @@
 import { cfgGet, cfgSet, cfgInvalidate } from './cfg.js';
 import { CONTROL_TOGGLES } from './constants.js';
 import { applyTranslations, t } from './i18n.js';
-import { setDevMode, wireRowActivation } from './utils.js';
+import { setDevMode } from './utils.js';
 
 function labelFromKey(key: string): string {
   const s = key.replace(/^(toggle_|action_)/, '').replace(/_/g, ' ');
@@ -85,46 +85,25 @@ export function wireRowDialog(rowId: string, open: () => void) {
 
   const config = row.querySelector<HTMLElement>('[data-config], .li-config-btn');
 
-  if (row.localName === 'sp-settings-row') {
-    // Configurable toggle rows: the row body opens the page; the switch itself
-    // toggles state. The chevron is a second, explicit affordance for the page.
-    row.addEventListener('sp-activate', open);
-    if (config) {
-      config.addEventListener('click', event => {
-        event.stopPropagation();
-        open();
-      });
-    }
-    return;
-  }
-
+  // Configurable toggle rows: the row body opens the page; the switch itself
+  // toggles state. The chevron is a second, explicit affordance for the page.
+  row.addEventListener('sp-activate', open);
   if (config) {
     config.addEventListener('click', event => {
       event.stopPropagation();
       open();
     });
-    return;
   }
-
-  wireRowActivation(row, open);
 }
 
 export function wireControlToggles() {
-  for (const { id, key, default: def, configurable } of CONTROL_TOGGLES) {
+  for (const { id, key, default: def } of CONTROL_TOGGLES) {
     const sw = document.getElementById(id) as MdSwitch | null;
     if (!sw) continue;
     cfgGet(key, def || '1').then(val => { sw.selected = val !== '0'; });
     sw.addEventListener('change', () => {
       cfgSet(key, sw.selected ? '1' : '0');
     });
-    const row = sw.closest('sp-settings-row, .list-item');
-    if (row && row.localName !== 'sp-settings-row' && !configurable) {
-      row.addEventListener('click', e => {
-        if (e.composedPath().some(n => n instanceof Element && n.localName === 'md-switch')) return;
-        sw.selected = !sw.selected;
-        sw.dispatchEvent(new Event('change', { bubbles: true }));
-      });
-    }
   }
 }
 
@@ -146,13 +125,4 @@ export function wireDevMode() {
     setDevMode(sw.selected);
     cfgSet('dev_mode', sw.selected ? 'true' : 'false');
   });
-  const row = sw.closest('sp-settings-row, .list-item');
-  if (row && row.localName !== 'sp-settings-row') {
-    row.addEventListener('click', e => {
-      if (e.composedPath().some(n => n instanceof Element && n.localName === 'md-switch')) return;
-      sw.selected = !sw.selected;
-      setDevMode(sw.selected);
-      cfgSet('dev_mode', sw.selected ? 'true' : 'false');
-    });
-  }
 }

@@ -65,12 +65,23 @@ describe('renderControlToggles', () => {
 })
 
 describe('wireRowDialog', () => {
-  it('wires a legacy row only once', () => {
-    document.body.innerHTML = '<div id="row"></div>'
+  it('wires a row only once and opens from the config button', () => {
+    const row = document.createElement('sp-settings-row')
+    row.id = 'row'
+    const config = document.createElement('button')
+    config.setAttribute('data-config', '')
+    config.setAttribute('slot', 'trailing')
+    row.appendChild(config)
+    document.body.appendChild(row)
+
     const open = vi.fn()
     wireRowDialog('row', open)
     wireRowDialog('row', open)
-    document.getElementById('row')!.click()
+
+    row.dispatchEvent(new Event('sp-activate'))
     expect(open).toHaveBeenCalledTimes(1)
+
+    config.click()
+    expect(open).toHaveBeenCalledTimes(2)
   })
 })

@@ -36,7 +36,7 @@ const h = vi.hoisted(() => ({
 
 const {
   spawnScript, appendToOutput, showToast, showConfirm, showErrorDialog,
-  addEntry, makeRowInteractive, setFriendlyNames, refreshControlToggles,
+  addEntry, setFriendlyNames, refreshControlToggles,
 } = vi.hoisted(() => ({
   spawnScript: vi.fn(() => {
     const child = (globalThis as { __makeChild?: () => FakeChild }).__makeChild!();
@@ -48,7 +48,6 @@ const {
   showConfirm: vi.fn(async () => h.confirmResult),
   showErrorDialog: vi.fn(),
   addEntry: vi.fn(),
-  makeRowInteractive: vi.fn(),
   setFriendlyNames: vi.fn(),
   refreshControlToggles: vi.fn(async () => {}),
 }));
@@ -61,7 +60,6 @@ vi.mock('./toast.js', () => ({ showToast }));
 vi.mock('./dialog.js', () => ({ showConfirm, showErrorDialog }));
 vi.mock('./history.js', () => ({ addEntry }));
 vi.mock('./utils.js', () => ({
-  makeRowInteractive,
   setFriendlyNames,
   getFriendlyName: (script: string) => `name_${script}`,
 }));
@@ -179,36 +177,28 @@ describe('actions', () => {
     expect(h.children).toHaveLength(1);
   });
 
-  it('asks for confirmation before destructive legacy rows and can abort', async () => {
-    document.body.innerHTML = `
-      <div id="progress-dialog"></div>
-      <div id="progress-label"></div>
-      <div id="progress-text"></div>
-      <div class="list-item" data-script="wipe.sh" data-destructive>
-        <span class="action-spinner hidden"></span>
-      </div>`;
-    const dialog = document.getElementById('progress-dialog') as HTMLElement & {
-      show: () => void; close: () => void;
+  it('asks for confirmation before destructive rows and can abort', async () => {
+    setupProgressDialog();
+    const row = document.createElement('sp-settings-row') as HTMLElement & {
+      disabled: boolean; loading: boolean;
     };
-    dialog.show = vi.fn();
-    dialog.close = vi.fn();
+    row.dataset.script = 'wipe.sh';
+    row.setAttribute('data-destructive', '');
+    document.body.appendChild(row);
     wireActions();
-    expect(makeRowInteractive).toHaveBeenCalled();
 
-    const item = document.querySelector('.list-item')!;
     h.confirmResult = false;
-    item.dispatchEvent(new Event('click', { bubbles: true }));
+    row.dispatchEvent(new Event('sp-activate'));
     await new Promise(r => setTimeout(r, 10));
     expect(showConfirm).toHaveBeenCalledWith('name_wipe.sh', expect.any(String), { variant: 'danger' });
     expect(h.children).toHaveLength(0);
 
     h.confirmResult = true;
-    item.dispatchEvent(new Event('click', { bubbles: true }));
+    row.dispatchEvent(new Event('sp-activate'));
     await vi.waitFor(() => expect(h.children).toHaveLength(1));
-    const spinner = item.querySelector('.action-spinner')!;
-    expect(spinner.classList.contains('hidden')).toBe(false);
+    expect(row.loading).toBe(true);
     h.children[0]!.emitExit(0);
-    await vi.waitFor(() => expect(spinner.classList.contains('hidden')).toBe(true));
+    await vi.waitFor(() => expect(row.loading).toBe(false));
   });
 
   it('refreshes control toggles after restore_defaults.sh', async () => {

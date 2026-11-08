@@ -3,7 +3,7 @@ import { appendToOutput } from './terminal.js';
 import { showToast } from './toast.js';
 import { showConfirm, showErrorDialog } from './dialog.js';
 import { addEntry } from './history.js';
-import { makeRowInteractive, setFriendlyNames } from './utils.js';
+import { setFriendlyNames } from './utils.js';
 import { getTranslation } from './i18n.js';
 import { getFriendlyName } from './utils.js';
 
@@ -87,9 +87,8 @@ async function runActionInternal(scriptName: string, friendlyNameKey?: string): 
 type SettingsRowElement = HTMLElement & { disabled: boolean; loading: boolean };
 
 export function wireActions() {
-  document.querySelectorAll('.list-item[data-script], sp-settings-row[data-script]').forEach(item => {
+  document.querySelectorAll('sp-settings-row[data-script]').forEach(item => {
     const el = item as SettingsRowElement;
-    const isSettingsRow = el.localName === 'sp-settings-row';
 
     const activate = async () => {
       if (el.disabled) return;
@@ -102,12 +101,10 @@ export function wireActions() {
         if (!confirmed) return;
       }
 
-      const spinner = item.querySelector('.action-spinner') as HTMLElement | null;
       el.disabled = true;
       el.setAttribute('aria-disabled', 'true');
       el.setAttribute('aria-busy', 'true');
-      if (isSettingsRow) el.loading = true;
-      else spinner?.classList.remove('hidden');
+      el.loading = true;
 
       try {
         await runAction(scriptName);
@@ -120,24 +117,11 @@ export function wireActions() {
         el.disabled = false;
         el.removeAttribute('aria-disabled');
         el.removeAttribute('aria-busy');
-        if (isSettingsRow) el.loading = false;
-        else spinner?.classList.add('hidden');
+        el.loading = false;
       }
     };
 
-    if (isSettingsRow) {
-      el.addEventListener('sp-activate', () => { void activate(); });
-      return;
-    }
-
-    makeRowInteractive(el);
-    el.addEventListener('keydown', (e) => {
-      const key = (e as KeyboardEvent).key;
-      if (key !== 'Enter' && key !== ' ') return;
-      e.preventDefault();
-      void activate();
-    });
-    el.addEventListener('click', () => { void activate(); });
+    el.addEventListener('sp-activate', () => { void activate(); });
   });
 }
 
