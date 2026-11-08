@@ -300,7 +300,7 @@ describe('applyKeyboxStatus', () => {
     expect(name().textContent).toBe('Private Keybox');
   });
 
-  it('renders a provider keybox with version prefix, RKP type and Latest badge', () => {
+  it('renders a provider keybox with version prefix and RKP type, no version badge', () => {
     applyKeyboxStatus({
       installed: true, source: 'rawbin', source_version: '2.0',
       rkp: true, up_to_date: true, cert_validity: 'valid',
@@ -310,8 +310,8 @@ describe('applyKeyboxStatus', () => {
     expect(document.getElementById('keybox-source')!.textContent).toBe('rawbin');
     expect(type().textContent).toBe('RKP');
     expect(type().className).toContain('kb-hero-type-text');
-    expect(badge().textContent).toBe('Latest');
-    expect(badge().className).toContain('kb-version-badge--latest');
+    expect(badge().textContent).toBe('');
+    expect(badge().className).toBe('kb-version-badge');
   });
 
   it('keeps an existing v prefix and falls back to the provider name alone', () => {

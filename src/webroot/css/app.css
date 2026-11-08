@@ -2006,9 +2006,8 @@ sp-snackbar.sp-snackbar--error .sp-snackbar__leading md-icon {
   padding: 6px 10px;
   border-radius: 9999px;
 }
-.kb-version-badge--latest {
-  background: var(--md-sys-color-primary-container);
-  color: var(--md-sys-color-on-primary-container);
+.kb-version-badge:empty {
+  display: none;
 }
 .kb-version-badge--outdated {
   background: var(--md-sys-color-tertiary-container);

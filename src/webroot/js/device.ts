@@ -316,10 +316,7 @@ export function applyKeyboxStatus(data: KeyboxInfoJson) {
     setType('—');
   }
 
-  if (isRawbin && data.up_to_date && data.source_version) {
-    badgeEl.textContent = getTranslation('device_latest') || 'Latest';
-    badgeEl.className = 'kb-version-badge kb-version-badge--latest';
-  } else if (!isRawbin && data.source_version) {
+  if (!isRawbin && data.source_version) {
     badgeEl.textContent = getTranslation('device_generic') || 'Generic';
     badgeEl.className = 'kb-version-badge kb-version-badge--outdated';
   } else {

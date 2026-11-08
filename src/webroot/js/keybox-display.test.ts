@@ -37,7 +37,7 @@ describe('keybox display format', () => {
     expect(byEl.style.display).not.toBe('none')
     expect(sourceEl.textContent).toBe('mhmrdd')
     expect(sourceEl.style.display).not.toBe('none')
-    expect(badgeEl.textContent).toBe('Latest')
+    expect(badgeEl.textContent).toBe('')
   })
 
   it('displays "v53 by Yuri" for Yuri provider with v53 text', () => {
