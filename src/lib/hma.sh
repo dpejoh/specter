@@ -184,6 +184,98 @@ _hma_installed() {
   return 0
 }
 
+# Output package names currently in the HMA-OSS config scope.
+_hma_list_scope() {
+  _hls_file="$1"
+  [ -f "$_hls_file" ] || { unset _hls_file; return 0; }
+  _hma_timeout "$HMAOSS_CMD_TIMEOUT" awk '
+function unquote(s) {
+  gsub(/^"/, "", s); gsub(/"$/, "", s)
+  gsub(/\\"/, "\"", s); gsub(/\\\\/, "\\", s)
+  return s
+}
+function tokenize(s,   n, off, chunk, clen, i, c, abs) {
+  tn = 0; n = length(s); off = 1
+  instr = 0; esc = 0; intok = 0; tstart = 0; tc = ""
+  while (off <= n) {
+    chunk = substr(s, off, 1024)
+    clen = length(chunk)
+    for (i = 1; i <= clen; i++) {
+      c = substr(chunk, i, 1)
+      abs = off + i - 1
+      if (instr) {
+        if (esc) { esc = 0; tc = tc c }
+        else if (c == "\\") { esc = 1; tc = tc c }
+        else if (c == "\"") {
+          tk[++tn] = tc "\""; tp[tn] = tstart; te[tn] = abs + 1
+          instr = 0; intok = 0; tc = ""
+        }
+        else { tc = tc c }
+        continue
+      }
+      if (c == " " || c == "\t" || c == "\r" || c == "\n") {
+        if (intok) { tk[++tn] = tc; tp[tn] = tstart; te[tn] = abs; intok = 0; tc = "" }
+        continue
+      }
+      if (c == "{" || c == "}" || c == "[" || c == "]" || c == ":" || c == ",") {
+        if (intok) { tk[++tn] = tc; tp[tn] = tstart; te[tn] = abs; intok = 0; tc = "" }
+        tk[++tn] = c; tp[tn] = abs; te[tn] = abs + 1
+        continue
+      }
+      if (c == "\"") {
+        if (intok) { tk[++tn] = tc; tp[tn] = tstart; te[tn] = abs; intok = 0 }
+        instr = 1; esc = 0; tstart = abs; tc = "\""; intok = 1
+        continue
+      }
+      if (!intok) { intok = 1; tstart = abs; tc = "" }
+      tc = tc c
+    }
+    off += 1024
+  }
+  if (intok) { tk[++tn] = tc; tp[tn] = tstart; te[tn] = n + 1 }
+}
+function skipv(i,   d, t) {
+  t = tk[i]
+  if (t == "{") { d = 1; i++; while (i <= tn && d > 0) { if (tk[i] == "{") d++; else if (tk[i] == "}") d--; i++ } return i }
+  if (t == "[") { d = 1; i++; while (i <= tn && d > 0) { if (tk[i] == "[") d++; else if (tk[i] == "]") d--; i++ } return i }
+  return i + 1
+}
+BEGIN {
+  RS = "\001"
+  if ((getline raw < ARGV[1]) <= 0) raw = ""
+  close(ARGV[1])
+  if (raw == "") exit 0
+  tokenize(raw)
+  if (tn < 2 || tk[1] != "{") exit 0
+  i = 2
+  while (i <= tn && tk[i] != "}") {
+    if (tk[i] ~ /^"/) {
+      k = unquote(tk[i]); i++
+      if (tk[i] == ":") i++
+      if (k == "scope" && tk[i] == "{") {
+        i++
+        while (i <= tn && tk[i] != "}") {
+          if (tk[i] ~ /^"/) {
+            pkg = unquote(tk[i]); i++
+            if (tk[i] == ":") i++
+            i = skipv(i)
+            if (pkg != "") print pkg
+            if (tk[i] == ",") i++
+          } else i++
+        }
+        break
+      } else {
+        i = skipv(i)
+        if (tk[i] == ",") i++
+      }
+    } else i++
+  }
+}
+' "$_hls_file"
+  unset _hls_file
+  return 0
+}
+
 # User apps that become hiding targets, minus the Specter blacklist and apps
 # detected by HMA presets that must not be targeted themselves.
 _hma_user_apps() {
@@ -293,10 +385,12 @@ _hma_build_scope() {
 _hma_merge_config() {
   _hmc_base="$1" _hmc_scope="$2" _hmc_default="$3" _hmc_out="$4"
   _hmc_timeout="${5:-$HMAOSS_MERGE_TIMEOUT}" _hmc_exclude="${6:-}" _hmc_det="${7:-}"
+  _hmc_mode="${8:-merge}"
   _hma_timeout "$_hmc_timeout" awk -v cfg="$_hmc_base" -v scopefile="$_hmc_scope" \
       -v deffile="$_hmc_default" -v excludefile="$_hmc_exclude" \
       -v detectorsfile="$_hmc_det" -v presets="$HMAOSS_APP_PRESETS" \
-      -v presets_no_detectors="$HMAOSS_APP_PRESETS_NO_DETECTORS" '
+      -v presets_no_detectors="$HMAOSS_APP_PRESETS_NO_DETECTORS" \
+      -v scope_mode="$_hmc_mode" '
 function jesc(s) { gsub(/\\/, "\\\\", s); gsub(/"/, "\\\"", s); return s }
 
 function unquote(s) {
@@ -476,10 +570,21 @@ BEGIN {
         ve = skipv(vs) - 1
         i = ve + 1
         if (!(k in excluded)) {
-          nkept++
           val_str = substr(raw, tp[vs], te[ve] - tp[vs])
-          val_str = normalize_appconfig(val_str, k)
-          kept_text = kept_text (nkept > 1 ? "," : "") "\"" jesc(k) "\":" val_str
+          if (scope_mode == "replace") {
+            if (val_str ~ /"useWhitelist"[[:space:]]*:[[:space:]]*true/) {
+              nkept++
+              kept_text = kept_text (nkept > 1 ? "," : "") "\"" jesc(k) "\":" val_str
+            } else if (k in wanted) {
+              nkept++
+              val_str = normalize_appconfig(val_str, k)
+              kept_text = kept_text (nkept > 1 ? "," : "") "\"" jesc(k) "\":" val_str
+            }
+          } else {
+            nkept++
+            val_str = normalize_appconfig(val_str, k)
+            kept_text = kept_text (nkept > 1 ? "," : "") "\"" jesc(k) "\":" val_str
+          }
         }
         if (tk[i] == ",") i++
       } else i++
@@ -576,7 +681,7 @@ BEGIN {
   if [ "$_hmc_rc" -ne 0 ]; then
     rm -f "$_hmc_out" 2>/dev/null || true
   fi
-  unset _hmc_base _hmc_scope _hmc_default _hmc_out _hmc_timeout _hmc_exclude _hmc_det
+  unset _hmc_base _hmc_scope _hmc_default _hmc_out _hmc_timeout _hmc_exclude _hmc_det _hmc_mode
   return "$_hmc_rc"
 }
 

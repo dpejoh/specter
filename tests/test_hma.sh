@@ -310,6 +310,30 @@ assert_eq "feature: preset cache app pruned from scope" "False" "$(_hma_pyval "$
 assert_eq "feature: allowed preexisting app kept in scope" "True" "$(_hma_pyval "$_hm_cfg5" "'com.kept' in d['scope']")"
 assert_eq "feature: allowed preexisting app normalized" "7" "$(_hma_pyval "$_hm_cfg5" "len(d['scope']['com.kept']['applyPresets'])")"
 
+# ---------- feature: preexisting scope entry for blacklisted app pruned ----------
+bootstrap
+export HMAOSS_BASE="$TEST_ROOT/misc"
+source_libs
+mkdir -p "$HMAOSS_BASE/hide_my_applist_test" "$SPECTER_DIR"
+_hm_cfg_bl="$HMAOSS_BASE/hide_my_applist_test/config.json"
+printf '%s' '{"scope":{"com.already.blacklisted":{"applyPresets":["root_apps"]},"com.stay.kept":{"mode":1}}}' > "$_hm_cfg_bl"
+printf 'com.already.blacklisted\n' > "$SPECTER_DIR/blacklist.txt"
+: > "$SPECTER_DIR/blacklist_enabled"
+cat > "$BIN_DIR/pm" << 'MOCK'
+#!/bin/sh
+case "$*" in
+  *"-3"*) printf 'package:com.already.blacklisted\npackage:com.stay.kept\npackage:org.frknkrc44.hma_oss\n' ;;
+  *list*packages*) printf 'package:com.already.blacklisted\npackage:com.stay.kept\npackage:org.frknkrc44.hma_oss\n' ;;
+  *) echo "mock pm $*" ;;
+esac
+MOCK
+chmod +x "$BIN_DIR/pm"
+printf '#!/bin/sh\nexit 0\n' > "$BIN_DIR/chown"; chmod +x "$BIN_DIR/chown"
+printf '#!/bin/sh\nexit 0\n' > "$BIN_DIR/restorecon"; chmod +x "$BIN_DIR/restorecon"
+run_feature hma.sh >/dev/null 2>&1
+assert_eq "feature: preexisting blacklisted app pruned from scope" "False" "$(_hma_pyval "$_hm_cfg_bl" "'com.already.blacklisted' in d['scope']")"
+assert_eq "feature: non-blacklisted preexisting app kept in scope" "True" "$(_hma_pyval "$_hm_cfg_bl" "'com.stay.kept' in d['scope']")"
+
 # ---------- feature: watcher debounce and lock ----------
 bootstrap
 export HMAOSS_BASE="$TEST_ROOT/misc"
@@ -333,5 +357,41 @@ export HMAOSS_BASE="$TEST_ROOT/misc"
 source_libs
 _hm_missing_out=$(run_feature hma.sh)
 assert_contains "feature: not-installed notice" "$_hm_missing_out" "HMA-OSS not installed"
+
+# ---------- feature: --list-raw and --set <file> ----------
+bootstrap
+export HMAOSS_BASE="$TEST_ROOT/misc"
+source_libs
+mkdir -p "$HMAOSS_BASE/hide_my_applist_test"
+_hm_cfg_set="$HMAOSS_BASE/hide_my_applist_test/config.json"
+printf '{"scope":{"com.existing.target":{"applyPresets":["root_apps"]},"com.my.whitelist":{"useWhitelist":true}}}' > "$_hm_cfg_set"
+
+cat > "$BIN_DIR/pm" << 'MOCK'
+#!/bin/sh
+case "$*" in
+  *"-3"*) printf 'package:com.existing.target\npackage:com.new.target\npackage:com.my.whitelist\npackage:com.blacklisted.target\npackage:org.frknkrc44.hma_oss\n' ;;
+  *list*packages*) printf 'package:com.existing.target\npackage:com.new.target\npackage:com.my.whitelist\npackage:com.blacklisted.target\npackage:org.frknkrc44.hma_oss\n' ;;
+  *) echo "mock pm $*" ;;
+esac
+MOCK
+chmod +x "$BIN_DIR/pm"
+printf '#!/bin/sh\nexit 0\n' > "$BIN_DIR/chown"; chmod +x "$BIN_DIR/chown"
+printf '#!/bin/sh\nexit 0\n' > "$BIN_DIR/restorecon"; chmod +x "$BIN_DIR/restorecon"
+
+_hm_raw_list=$(run_feature hma.sh --list-raw)
+assert_contains "list-raw: contains existing target" "$_hm_raw_list" "com.existing.target"
+assert_contains "list-raw: contains whitelist entry" "$_hm_raw_list" "com.my.whitelist"
+
+# Test --set with new target, dropping existing target, preserving whitelist, and filtering blacklist
+printf 'com.blacklisted.target\n' > "$SPECTER_DIR/blacklist.txt"
+: > "$SPECTER_DIR/blacklist_enabled"
+printf 'com.new.target\ncom.blacklisted.target\n' > "$TEST_ROOT/user_selection.txt"
+
+run_feature hma.sh --set "$TEST_ROOT/user_selection.txt" >/dev/null 2>&1
+assert_eq "set: new target added" "True" "$(_hma_pyval "$_hm_cfg_set" "'com.new.target' in d['scope']")"
+assert_eq "set: unselected target dropped" "False" "$(_hma_pyval "$_hm_cfg_set" "'com.existing.target' in d['scope']")"
+assert_eq "set: whitelist app preserved" "True" "$(_hma_pyval "$_hm_cfg_set" "'com.my.whitelist' in d['scope']")"
+assert_eq "set: blacklisted target filtered out" "False" "$(_hma_pyval "$_hm_cfg_set" "'com.blacklisted.target' in d['scope']")"
+assert_file_not_exists "set: staging file consumed" "$TEST_ROOT/user_selection.txt"
 
 done_testing
