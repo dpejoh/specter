@@ -2,7 +2,7 @@ import { exec } from './bridge.js';
 import { cfgSet } from './cfg.js';
 import { t } from './i18n.js';
 import { API_URLS } from './constants.js';
-import { fetchJson, shellEscape, updateListContainerCorners } from './utils.js';
+import { fetchJson, shellEscape } from './utils.js';
 import { createFilterDropdown, type FilterDropdownHandle, type FilterOption } from './filter-dropdown.js';
 import { openSubPage } from './subpage.js';
 import { installKeybox } from './keybox-install.js';
@@ -290,7 +290,6 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
       catalogBody.appendChild(empty);
     }
 
-    updateListContainerCorners(list);
   };
 
   async function loadCatalog() {

@@ -1,9 +1,8 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import {
-  escapeHtml, shellEscape, fetchJson, updateListContainerCorners,
+  escapeHtml, shellEscape, fetchJson,
   setFriendlyNames, getFriendlyNames, getFriendlyName, isDevMode, setDevMode,
   makeRowInteractive, wireRowActivation, wireLazyClick, afterPaint,
-  scheduleCornerUpdate, initCornerObserver,
   SpecterError, BridgeError, ScriptError, TimeoutError, ConfigError,
 } from './utils.js'
 
@@ -15,22 +14,6 @@ beforeEach(() => {
   document.body.innerHTML = ''
 })
 
-
-describe('updateListContainerCorners', () => {
-  it('processes a list container passed directly as the root', () => {
-    document.body.innerHTML = `
-      <div class="list-container" id="direct-list">
-        <div class="list-item"></div>
-        <div class="list-item"></div>
-      </div>
-    `
-    const list = document.getElementById('direct-list')!
-    updateListContainerCorners(list)
-    const items = list.querySelectorAll('.list-item')
-    expect(items[0]!.classList.contains('list-item--first')).toBe(true)
-    expect(items[1]!.classList.contains('list-item--last')).toBe(true)
-  })
-})
 
 describe('escapeHtml', () => {
   it('escapes & < > " and \'', () => {
@@ -261,86 +244,3 @@ describe('afterPaint', () => {
     expect(fn).toHaveBeenCalledTimes(1)
   })
 })
-
-describe('updateListContainerCorners visibility', () => {
-  it('ignores hidden items and marks a single visible item as only', () => {
-    document.body.innerHTML = `
-      <div class="list-container">
-        <div class="list-item"></div>
-        <div class="list-item" hidden></div>
-        <div class="list-item" style="display:none"></div>
-      </div>`
-    updateListContainerCorners()
-    const items = document.querySelectorAll('.list-item')
-    expect(items[0]!.classList.contains('list-item--only')).toBe(true)
-    expect(items[1]!.className).not.toContain('list-item--')
-  })
-
-  it('recomputes middle items and clears stale corner classes', () => {
-    document.body.innerHTML = `
-      <div class="list-container">
-        <div class="list-item list-item--last"></div>
-        <div class="list-item"></div>
-        <div class="list-item"></div>
-      </div>`
-    updateListContainerCorners()
-    const items = document.querySelectorAll('.list-item')
-    expect(items[0]!.classList.contains('list-item--first')).toBe(true)
-    expect(items[0]!.classList.contains('list-item--last')).toBe(false)
-    expect(items[1]!.classList.contains('list-item--middle')).toBe(true)
-    expect(items[2]!.classList.contains('list-item--last')).toBe(true)
-  })
-})
-
-describe('corner scheduling and observer', () => {
-  it('scheduleCornerUpdate applies corners on the next frame, once', async () => {
-    document.body.innerHTML = `
-      <div class="list-container">
-        <div class="list-item"></div>
-        <div class="list-item"></div>
-      </div>`
-    scheduleCornerUpdate()
-    scheduleCornerUpdate()
-    await vi.waitFor(() => {
-      expect(document.querySelector('.list-item')!.classList.contains('list-item--first')).toBe(true)
-    })
-  })
-
-  it('initCornerObserver reacts to items added to a container', async () => {
-    document.body.innerHTML = '<div class="list-container" id="observed"></div>'
-    initCornerObserver()
-    initCornerObserver() // second call is a no-op
-    const container = document.getElementById('observed')!
-    const a = document.createElement('div'); a.className = 'list-item'
-    const b = document.createElement('div'); b.className = 'list-item'
-    container.append(a, b)
-    await vi.waitFor(() => {
-      expect(a.classList.contains('list-item--first')).toBe(true)
-      expect(b.classList.contains('list-item--last')).toBe(true)
-    }, { timeout: 2000 })
-  })
-
-  it('initCornerObserver reacts to class changes on items', async () => {
-    document.body.innerHTML = `
-      <div class="list-container" id="observed2">
-        <div class="list-item list-item--first"></div>
-        <div class="list-item list-item--middle"></div>
-        <div class="list-item list-item--last"></div>
-      </div>`
-    initCornerObserver()
-    const items = document.querySelectorAll('#observed2 .list-item')
-    // Let the mutations from setting up the DOM flush through the
-    // observer first: a corner update guards its own mutation batch, so
-    // the class change below must land in a later batch to be seen.
-    await new Promise(r => setTimeout(r, 50))
-    // Hiding the middle item through a class change re-corners the list:
-    // the observer sees the class mutation and schedules an update that
-    // drops the middle item from the visible set.
-    items[1]!.classList.add('hidden')
-    await vi.waitFor(() => {
-      expect(items[1]!.classList.contains('list-item--middle')).toBe(false)
-      expect(items[2]!.classList.contains('list-item--last')).toBe(true)
-    }, { timeout: 2000 })
-  })
-})
-

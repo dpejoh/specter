@@ -1,5 +1,5 @@
 import { initBridge, getDataDir, getModuleDir, exec } from './bridge.js';
-import { shellEscape, setDevMode, updateListContainerCorners, initCornerObserver, afterPaint, wireLazyClick } from './utils.js';
+import { shellEscape, setDevMode, wireLazyClick } from './utils.js';
 import { setDataDir, migrateLocalStorage, cfgInit, cfgGet } from './cfg.js';
 import { initDevice, refreshKeyboxStatus, refreshKeyboxWatchInBackground, refreshConflictStatus, reapplyKeyboxStatus } from './device.js';
 import { initTheme } from './theme.js';
@@ -53,7 +53,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   initThemeToggle();
   wireActions();
   buildFriendlyNames();
-  updateListContainerCorners();
 
   const cfgReady = (async () => {
     try {
@@ -111,10 +110,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Home does not start any. The scheduler handles background refreshes;
     // here we only re-read the keybox snapshot.
     refreshHomeKeybox();
-  });
-
-  afterPaint(() => {
-    initCornerObserver();
   });
 
   const updateDialogOpen = () => {
@@ -186,7 +181,6 @@ async function loadToolsUI() {
 
   ensureConflicts().catch(() => {});
   await sectionVisibility;
-  updateListContainerCorners();
 }
 
 async function loadControlUI() {
@@ -197,7 +191,6 @@ async function loadControlUI() {
   // Control rows may have appeared after the conflict script ran on Tools.
   applyConflictOwnership();
   ensureConflicts().then(() => applyConflictOwnership()).catch(() => {});
-  updateListContainerCorners();
 }
 
 async function loadSettingsUI() {

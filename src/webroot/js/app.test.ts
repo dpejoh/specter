@@ -23,8 +23,6 @@ const m = vi.hoisted(() => ({
   exec: vi.fn(async () => h.execResult),
   shellEscape: (v: string) => `'${v}'`,
   setDevMode: vi.fn(),
-  updateListContainerCorners: vi.fn(),
-  initCornerObserver: vi.fn(),
   afterPaint: vi.fn((cb: () => void) => cb()),
   wireLazyClick: vi.fn((id: string) => { h.lazyClicks.push(id); }),
   setDataDir: vi.fn(),
@@ -86,8 +84,7 @@ vi.mock('./bridge.js', () => ({
 }));
 vi.mock('./utils.js', () => ({
   shellEscape: m.shellEscape, setDevMode: m.setDevMode,
-  updateListContainerCorners: m.updateListContainerCorners,
-  initCornerObserver: m.initCornerObserver, afterPaint: m.afterPaint, wireLazyClick: m.wireLazyClick,
+  afterPaint: m.afterPaint, wireLazyClick: m.wireLazyClick,
 }));
 vi.mock('./cfg.js', () => ({
   setDataDir: m.setDataDir, migrateLocalStorage: m.migrateLocalStorage,
@@ -216,7 +213,6 @@ describe('app bootstrap', () => {
     expect(m.reapplyKeyboxStatus).toHaveBeenCalled();
     expect(m.refreshKeyboxWatchInBackground).toHaveBeenCalled();
     expect(m.renderActivityPreview).toHaveBeenCalled();
-    expect(m.initCornerObserver).toHaveBeenCalled();
     expect([...h.pageCallbacks.keys()]).toEqual(['tools-page', 'control-page', 'settings-page']);
     expect(h.homeCallback).not.toBeNull();
   });

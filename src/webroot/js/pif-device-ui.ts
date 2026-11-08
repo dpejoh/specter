@@ -17,7 +17,7 @@ import { cfgGet, cfgSet } from './cfg.js';
 import { openFileBrowser } from './file-browser.js';
 import { showConfirm } from './dialog.js';
 import { showToast } from './toast.js';
-import { escapeHtml, shellEscape, updateListContainerCorners } from './utils.js';
+import { escapeHtml, shellEscape } from './utils.js';
 import { t } from './i18n.js';
 import { refreshPifChooseDesc as refreshChooseDesc } from './pif-choose-desc.js';
 import { openSubPage } from './subpage.js';
@@ -328,7 +328,6 @@ export async function openPifDeviceSubpage() {
       }
 
       listHostRef.innerHTML = html;
-      updateListContainerCorners();
 
       // Wire clicks on target rows
       listHostRef.querySelectorAll<HTMLElement>('.pif-device-row').forEach(row => {
@@ -438,7 +437,6 @@ export async function openPifDeviceSubpage() {
       }
 
       listHostRef.innerHTML = html;
-      updateListContainerCorners();
 
       // Wire checkbox & row toggles
       listHostRef.querySelectorAll<HTMLElement>('.pif-blacklist-row').forEach(row => {
@@ -705,7 +703,6 @@ export async function wirePifDevice() {
   const row = document.getElementById('pif-choose-device');
   if (!row) return;
   row.hidden = false;
-  updateListContainerCorners();
   void ensureCanaryList();
   row.addEventListener('click', () => {
     void openPifDeviceSubpage();

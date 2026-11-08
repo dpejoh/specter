@@ -1,4 +1,4 @@
-import { afterPaint, fetchJson, updateListContainerCorners } from './utils.js';
+import { afterPaint, fetchJson } from './utils.js';
 import { runScript, spawnScript } from './bridge.js';
 import { appendToOutput } from './terminal.js';
 import { API_URLS } from './constants.js';
@@ -210,7 +210,6 @@ function applyKeystoreManager(data: KeystoreManagerJson) {
     const text = data.name || (data.id && data.id !== 'none' ? data.id : (getTranslation('device_not_installed') || 'Not Installed'));
     setClipped(backendEl, text);
   }
-  updateListContainerCorners();
 }
 
 function applyAllDeviceInfo(data: InfoJson) {
