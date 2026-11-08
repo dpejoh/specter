@@ -54,7 +54,7 @@ vi.mock('./target-apps-icons.js', () => ({
   },
 }));
 vi.mock('./target-apps-dialogs.js', () => ({
-  openModeDialog, openRegenerateDialog, openTeesimModeDialog,
+  openModeDialog, openModeSubpage: openModeDialog, openRegenerateDialog, openTeesimModeDialog,
 }));
 vi.mock('./overlay-a11y.js', () => ({ setupOverlayA11y: () => () => {} }));
 vi.mock('./menu-utils.js', () => ({ closeMenu: vi.fn(), wireMenuTrigger: vi.fn() }));
@@ -245,6 +245,28 @@ describe('target apps manager', () => {
     expect(items().map(i => i.pkg)).toEqual(['com.d.app']);
 
     pickFilter('all');
+    expect(items()).toHaveLength(4);
+  });
+
+  it('filters by mode using the mode filter dropdown', async () => {
+    await openTargetAppsManager();
+
+    const pickModeFilter = (value: string) => {
+      const root = document.querySelector('[data-filter-id="ta-mode-filter"]')!;
+      click(root.querySelector('.filter-trigger')!);
+      click(root.querySelector(`.filter-option[data-value="${value}"]`)!);
+    };
+
+    pickModeFilter('bare');
+    expect(items().map(i => i.pkg)).toEqual(['com.c.app']);
+
+    pickModeFilter('conditional');
+    expect(items().map(i => i.pkg)).toEqual(['com.b.app']);
+
+    pickModeFilter('force');
+    expect(items().map(i => i.pkg)).toEqual(['com.a.app']);
+
+    pickModeFilter('all');
     expect(items()).toHaveLength(4);
   });
 

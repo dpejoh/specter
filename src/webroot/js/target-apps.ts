@@ -7,7 +7,7 @@ import { appendToOutput } from './terminal.js';
 import { API_URLS } from './constants.js';
 import type { KeystoreManagerJson } from './types.js';
 import { AppIconManager, ksuGlobal } from './target-apps-icons.js';
-import { openTeesimModeDialog, openModeDialog, openRegenerateDialog } from './target-apps-dialogs.js';
+import { openTeesimModeDialog, openModeSubpage, openRegenerateDialog } from './target-apps-dialogs.js';
 import type { TargetDialogsContext } from './target-apps-dialogs.js';
 import { setupOverlayA11y } from './overlay-a11y.js';
 import { closeMenu, wireMenuTrigger } from './menu-utils.js';
@@ -248,6 +248,7 @@ export async function openTargetAppsManager() {
   let apps: TargetApp[] = [];
   let filteredApps: TargetApp[] = [];
   let currentFilter: 'all' | 'selected' | 'not_selected' = 'all';
+  let currentModeFilter: 'all' | 'bare' | 'conditional' | 'force' = 'all';
   let currentSearch = '';
   let showSystemApps = false;
   let sysPkgs: string[] = [];
@@ -288,6 +289,13 @@ export async function openTargetAppsManager() {
     },
   ];
 
+  const modeFilterOptions = (): FilterOption[] => [
+    { value: 'all', label: t('ta_filter_all_modes', 'All Modes') },
+    { value: 'bare', label: t('ta_mode_bare', 'Auto') },
+    { value: 'conditional', label: `? ${t('ta_mode_conditional', 'Leaf')}` },
+    { value: 'force', label: `! ${t('ta_mode_force', 'Gen')}` },
+  ];
+
   const filterDropdown: FilterDropdownHandle = createFilterDropdown({
     id: 'ta-state-filter',
     ariaLabel: t('ta_filter_aria', 'Filter apps by selection'),
@@ -295,10 +303,37 @@ export async function openTargetAppsManager() {
     options: filterOptions(),
     onChange: (value) => {
       currentFilter = value as typeof currentFilter;
+      if (currentFilter === 'not_selected' && currentModeFilter !== 'all') {
+        currentModeFilter = 'all';
+        modeFilterDropdown.setValue('all');
+      }
       applyFilters();
     },
   });
-  overlay.querySelector('#ta-filters')!.appendChild(filterDropdown.element);
+
+  const modeFilterDropdown: FilterDropdownHandle = createFilterDropdown({
+    id: 'ta-mode-filter',
+    ariaLabel: t('ta_filter_mode_aria', 'Filter apps by mode'),
+    value: currentModeFilter,
+    options: modeFilterOptions(),
+    onChange: (value) => {
+      currentModeFilter = value as typeof currentModeFilter;
+      if (currentModeFilter !== 'all' && currentFilter === 'not_selected') {
+        currentFilter = 'all';
+        filterDropdown.setValue('all');
+      }
+      applyFilters();
+    },
+  });
+
+  function syncModeFilterVisibility() {
+    modeFilterDropdown.element.hidden = mode === 'blacklist' || !supportsPerAppMode;
+  }
+
+  const filtersEl = overlay.querySelector('#ta-filters')!;
+  filtersEl.appendChild(filterDropdown.element);
+  filtersEl.appendChild(modeFilterDropdown.element);
+  syncModeFilterVisibility();
   list.addEventListener('scroll', maybeAppendMore, { passive: true });
   const targetMap = new Map<string, AppState>();
   let blPkgs = new Set<string>();
@@ -310,6 +345,7 @@ export async function openTargetAppsManager() {
     closed = true;
     cleanupA11y();
     filterDropdown.dispose();
+    modeFilterDropdown.dispose();
     chunkObserver?.disconnect();
     iconMgr.destroy();
     window.isOverlayOpen = false;
@@ -324,8 +360,9 @@ export async function openTargetAppsManager() {
 
   // Back (hardware or the header button, both go through history) first
   // collapses an open search; only a second Back closes the overlay.
-  function onPopState() {
+  function onPopState(e: PopStateEvent) {
     if (searchOpen) exitSearch();
+    else if (e.state && (e.state.targetApps || e.state.subpage)) return;
     else closeOverlay();
   }
 
@@ -366,8 +403,11 @@ export async function openTargetAppsManager() {
       if (modeHeadline) modeHeadline.textContent = t('ta_edit_blacklist', 'Edit blacklist');
     }
     currentFilter = 'all';
+    currentModeFilter = 'all';
     filterDropdown.setOptions(filterOptions());
     filterDropdown.setValue('all');
+    modeFilterDropdown.setValue('all');
+    syncModeFilterVisibility();
     applyFilters();
   }
 
@@ -415,8 +455,7 @@ export async function openTargetAppsManager() {
           else targetMap.set(line, 'bare');
         }
         for (const app of apps) {
-          if (!targetMap.has(app.packageName)) continue;
-          app.state = targetMap.get(app.packageName)!;
+          app.state = targetMap.get(app.packageName) || 'unchecked';
         }
         applyFilters();
       }).catch((e) => {
@@ -464,7 +503,7 @@ export async function openTargetAppsManager() {
   overlay.querySelector('#ta-mode')!.addEventListener('click', () => {
     closeTapMenu();
     if (ksmFormat === 'json') openTeesimModeDialog();
-    else if (supportsPerAppMode) openModeDialog(dialogsCtx);
+    else if (supportsPerAppMode) openModeSubpage(dialogsCtx);
   });
 
 
@@ -551,6 +590,7 @@ export async function openTargetAppsManager() {
       const perAppModes = km?.perAppModes;
       supportsPerAppMode = perAppModes ?? (ksmFormat === 'txt' || ksmFormat === 'ini');
       defaultMode = supportsPerAppMode ? (defaultModeVal || 'bare') : 'bare';
+      syncModeFilterVisibility();
 
       const modeItem = overlay.querySelector('#ta-mode') as HTMLElement | null;
       if (modeItem) {
@@ -911,10 +951,22 @@ export async function openTargetAppsManager() {
       result = result.filter(a => !sysSet.has(a.packageName) || a.state !== 'unchecked');
     }
 
-    if (currentFilter === 'selected') {
-      result = result.filter(a => (mode === 'blacklist' ? a.state === 'blacklisted' : a.state !== 'unchecked'));
-    } else if (currentFilter === 'not_selected') {
-      result = result.filter(a => a.state === 'unchecked');
+    if (mode === 'blacklist') {
+      if (currentFilter === 'selected') {
+        result = result.filter(a => a.state === 'blacklisted');
+      } else if (currentFilter === 'not_selected') {
+        result = result.filter(a => a.state === 'unchecked');
+      }
+    } else {
+      if (currentFilter === 'selected') {
+        result = result.filter(a => a.state !== 'unchecked');
+      } else if (currentFilter === 'not_selected') {
+        result = result.filter(a => a.state === 'unchecked');
+      }
+
+      if (supportsPerAppMode && currentModeFilter !== 'all') {
+        result = result.filter(a => a.state === currentModeFilter);
+      }
     }
 
     result.sort((a, b) => {
