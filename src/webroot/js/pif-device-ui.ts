@@ -17,7 +17,7 @@ import { cfgGet, cfgSet } from './cfg.js';
 import { openFileBrowser } from './file-browser.js';
 import { showConfirm } from './dialog.js';
 import { showToast } from './toast.js';
-import { escapeHtml, shellEscape } from './utils.js';
+import { afterPaint, escapeHtml, shellEscape } from './utils.js';
 import { t } from './i18n.js';
 import { refreshPifChooseDesc as refreshChooseDesc } from './pif-choose-desc.js';
 import { openSubPage } from './subpage.js';
@@ -156,19 +156,18 @@ async function loadImported(): Promise<PifDevice[]> {
 }
 
 export async function openPifDeviceSubpage() {
-  const [saved, initialImported, initialCanary, initialBlacklist] = await Promise.all([
-    loadPreferred(),
-    loadImported(),
-    ensureCanaryList(),
-    loadBlacklist(),
-  ]);
-
-  let selectedProduct = saved[0]?.product || '';
-  let blacklist = new Set(initialBlacklist);
+  // The page opens immediately on the built-in fallback device list; the
+  // saved selection, the imported devices, the blacklist, and the live
+  // canary list (a network fetch) load after it is up and re-render the
+  // list. Awaiting them first used to freeze the tap, worst on a slow
+  // network. State the user changes before the load lands is kept.
+  let selectedProduct = '';
+  let blacklist = new Set<string>();
   let mode: 'target' | 'blacklist' = 'target';
-  let imported = initialImported;
-  let canary = initialCanary;
+  let imported: PifDevice[] = [];
+  let canary: PifDevice[] = FALLBACK_CANARY_DEVICES;
   let searchQuery = '';
+  let interacted = false;
 
   let listHostRef: HTMLElement | null = null;
   let searchFieldRef: MdOutlinedTextField | null = null;
@@ -208,6 +207,7 @@ export async function openPifDeviceSubpage() {
   };
 
   const selectProduct = (prod: string) => {
+    interacted = true;
     selectedProduct = prod;
     if (!listHostRef) return;
     listHostRef.querySelectorAll<MdRadio>('md-radio[name="pif-device"]').forEach(r => {
@@ -222,6 +222,7 @@ export async function openPifDeviceSubpage() {
   };
 
   const toggleBlacklistDevice = (prod: string) => {
+    interacted = true;
     if (blacklist.has(prod)) {
       blacklist.delete(prod);
     } else {
@@ -362,6 +363,7 @@ export async function openPifDeviceSubpage() {
           );
           if (!ok) return;
 
+          interacted = true;
           const product = IMPORTED_PREFIX + id;
           const path = `${importedDir()}/${id}.prop`;
           await exec(`rm -f ${shellEscape(path)} 2>/dev/null || true`);
@@ -490,6 +492,7 @@ export async function openPifDeviceSubpage() {
     }
 
     const product = IMPORTED_PREFIX + id;
+    interacted = true;
     selectedProduct = product;
     imported = imported.filter(d => d.product !== product);
     imported.unshift({ model, product, imported: true });
@@ -501,7 +504,7 @@ export async function openPifDeviceSubpage() {
     });
   };
 
-  await openSubPage({
+  const pageInstance = await openSubPage({
     id: 'pif-devices',
     title: t('menu_pif_choose', 'Choose PIF Device'),
     description: t('menu_pif_choose_desc', 'Pick which Pixel Canary models Specter may fetch'),
@@ -602,7 +605,7 @@ export async function openPifDeviceSubpage() {
     },
     fab: container => {
       container.innerHTML = `
-        <md-fab id="pif-apply" class="subpage-fab" label="${t('dialog_apply', 'Apply')}">
+        <md-fab id="pif-apply" class="subpage-fab" disabled label="${t('dialog_apply', 'Apply')}">
           <md-icon slot="icon" aria-hidden="true">check</md-icon>
         </md-fab>
       `;
@@ -697,6 +700,28 @@ export async function openPifDeviceSubpage() {
       },
     ],
   });
+
+  // The page is already open on the fallback list; let it paint before
+  // the loads start so they cannot block the page's first frame.
+  await new Promise<void>(resolve => afterPaint(resolve, 300));
+
+  // Now load the real state and re-render. Selection and blacklist are
+  // only applied when the user has not already changed them.
+  const [saved, loadedImported, loadedCanary, loadedBlacklist] = await Promise.all([
+    loadPreferred(),
+    loadImported(),
+    ensureCanaryList(),
+    loadBlacklist(),
+  ]);
+  imported = loadedImported;
+  canary = loadedCanary;
+  if (!interacted) {
+    selectedProduct = saved[0]?.product || '';
+    blacklist = loadedBlacklist;
+  }
+  (updateHeaderFn as (() => void) | null)?.();
+  renderLists();
+  pageInstance.overlay.querySelector('#pif-apply')?.removeAttribute('disabled');
 }
 
 export async function wirePifDevice() {

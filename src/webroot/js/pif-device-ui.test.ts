@@ -32,6 +32,15 @@ const {
   refreshPifChooseDesc: vi.fn(async () => {}),
 }));
 
+vi.mock('./utils.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./utils.js')>();
+  return {
+    ...actual,
+    // Run the paint callback on the next tick so loads still start
+    // strictly after the page render.
+    afterPaint: (fn: () => void) => { setTimeout(fn, 0); },
+  };
+});
 vi.mock('./bridge.js', () => ({ exec, getDataDir: () => '/data/adb/specter' }));
 vi.mock('./cfg.js', () => ({ cfgGet, cfgSet }));
 vi.mock('./subpage.js', () => ({ openSubPage }));
