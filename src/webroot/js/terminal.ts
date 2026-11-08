@@ -1,7 +1,7 @@
 import { showToast } from './toast.js';
 import { t } from './i18n.js';
 import { exec, getDataDir } from './bridge.js';
-import { shellEscape, wireRowActivation } from './utils.js';
+import { afterPaint, shellEscape, wireRowActivation } from './utils.js';
 
 
 export interface LogEntry {
@@ -206,7 +206,10 @@ export async function openLogsSubPage() {
                 });
               });
 
-              renderCurrentLog().catch(console.error);
+              // Start the first log read only after the page has painted.
+              afterPaint(() => {
+                renderCurrentLog().catch(console.error);
+              }, 300);
             }
           }
         ]

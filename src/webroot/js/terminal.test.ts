@@ -26,6 +26,7 @@ vi.mock('./i18n.js', () => ({ t: (_key: string, fallback = '') => fallback }));
 vi.mock('./utils.js', () => ({
   shellEscape: (v: string) => `'${v}'`,
   wireRowActivation,
+  afterPaint: (fn: () => void) => { setTimeout(fn, 0); },
 }));
 vi.mock('./subpage.js', () => ({ openSubPage }));
 vi.mock('@material/web/iconbutton/icon-button.js', () => ({}));
