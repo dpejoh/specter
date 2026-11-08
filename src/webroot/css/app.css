@@ -3535,14 +3535,22 @@ button.sp-action-row:disabled {
   margin-bottom: 14px;
 }
 
-.phone-mockup .list-container {
+.phone-mockup sp-settings-section {
   margin: 0 14px 10px;
   width: auto;
-  gap: 2px;
-  overflow: clip;
 }
 
-.phone-mockup .list-item--secondary md-switch {
+.phone-mockup .mock-row--secondary {
+  --sp-settings-icon-bg: var(--md-sys-color-secondary-container);
+  --sp-settings-icon-fg: var(--md-sys-color-on-secondary-container);
+}
+
+.phone-mockup .mock-row--tertiary {
+  --sp-settings-icon-bg: var(--md-sys-color-tertiary-container);
+  --sp-settings-icon-fg: var(--md-sys-color-on-tertiary-container);
+}
+
+.phone-mockup .mock-row--secondary md-switch {
   --md-switch-selected-track-color: var(--md-sys-color-secondary);
   --md-switch-selected-handle-color: var(--md-sys-color-on-secondary);
   --md-switch-selected-icon-color: var(--md-sys-color-on-secondary-container);
@@ -3551,7 +3559,7 @@ button.sp-action-row:disabled {
   --md-switch-selected-pressed-track-color: var(--md-sys-color-secondary);
 }
 
-.phone-mockup .list-item--tertiary md-switch {
+.phone-mockup .mock-row--tertiary md-switch {
   --md-switch-selected-track-color: var(--md-sys-color-tertiary);
   --md-switch-selected-handle-color: var(--md-sys-color-on-tertiary);
   --md-switch-selected-icon-color: var(--md-sys-color-on-tertiary-container);
@@ -3560,17 +3568,15 @@ button.sp-action-row:disabled {
   --md-switch-selected-pressed-track-color: var(--md-sys-color-tertiary);
 }
 
-.phone-mockup .list-item {
+.phone-mockup sp-settings-row::part(row) {
   min-height: 48px;
   padding: 8px 14px;
   gap: 12px;
-  cursor: pointer;
 }
 
-.phone-mockup .toggle-text {
+.phone-mockup sp-settings-row::part(headline) {
   font-size: 14px;
   font-weight: 600;
-  color: var(--md-sys-color-on-surface);
   line-height: 1.2;
 }
 
@@ -3581,15 +3587,6 @@ button.sp-action-row:disabled {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.phone-mockup .li-toggle-action {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-shrink: 0;
-  margin-inline-start: auto;
-  color: var(--md-sys-color-on-surface-variant);
 }
 
 .phone-mockup .li-config-divider {

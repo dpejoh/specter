@@ -68,7 +68,7 @@ describe('colors ui', () => {
     expect(document.getElementById('color-theme-summary')?.textContent).toBe('custom-xyz');
   });
 
-  it('dialog renders the inert phone mockup with legacy list items', async () => {
+  it('dialog renders the inert phone mockup from settings components', async () => {
     await openColorsDialog();
     const config = h.subpageConfig as ColorsConfig;
     const render = config.groups[0]!.items[0]!.render as (host: HTMLElement) => void;
@@ -76,7 +76,16 @@ describe('colors ui', () => {
     render(host);
 
     expect(host.querySelector('.phone-mockup')).not.toBeNull();
-    expect(host.querySelectorAll('.list-item')).toHaveLength(4);
+    expect(host.querySelectorAll('.list-item')).toHaveLength(0);
+    expect(host.querySelectorAll('sp-settings-section')).toHaveLength(2);
+    const rows = host.querySelectorAll('sp-settings-row');
+    expect(rows).toHaveLength(4);
+    expect(rows[0]!.querySelector('[slot="headline"]')?.textContent).toBe('Boot Spoofing');
+    expect(rows[0]!.querySelector('md-switch')?.hasAttribute('selected')).toBe(true);
+    expect(rows[1]!.classList.contains('mock-row--secondary')).toBe(true);
+    expect(rows[2]!.classList.contains('mock-row--tertiary')).toBe(true);
+    expect(rows[2]!.querySelector('md-switch')?.hasAttribute('selected')).toBe(false);
+    expect(host.querySelectorAll('.list-title')).toHaveLength(2);
     expect(host.querySelector('.colors-preview-showcase')?.hasAttribute('inert')).toBe(true);
   });
 
