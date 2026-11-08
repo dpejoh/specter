@@ -71,8 +71,9 @@ _new_count=$(awk -v bl_file="$BLACKLIST" \
   BEGIN {
     if (bl_enabled == 1 && bl_file != "") {
       while ((getline bl < bl_file) > 0) {
-        sub(/\r$/, "", bl); sub(/[[:space:]]+$/, "", bl); sub(/^[[:space:]]+/, "", bl)
-        if (bl != "") blacklist[bl] = 1
+        sub(/\r$/, "", bl); sub(/^[[:space:]]+/, "", bl); sub(/[[:space:]]+$/, "", bl)
+        sub(/[[:space:]#].*$/, "", bl)
+        if (bl != "" && bl !~ /^#/) blacklist[bl] = 1
       }
       close(bl_file)
     }
@@ -120,8 +121,9 @@ _cleaned=$(awk -v bl_file="$BLACKLIST" \
   BEGIN {
     if (bl_enabled == 1 && bl_file != "") {
       while ((getline bl < bl_file) > 0) {
-        sub(/\r$/, "", bl); sub(/[[:space:]]+$/, "", bl); sub(/^[[:space:]]+/, "", bl)
-        if (bl != "") blacklist[bl] = 1
+        sub(/\r$/, "", bl); sub(/^[[:space:]]+/, "", bl); sub(/[[:space:]]+$/, "", bl)
+        sub(/[[:space:]#].*$/, "", bl)
+        if (bl != "" && bl !~ /^#/) blacklist[bl] = 1
       }
       close(bl_file)
     }

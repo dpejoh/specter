@@ -87,8 +87,9 @@ _filter_blacklist() {
   awk -v bl_file="$BLACKLIST" '
     BEGIN {
       while ((getline bl < bl_file) > 0) {
-        sub(/\r$/, "", bl); sub(/[[:space:]]+$/, "", bl); sub(/^[[:space:]]+/, "", bl)
-        if (bl != "") blacklist[bl] = 1
+        sub(/\r$/, "", bl); sub(/^[[:space:]]+/, "", bl); sub(/[[:space:]]+$/, "", bl)
+        sub(/[[:space:]#].*$/, "", bl)
+        if (bl != "" && bl !~ /^#/) blacklist[bl] = 1
       }
       close(bl_file)
     }

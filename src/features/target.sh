@@ -126,8 +126,9 @@ if [ "$_mode" = "overwrite" ]; then
       }
       if (bl_enabled == 1 && bl_file != "") {
         while ((getline bl < bl_file) > 0) {
-          sub(/\r$/, "", bl); sub(/[[:space:]]+$/, "", bl); sub(/^[[:space:]]+/, "", bl)
-          if (bl != "") blacklist[bl] = 1
+          sub(/\r$/, "", bl); sub(/^[[:space:]]+/, "", bl); sub(/[[:space:]]+$/, "", bl)
+          sub(/[[:space:]#].*$/, "", bl)
+          if (bl != "" && bl !~ /^#/) blacklist[bl] = 1
         }
         close(bl_file)
       }
@@ -215,8 +216,9 @@ else
       close(exist_file)
       if (bl_enabled == 1 && bl_file != "") {
         while ((getline bl < bl_file) > 0) {
-          sub(/\r$/, "", bl); sub(/[[:space:]]+$/, "", bl); sub(/^[[:space:]]+/, "", bl)
-          if (bl != "") blacklist[bl] = 1
+          sub(/\r$/, "", bl); sub(/^[[:space:]]+/, "", bl); sub(/[[:space:]]+$/, "", bl)
+          sub(/[[:space:]#].*$/, "", bl)
+          if (bl != "" && bl !~ /^#/) blacklist[bl] = 1
         }
         close(bl_file)
       }
