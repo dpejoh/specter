@@ -15,6 +15,7 @@ import './sp-settings-section.js';
 import './sp-tooltip.js';
 import './sp-skeleton.js';
 import './sp-page-skeleton.js';
+import './sp-snackbar.js';
 
 export interface UiComponentDefinition {
   /** Custom-element tag used in markup. */
@@ -62,6 +63,12 @@ export const UI_COMPONENTS = [
     file: './sp-page-skeleton.js',
     summary: 'Page-level loading placeholder composed of section and row shapes.',
   },
+  {
+    tag: 'sp-snackbar',
+    name: 'SpSnackbar',
+    file: './sp-snackbar.js',
+    summary: 'Material 3 snackbar: a short process update with an optional action and close affordance.',
+  },
 ] as const satisfies readonly UiComponentDefinition[];
 
 export type UiComponentTag = (typeof UI_COMPONENTS)[number]['tag'];
@@ -87,6 +94,7 @@ export { SpSettingsRow, type SpSettingsRowVariant } from './sp-settings-row.js';
 export { SpSettingsSection } from './sp-settings-section.js';
 export { SpTooltip, type SpTooltipPosition } from './sp-tooltip.js';
 export { SpPageSkeleton } from './sp-page-skeleton.js';
+export { SpSnackbar } from './sp-snackbar.js';
 export {
   SpSkeleton,
   type SpSkeletonAnimation,

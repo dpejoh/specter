@@ -22,3 +22,19 @@ if (typeof window !== 'undefined') {
     configurable: true,
   })
 }
+
+// happy-dom has no ElementInternals; @material/web form-associated
+// components (buttons) call attachInternals() when they connect and
+// throw without it, which wedges their Lit update cycle.
+if (typeof HTMLElement !== 'undefined' && !HTMLElement.prototype.attachInternals) {
+  HTMLElement.prototype.attachInternals = function () {
+    return {
+      form: null,
+      labels: [],
+      setFormValue() {},
+      setValidity() {},
+      checkValidity: () => true,
+      reportValidity: () => true,
+    } as unknown as ElementInternals
+  }
+}
