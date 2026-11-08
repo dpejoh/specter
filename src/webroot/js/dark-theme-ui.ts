@@ -39,7 +39,7 @@ export async function openDarkThemeDialog() {
 
   openSubPage({
     id: 'dark-theme',
-    title: t('settings_dark_theme_title', 'Dark theme'),
+    title: t('settings_theme_mode', 'Dark theme'),
     description: t(
       'settings_dark_theme_desc',
       'Use a dark background to reduce battery usage and make your screen more comfortable to view.'
