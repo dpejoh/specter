@@ -35,6 +35,16 @@ vi.mock('./device.js', () => ({
   refreshKeyboxWatch: state.watch,
 }));
 
+vi.mock('./utils.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./utils.js')>();
+  return {
+    ...actual,
+    // Run the paint callback on the next tick so the load still starts
+    // strictly after the page render the subpage mock performs.
+    afterPaint: (fn: () => void) => { setTimeout(fn, 0); },
+  };
+});
+
 import { openKeyboxInfoPage } from './keybox-info-ui.js';
 
 const activeKeybox: KeyboxInfoJson = {

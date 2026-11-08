@@ -1,6 +1,6 @@
 import { openSubPage } from './subpage.js';
 import { t } from './i18n.js';
-import { escapeHtml } from './utils.js';
+import { afterPaint, escapeHtml } from './utils.js';
 import {
   appendInfoSection,
   dash,
@@ -10,6 +10,7 @@ import {
 } from './info-page.js';
 import { refreshKeyboxStatus, refreshKeyboxWatch } from './device.js';
 import type { KeyboxInfoJson } from './types.js';
+import './ui/sp-skeleton.js';
 
 type InfoTone = 'default' | 'error' | 'warning';
 
@@ -146,8 +147,39 @@ function buildPage(host: HTMLElement, data: KeyboxInfoJson | null): void {
   }
 }
 
+function buildLoading(host: HTMLElement): void {
+  host.replaceChildren();
+  const section = document.createElement('sp-settings-section');
+  section.setAttribute('aria-hidden', 'true');
+  const widths: ReadonlyArray<readonly [string, string]> = [
+    ['35%', '55%'],
+    ['28%', '70%'],
+    ['40%', '45%'],
+    ['30%', '60%'],
+  ];
+  for (const [labelWidth, valueWidth] of widths) {
+    const row = document.createElement('sp-settings-row');
+    row.setAttribute('variant', 'custom');
+    const label = document.createElement('sp-skeleton');
+    label.setAttribute('variant', 'text');
+    label.setAttribute('slot', 'headline');
+    label.style.width = labelWidth;
+    const value = document.createElement('sp-skeleton');
+    value.setAttribute('variant', 'text');
+    value.setAttribute('slot', 'supporting');
+    value.style.width = valueWidth;
+    row.append(label, value);
+    section.append(row);
+  }
+  host.append(section);
+}
+
 export async function openKeyboxInfoPage(): Promise<void> {
-  let latest = await refreshKeyboxStatus();
+  // The page opens immediately on a skeleton; the keybox status (a JSON
+  // snapshot refreshed by a shell script) fills in when it lands.
+  // Awaiting it first used to freeze the tap.
+  let latest: KeyboxInfoJson | null = null;
+  let loading = true;
   let hostEl: HTMLElement | null = null;
   let pageRef: { close: () => void } | null = null;
 
@@ -191,11 +223,20 @@ export async function openKeyboxInfoPage(): Promise<void> {
           hostEl = host;
           host.parentElement?.classList.add('info-page-container');
           host.className = 'keybox-info-page';
-          render(host, latest);
+          if (loading) buildLoading(host);
+          else render(host, latest);
         },
       }],
     }],
   });
 
   pageRef = page;
+
+  // The skeleton is on screen; let it paint before the status load starts
+  // so the load cannot block the page's first frame.
+  await new Promise<void>(resolve => afterPaint(resolve, 300));
+
+  latest = await refreshKeyboxStatus();
+  loading = false;
+  if (hostEl) render(hostEl, latest);
 }
