@@ -3514,11 +3514,6 @@ button.sp-action-row:disabled {
   user-select: text;
 }
 
-#kb-browse-btn {
-  --md-filled-tonal-button-container-shape: 9999px;
-  border-radius: 9999px;
-}
-
 .recent-activity-actions {
   display: flex;
   align-items: center;
@@ -3583,12 +3578,6 @@ button.sp-action-row:disabled {
 .kb-file-subtitle--active {
   color: var(--md-sys-color-primary);
   font-weight: 500;
-}
-
-.kb-browse-btn {
-  flex-shrink: 0;
-  --md-filled-tonal-button-container-shape: 9999px;
-  border-radius: 9999px;
 }
 
 /* File browser icon tones */

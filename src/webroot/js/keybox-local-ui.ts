@@ -1,6 +1,5 @@
 import { cfgGet, cfgSet } from './cfg.js';
 import { t } from './i18n.js';
-import { escapeHtml } from './utils.js';
 import { showToast } from './toast.js';
 import type { MdSwitch } from '@material/web/switch/switch.js';
 import { installKeybox } from './keybox-install.js';
@@ -65,12 +64,6 @@ export async function mountLocalKeyboxForm(
     ? (selectedFilePath.split('/').pop() || '')
     : t('custom_kb_file_desc', 'Select a keybox XML file from your device');
   fileRow.append(fileSubtitle);
-  const browseBtn = document.createElement('md-filled-tonal-button');
-  browseBtn.id = 'kb-browse-btn';
-  browseBtn.className = 'kb-browse-btn';
-  browseBtn.setAttribute('slot', 'trailing');
-  browseBtn.innerHTML = `<md-icon slot="icon" aria-hidden="true">folder_open</md-icon>${escapeHtml(t('custom_kb_browse', 'Browse Files'))}`;
-  fileRow.append(browseBtn);
 
   const urlRow = document.createElement('sp-settings-row');
   urlRow.className = 'kb-url-card';
@@ -139,10 +132,6 @@ export async function mountLocalKeyboxForm(
   };
 
   fileRow.addEventListener('sp-activate', onPick);
-  browseBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    onPick();
-  });
 
   urlInputEl?.addEventListener('input', () => {
     selectedFilePath = urlInputEl?.value.trim() || '';
