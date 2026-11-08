@@ -168,6 +168,11 @@ export class SpSettingsRow extends LitElement {
     :host([stacked]) .trailing {
       flex-basis: 100%;
       margin-inline-start: 0;
+      /* The slotted control sizes against this span; cap the span at the
+         row's content box and let it shrink below its content, so a
+         width:100% control inside can never push past the row's edge. */
+      min-width: 0;
+      max-width: 100%;
     }
 
     .row--disabled {

@@ -3114,6 +3114,8 @@ button.sp-action-row:disabled {
   align-items: center;
   gap: 8px;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   margin-top: 2px;
   background: var(--md-sys-color-surface-container-highest);
   border: 1px solid var(--md-sys-color-outline-variant);
