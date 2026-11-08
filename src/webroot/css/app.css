@@ -1454,7 +1454,7 @@ sp-snackbar.sp-snackbar--error .sp-snackbar__leading md-icon {
   flex-shrink: 0;
   background: var(--md-sys-color-surface);
   position: relative;
-  z-index: 2;
+  z-index: 50;
 }
 
 .ta-back-btn {
@@ -1498,7 +1498,9 @@ sp-snackbar.sp-snackbar--error .sp-snackbar__leading md-icon {
 
 .ta-header--searching .ta-title,
 .ta-header--searching #ta-search-btn,
-.ta-header--searching #ta-menu-btn {
+.ta-header--searching #ta-menu-btn,
+.ta-header--searching #ha-search-btn,
+.ta-header--searching #ha-menu-btn {
   display: none;
 }
 
@@ -1529,6 +1531,9 @@ sp-snackbar.sp-snackbar--error .sp-snackbar__leading md-icon {
   gap: 8px;
   padding: 0 20px 16px;
   flex-shrink: 0;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 10;
 }
 
 .ptr-indicator {
@@ -1649,11 +1654,13 @@ sp-snackbar.sp-snackbar--error .sp-snackbar__leading md-icon {
   font-family: 'Material Icons Outlined';
 }
 
-.ta-state-circle[data-state="bare"] {
+.ta-state-circle[data-state="bare"],
+.ta-state-circle[data-state="targeted"] {
   background: var(--md-sys-color-primary);
 }
 
-.ta-state-circle[data-state="bare"] .ta-state-icon {
+.ta-state-circle[data-state="bare"] .ta-state-icon,
+.ta-state-circle[data-state="targeted"] .ta-state-icon {
   color: var(--md-sys-color-on-primary);
 }
 
@@ -1780,6 +1787,7 @@ sp-snackbar.sp-snackbar--error .sp-snackbar__leading md-icon {
   --md-menu-bottom-space: 0;
   --md-menu-container-elevation: 0;
   max-width: 60vw;
+  z-index: 100;
 }
 
 .fb-menu md-menu-item,
@@ -2451,7 +2459,7 @@ sp-snackbar.sp-snackbar--error .sp-snackbar__leading md-icon {
 .subpage-overlay {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: 10000;
   background: var(--md-sys-color-surface);
   color: var(--md-sys-color-on-surface);
   opacity: 0;
@@ -2615,6 +2623,10 @@ sp-snackbar.sp-snackbar--error .sp-snackbar__leading md-icon {
   align-items: flex-start;
 }
 
+.filter-dropdown[hidden] {
+  display: none;
+}
+
 .filter-dropdown--open {
   z-index: 20;
 }
@@ -2633,6 +2645,14 @@ sp-snackbar.sp-snackbar--error .sp-snackbar__leading md-icon {
   font-size: 1rem;
   font-weight: 500;
   cursor: pointer;
+  max-width: min(280px, calc(100vw - 32px));
+  box-sizing: border-box;
+}
+
+.filter-trigger-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .filter-trigger:hover {
@@ -2647,6 +2667,7 @@ sp-snackbar.sp-snackbar--error .sp-snackbar__leading md-icon {
 
 .filter-trigger md-icon {
   font-size: 24px;
+  flex-shrink: 0;
 }
 
 .filter-menu {
@@ -2657,7 +2678,15 @@ sp-snackbar.sp-snackbar--error .sp-snackbar__leading md-icon {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  min-width: 220px;
+  min-width: 100%;
+  width: max-content;
+  max-width: min(280px, calc(100vw - 32px));
+  max-height: min(320px, calc(100vh - 160px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  box-sizing: border-box;
   padding: 8px;
   border-radius: 20px;
   background: var(--md-sys-color-surface-container-low);
@@ -2673,6 +2702,8 @@ sp-snackbar.sp-snackbar--error .sp-snackbar__leading md-icon {
   align-items: center;
   gap: 12px;
   min-height: 48px;
+  width: 100%;
+  box-sizing: border-box;
   padding: 0 16px;
   border: 0;
   border-radius: 9999px;
@@ -2683,6 +2714,17 @@ sp-snackbar.sp-snackbar--error .sp-snackbar__leading md-icon {
   font-weight: 500;
   text-align: start;
   cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.filter-option span,
+.filter-option-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @media (hover: hover) {
@@ -2704,6 +2746,7 @@ sp-snackbar.sp-snackbar--error .sp-snackbar__leading md-icon {
 
 .filter-option-check {
   font-size: 20px;
+  flex-shrink: 0;
 }
 
 .kb-catalog-row--disabled {

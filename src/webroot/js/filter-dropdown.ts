@@ -78,6 +78,8 @@ export function createFilterDropdown(config: FilterDropdownConfig): FilterDropdo
     open = false;
     root.classList.remove('filter-dropdown--open');
     menu.hidden = true;
+    menu.style.insetInlineStart = '';
+    menu.style.insetInlineEnd = '';
     trigger.setAttribute('aria-expanded', 'false');
     triggerIcon.textContent = 'expand_more';
     removeDocListeners();
@@ -113,6 +115,7 @@ export function createFilterDropdown(config: FilterDropdownConfig): FilterDropdo
       }
 
       const text = document.createElement('span');
+      text.className = 'filter-option-label';
       text.textContent = option.label;
       button.appendChild(text);
 
@@ -160,6 +163,17 @@ export function createFilterDropdown(config: FilterDropdownConfig): FilterDropdo
     triggerIcon.textContent = 'expand_less';
     const selectedIndex = options.findIndex(option => option.value === value);
     focusOption(selectedIndex >= 0 ? selectedIndex : 0);
+
+    if (typeof window !== 'undefined') {
+      const menuRect = menu.getBoundingClientRect();
+      if (menuRect.right > window.innerWidth - 16) {
+        menu.style.insetInlineStart = 'auto';
+        menu.style.insetInlineEnd = '0';
+      } else {
+        menu.style.insetInlineStart = '0';
+        menu.style.insetInlineEnd = 'auto';
+      }
+    }
 
     docPointer = (event) => {
       if (!root.isConnected || !event.composedPath().includes(root)) close();
