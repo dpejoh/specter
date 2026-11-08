@@ -14,6 +14,8 @@ const mocks = vi.hoisted(() => ({
   cfgGet: vi.fn(async (key: string, fallback = '') => (key === 'custom_boot_hash' ? 'c3'.repeat(32) : fallback)),
   cfgSet: vi.fn(),
   showToast: vi.fn(),
+  paintCallback: null as (() => void) | null,
+  afterPaint: vi.fn((fn: () => void) => { mocks.paintCallback = fn; }),
 }));
 
 vi.mock('./subpage.js', () => ({
@@ -28,6 +30,10 @@ vi.mock('./bridge.js', () => ({
 }));
 vi.mock('./cfg.js', () => ({ cfgGet: mocks.cfgGet, cfgSet: mocks.cfgSet }));
 vi.mock('./toast.js', () => ({ showToast: mocks.showToast }));
+vi.mock('./utils.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./utils.js')>();
+  return { ...actual, afterPaint: mocks.afterPaint };
+});
 
 import { openBootHashSubpage } from './boot-hash-ui.js';
 import './ui/sp-settings-row.js';
@@ -44,17 +50,34 @@ function renderAll(): HTMLElement {
   return section;
 }
 
+async function flushStatusLoad(): Promise<void> {
+  expect(mocks.paintCallback).not.toBeNull();
+  mocks.paintCallback!();
+  mocks.paintCallback = null;
+  await new Promise(resolve => setTimeout(resolve, 0));
+  await new Promise(resolve => setTimeout(resolve, 0));
+}
+
 describe('boot hash subpage', () => {
   beforeEach(() => {
     mocks.config = null;
     mocks.exec.mockClear();
     mocks.cfgSet.mockClear();
     mocks.showToast.mockClear();
+    mocks.afterPaint.mockClear();
+    mocks.paintCallback = null;
   });
 
   it('renders every card as an sp-settings-row with no legacy list items', async () => {
     await openBootHashSubpage();
     const section = renderAll();
+
+    // Skeleton status rows first; the reads have not started yet.
+    expect(section.querySelectorAll('.sp-skeleton-row')).toHaveLength(2);
+    expect(section.querySelector('#bh-active-val')).toBeNull();
+    expect(mocks.exec).not.toHaveBeenCalled();
+
+    await flushStatusLoad();
 
     const rows = section.querySelectorAll('sp-settings-row');
     expect(rows).toHaveLength(3);
@@ -69,6 +92,7 @@ describe('boot hash subpage', () => {
 
   it('fills the custom hash with zeros from the zero button', async () => {
     await openBootHashSubpage();
+    await flushStatusLoad();
     const section = renderAll();
 
     (section.querySelector('#bh-zero-btn') as HTMLElement).click();
@@ -77,6 +101,7 @@ describe('boot hash subpage', () => {
 
   it('clears the cached hash and disables the clear button', async () => {
     await openBootHashSubpage();
+    await flushStatusLoad();
     const section = renderAll();
 
     (section.querySelector('#bh-clear-cache-btn') as HTMLElement).click();
