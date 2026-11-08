@@ -1574,13 +1574,6 @@ md-filled-tonal-button {
   gap: 8px;
   padding: 0 20px 16px;
   flex-shrink: 0;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-
-.ta-filters::-webkit-scrollbar {
-  display: none;
 }
 
 .ptr-indicator {

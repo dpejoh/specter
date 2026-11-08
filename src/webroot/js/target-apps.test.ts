@@ -144,7 +144,7 @@ describe('target apps manager', () => {
 
     const section = document.querySelector('#ta-list sp-settings-section');
     expect(section).not.toBeNull();
-    const rows = [...section!.querySelectorAll('sp-settings-row.ta-item')];
+    const rows = [...section!.querySelectorAll<HTMLElement>('sp-settings-row.ta-item')];
     expect(rows.length).toBe(items().length);
     expect(rows.length).toBeGreaterThan(0);
     for (const row of rows) {
@@ -156,8 +156,14 @@ describe('target apps manager', () => {
     }
   });
 
-  it('filters by search text and by the selected/not-selected chips', async () => {
+  it('filters by search text and by the selection dropdown', async () => {
     await openTargetAppsManager();
+
+    const pickFilter = (value: string) => {
+      const root = document.querySelector('[data-filter-id="ta-state-filter"]')!;
+      click(root.querySelector('.filter-trigger')!);
+      click(root.querySelector(`.filter-option[data-value="${value}"]`)!);
+    };
 
     const search = document.querySelector('#ta-search') as unknown as HTMLElement & { value: string };
     search.value = 'b.app';
@@ -166,13 +172,13 @@ describe('target apps manager', () => {
 
     search.value = '';
     search.dispatchEvent(new Event('input', { bubbles: true }));
-    click(document.querySelector('#ta-filter-selected')!);
+    pickFilter('selected');
     expect(items().map(i => i.pkg)).toEqual(['com.a.app', 'com.b.app', 'com.c.app']);
 
-    click(document.querySelector('#ta-filter-not-selected')!);
+    pickFilter('not_selected');
     expect(items().map(i => i.pkg)).toEqual(['com.d.app']);
 
-    click(document.querySelector('#ta-filter-all')!);
+    pickFilter('all');
     expect(items()).toHaveLength(4);
   });
 

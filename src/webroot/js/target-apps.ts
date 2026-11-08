@@ -12,6 +12,7 @@ import type { TargetDialogsContext } from './target-apps-dialogs.js';
 import { setupOverlayA11y } from './overlay-a11y.js';
 import { closeMenu, wireMenuTrigger } from './menu-utils.js';
 import { overlayHeader } from './ui-overlay.js';
+import { createFilterDropdown, type FilterDropdownHandle, type FilterOption } from './filter-dropdown.js';
 import './ui/sp-settings-row.js';
 import './ui/sp-settings-section.js';
 
@@ -205,17 +206,7 @@ function buildOverlayHTML(): string {
         </md-outlined-text-field>
       </div>
 
-      <div class="ta-filters">
-        <md-filter-chip id="ta-filter-all" label="${t('ta_filter_all', 'All')}" selected>
-          <md-icon slot="icon">select_all</md-icon>
-        </md-filter-chip>
-        <md-filter-chip id="ta-filter-selected" label="${t('ta_filter_selected', 'Selected')}">
-          <md-icon slot="icon">check_circle</md-icon>
-        </md-filter-chip>
-        <md-filter-chip id="ta-filter-not-selected" label="${t('ta_filter_not_selected', 'Not Selected')}">
-          <md-icon slot="icon">radio_button_unchecked</md-icon>
-        </md-filter-chip>
-      </div>
+      <div class="ta-filters" id="ta-filters"></div>
 
       <div class="ta-list" id="ta-list"></div>
     </div>
@@ -264,6 +255,30 @@ export async function openTargetAppsManager() {
   const loading = overlay.querySelector('#ta-loading') as HTMLElement;
   const searchInput = overlay.querySelector('#ta-search') as MdOutlinedTextField;
   const titleEl = overlay.querySelector('.ta-title') as HTMLElement;
+
+  const filterOptions = (): FilterOption[] => [
+    { value: 'all', label: t('ta_filter_all', 'All') },
+    {
+      value: 'selected',
+      label: mode === 'blacklist' ? t('bl_filter_blacklisted', 'Blacklisted') : t('ta_filter_selected', 'Selected'),
+    },
+    {
+      value: 'not_selected',
+      label: mode === 'blacklist' ? t('bl_filter_not_blacklisted', 'Not Blacklisted') : t('ta_filter_not_selected', 'Not Selected'),
+    },
+  ];
+
+  const filterDropdown: FilterDropdownHandle = createFilterDropdown({
+    id: 'ta-state-filter',
+    ariaLabel: t('ta_filter_aria', 'Filter apps by selection'),
+    value: currentFilter,
+    options: filterOptions(),
+    onChange: (value) => {
+      currentFilter = value as typeof currentFilter;
+      applyFilters();
+    },
+  });
+  overlay.querySelector('#ta-filters')!.appendChild(filterDropdown.element);
   const targetMap = new Map<string, AppState>();
   let blPkgs = new Set<string>();
 
@@ -273,6 +288,7 @@ export async function openTargetAppsManager() {
     if (closed) return;
     closed = true;
     cleanupA11y();
+    filterDropdown.dispose();
     iconMgr.destroy();
     window.isOverlayOpen = false;
     window.removeEventListener('popstate', closeOverlay);
@@ -308,26 +324,20 @@ export async function openTargetAppsManager() {
     const toggleHeadline = toggleItem?.querySelector('[slot="headline"]');
     const modeItem = overlay.querySelector('#ta-toggle-mode') as HTMLElement;
     const modeHeadline = modeItem?.querySelector('[slot="headline"]');
-    const filterSel = overlay.querySelector('#ta-filter-selected') as MdFilterChip | null;
-    const filterNot = overlay.querySelector('#ta-filter-not-selected') as MdFilterChip | null;
 
     if (mode === 'blacklist') {
       titleEl.textContent = t('bl_title', 'Blacklist');
       if (modeHeadline) modeHeadline.textContent = t('ta_edit_target', 'Back to targeting');
-      if (filterSel) { filterSel.label = t('bl_filter_blacklisted', 'Blacklisted'); filterSel.icon = 'block'; }
-      if (filterNot) { filterNot.label = t('bl_filter_not_blacklisted', 'Not Blacklisted'); filterNot.icon = 'radio_button_unchecked'; }
       if (showSystemApps && toggleHeadline) {
         toggleHeadline.textContent = t('ta_hide_system', 'Hide system apps');
       }
     } else {
       titleEl.textContent = t('ta_title', 'App Targeting');
       if (modeHeadline) modeHeadline.textContent = t('ta_edit_blacklist', 'Edit blacklist');
-      if (filterSel) { filterSel.label = t('ta_filter_selected', 'Selected'); filterSel.icon = 'check_circle'; }
-      if (filterNot) { filterNot.label = t('ta_filter_not_selected', 'Not Selected'); filterNot.icon = 'radio_button_unchecked'; }
     }
     currentFilter = 'all';
-    overlay.querySelectorAll('.ta-filters md-filter-chip').forEach(c => { (c as MdFilterChip).selected = false; });
-    (overlay.querySelector('#ta-filter-all') as MdFilterChip).selected = true;
+    filterDropdown.setOptions(filterOptions());
+    filterDropdown.setValue('all');
     applyFilters();
   }
 
@@ -841,20 +851,6 @@ export async function openTargetAppsManager() {
     currentSearch = (searchInput.value || '').trim();
     applyFilters();
   });
-
-  function wireFilter(id: string, filter: typeof currentFilter) {
-    const chip = overlay.querySelector(id) as MdFilterChip;
-    chip.addEventListener('click', () => {
-      overlay.querySelectorAll('.ta-filters md-filter-chip').forEach(c => { (c as MdFilterChip).selected = false; });
-      chip.selected = true;
-      currentFilter = filter;
-      applyFilters();
-    });
-  }
-
-  wireFilter('#ta-filter-all', 'all');
-  wireFilter('#ta-filter-selected', 'selected');
-  wireFilter('#ta-filter-not-selected', 'not_selected');
 
   const applyBtn = overlay.querySelector('#ta-apply') as HTMLButtonElement;
   applyBtn.addEventListener('click', async () => {
