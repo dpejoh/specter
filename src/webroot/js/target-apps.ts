@@ -1,6 +1,6 @@
 import { exec, getModuleDir, getDataDir } from './bridge.js';
 import { cfgGet } from './cfg.js';
-import { shellEscape, fetchJson, escapeHtml } from './utils.js';
+import { shellEscape, fetchJson, escapeHtml, afterPaint } from './utils.js';
 import { showToast } from './toast.js';
 import { getTranslation } from './i18n.js';
 import { appendToOutput } from './terminal.js';
@@ -973,5 +973,10 @@ export async function openTargetAppsManager() {
   window.addEventListener('popstate', closeOverlay);
 
   setupPullToRefresh();
+  // Let the overlay and its skeleton paint before the list work starts:
+  // the package bridge calls in loadData (icon caching, getPackagesInfo)
+  // are synchronous, and running them in the same breath as the opening
+  // used to freeze the page before it ever appeared.
+  await new Promise<void>(resolve => afterPaint(resolve, 300));
   await loadData();
 }

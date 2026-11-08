@@ -35,6 +35,9 @@ jobs:
         with:
           scandir: src
           severity: warning
+          # Pin the release: the action's default "stable" alias points at a
+          # moving target and its download broke the run on 2026-11-08.
+          version: "v0.11.0"
 
       - name: Run shell tests
         run: bash tests/run.sh

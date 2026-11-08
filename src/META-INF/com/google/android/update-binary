@@ -20,6 +20,8 @@ require_new_magisk() {
 # Load util_functions.sh
 #########################
 
+# OUTFD is consumed by Magisk's util_functions.sh, sourced below.
+# shellcheck disable=SC2034
 OUTFD=$2
 ZIPFILE=$3
 
@@ -51,11 +53,13 @@ is_legacy_script() {
   return $?
 }
 
+# 'local' is fine here: the recovery /sbin/sh (mksh / busybox ash) supports it.
+# shellcheck disable=SC3043
 print_modname() {
-  local len
-  len=`echo -n $MODNAME | wc -c`
+  local len pounds
+  len=$(printf %s "$MODNAME" | wc -c)
   len=$((len + 2))
-  local pounds=`printf "%${len}s" | tr ' ' '*'`
+  pounds=$(printf "%${len}s" | tr ' ' '*')
   ui_print "$pounds"
   ui_print "$MODNAME "
   ui_print "by $MODAUTH"
@@ -160,7 +164,7 @@ if $BOOTMODE; then
 fi
 
 # Copy over custom sepolicy rules
-if [ -f $MODPATH/sepolicy.rule -a -e $PERSISTDIR ]; then
+if [ -f "$MODPATH/sepolicy.rule" ] && [ -e "$PERSISTDIR" ]; then
   ui_print "- Installing custom sepolicy patch"
   PERSISTMOD=$PERSISTDIR/magisk/$MODID
   mkdir -p $PERSISTMOD

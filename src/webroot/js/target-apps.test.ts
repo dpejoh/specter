@@ -5,6 +5,8 @@ const state = vi.hoisted(() => ({
   blacklistFile: 'com.b.app\n',
   denylist: '',
   userPkgs: null as string | null,
+  deferPaint: false,
+  paintCallback: null as (() => void) | null,
   km: { format: 'txt', perAppModes: true } as Record<string, unknown>,
 }));
 
@@ -32,6 +34,10 @@ vi.mock('./utils.js', () => ({
   fetchJson,
   shellEscape: (value: string) => `'${value}'`,
   escapeHtml: (value: string) => value,
+  afterPaint: (fn: () => void) => {
+    if (state.deferPaint) { state.paintCallback = fn; return; }
+    fn();
+  },
 }));
 vi.mock('./toast.js', () => ({ showToast }));
 vi.mock('./terminal.js', () => ({ appendToOutput }));
@@ -93,6 +99,8 @@ describe('target apps manager', () => {
     document.body.innerHTML = '';
     state.listRawFails = false;
     state.userPkgs = null;
+    state.deferPaint = false;
+    state.paintCallback = null;
     state.blacklistFile = 'com.b.app\n';
     state.denylist = '';
     state.km = { format: 'txt', perAppModes: true };
@@ -139,6 +147,22 @@ describe('target apps manager', () => {
     expect(itemByPkg('com.a.app').state).toBe('force');
     click(circleOf('com.c.app')); // bare -> conditional; item handler must not also fire
     expect(itemByPkg('com.c.app').state).toBe('conditional');
+  });
+
+  it('paints the page and skeleton before loading the list', async () => {
+    state.deferPaint = true;
+    const opening = openTargetAppsManager();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(document.querySelector('.ta-overlay')).not.toBeNull();
+    expect(document.querySelector('#ta-loading sp-settings-section')).not.toBeNull();
+    expect(items()).toHaveLength(0);
+    expect(execCalls().some(cmd => cmd.includes('cmd package list packages'))).toBe(false);
+    expect(state.paintCallback).not.toBeNull();
+
+    state.paintCallback!();
+    await opening;
+    expect(items()).toHaveLength(4);
   });
 
   it('shows a skeleton list while loading, then swaps in the apps', async () => {
