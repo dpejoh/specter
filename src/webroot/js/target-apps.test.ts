@@ -288,4 +288,150 @@ describe('target apps manager', () => {
     expect(document.querySelectorAll('.ta-overlay')).toHaveLength(1);
     expect(execCalls().filter(cmd => cmd.includes('--list-raw'))).toHaveLength(1);
   });
+
+  describe('pull to refresh', () => {
+    const ptr = () => {
+      const list = document.querySelector('#ta-list') as HTMLElement;
+      return {
+        list,
+        indicator: document.querySelector('#ptr-indicator') as HTMLElement,
+        arrow: document.querySelector('#ptr-arrow') as HTMLElement,
+      };
+    };
+    const listRawCalls = () => execCalls().filter(cmd => cmd.includes('--list-raw')).length;
+    const pointer = (type: string, y: number) => {
+      const e = new window.MouseEvent(type, { bubbles: true }) as PointerEvent;
+      Object.defineProperty(e, 'clientY', { value: y });
+      Object.defineProperty(e, 'pointerId', { value: 1 });
+      return e;
+    };
+    const touch = (type: string, ys: number[]) => {
+      const e = new Event(type, { bubbles: true, cancelable: true });
+      Object.defineProperty(e, 'touches', { value: ys.map(clientY => ({ clientY })) });
+      return e;
+    };
+
+    beforeEach(() => {
+      delete (window as any).ontouchstart;
+      (HTMLElement.prototype as any).setPointerCapture = vi.fn();
+    });
+
+    it('pointer: a full pull past the threshold refreshes the list', async () => {
+      await openTargetAppsManager();
+      const { list, indicator, arrow } = ptr();
+      const before = listRawCalls();
+
+      list.dispatchEvent(pointer('pointerdown', 100));
+      expect(indicator.classList.contains('ptr-dragging')).toBe(true);
+
+      list.dispatchEvent(pointer('pointermove', 260));
+      expect(indicator.style.transform).toBe('translateY(0px)');
+      expect(indicator.style.opacity).toBe('1');
+      expect(arrow.style.transform).toBe('rotate(360deg)');
+
+      // The pull distance is capped.
+      list.dispatchEvent(pointer('pointermove', 900));
+      expect(indicator.style.transform).toBe('translateY(120px)');
+
+      list.dispatchEvent(pointer('pointerup', 900));
+      await vi.waitFor(() => {
+        expect(listRawCalls()).toBe(before + 1);
+        expect(indicator.style.transform).toBe('');
+        expect(indicator.style.opacity).toBe('0');
+        expect(arrow.style.display).toBe('');
+      });
+    });
+
+    it('pointer: a short pull just resets the indicator', async () => {
+      await openTargetAppsManager();
+      const { list, indicator, arrow } = ptr();
+      const before = listRawCalls();
+
+      list.dispatchEvent(pointer('pointerdown', 100));
+      list.dispatchEvent(pointer('pointermove', 140));
+      expect(indicator.style.transform).toBe('translateY(-60px)');
+      list.dispatchEvent(pointer('pointerup', 140));
+
+      expect(indicator.style.transform).toBe('');
+      expect(indicator.style.opacity).toBe('0');
+      expect(arrow.style.transform).toBe('');
+      expect(listRawCalls()).toBe(before);
+    });
+
+    it('pointer: pulling back up or cancelling aborts the gesture', async () => {
+      await openTargetAppsManager();
+      const { list, indicator } = ptr();
+
+      list.dispatchEvent(pointer('pointerdown', 200));
+      list.dispatchEvent(pointer('pointermove', 120));
+      expect(indicator.classList.contains('ptr-dragging')).toBe(false);
+      expect(indicator.style.opacity).toBe('0');
+
+      list.dispatchEvent(pointer('pointerdown', 100));
+      expect(indicator.classList.contains('ptr-dragging')).toBe(true);
+      list.dispatchEvent(pointer('pointercancel', 100));
+      expect(indicator.classList.contains('ptr-dragging')).toBe(false);
+    });
+
+    it('pointer: no gesture starts while the list is scrolled or before pointerdown', async () => {
+      await openTargetAppsManager();
+      const { list, indicator } = ptr();
+
+      list.dispatchEvent(pointer('pointermove', 300));
+      expect(indicator.classList.contains('ptr-dragging')).toBe(false);
+
+      list.scrollTop = 40;
+      list.dispatchEvent(pointer('pointerdown', 100));
+      expect(indicator.classList.contains('ptr-dragging')).toBe(false);
+      list.scrollTop = 0;
+    });
+
+    it('touch: drag, release past the threshold and refresh', async () => {
+      (window as any).ontouchstart = null;
+      await openTargetAppsManager();
+      const { list, indicator, arrow } = ptr();
+      const before = listRawCalls();
+
+      list.dispatchEvent(touch('touchstart', [100]));
+      list.dispatchEvent(touch('touchmove', [220]));
+      expect(indicator.classList.contains('ptr-dragging')).toBe(true);
+      // Multi-touch moves are ignored.
+      list.dispatchEvent(touch('touchmove', [400, 420]));
+      expect(indicator.style.transform).toBe('');
+      list.dispatchEvent(touch('touchmove', [420]));
+      expect(indicator.style.transform).toBe('translateY(80px)');
+      expect(arrow.style.transform).toBe('rotate(360deg)');
+
+      list.dispatchEvent(touch('touchend', []));
+      await vi.waitFor(() => {
+        expect(listRawCalls()).toBe(before + 1);
+        expect(indicator.style.transform).toBe('');
+      });
+    });
+
+    it('touch: reversing direction or cancelling aborts, and scrolled starts are ignored', async () => {
+      (window as any).ontouchstart = null;
+      await openTargetAppsManager();
+      const { list, indicator } = ptr();
+
+      list.scrollTop = 30;
+      list.dispatchEvent(touch('touchstart', [100]));
+      list.dispatchEvent(touch('touchmove', [300]));
+      expect(indicator.classList.contains('ptr-dragging')).toBe(false);
+      list.scrollTop = 0;
+
+      list.dispatchEvent(touch('touchstart', [200]));
+      list.dispatchEvent(touch('touchmove', [260]));
+      expect(indicator.classList.contains('ptr-dragging')).toBe(true);
+      list.dispatchEvent(touch('touchmove', [120]));
+      expect(indicator.classList.contains('ptr-dragging')).toBe(false);
+
+      list.dispatchEvent(touch('touchstart', [100]));
+      list.dispatchEvent(touch('touchmove', [200]));
+      expect(indicator.classList.contains('ptr-dragging')).toBe(true);
+      list.dispatchEvent(touch('touchcancel', []));
+      expect(indicator.classList.contains('ptr-dragging')).toBe(false);
+      expect(indicator.style.opacity).toBe('0');
+    });
+  });
 });
