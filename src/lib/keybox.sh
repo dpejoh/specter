@@ -262,24 +262,30 @@ EOF
 }
 
 # Print "STATUS|REASON" for a certificate serial, or nothing when not listed.
-# Google keys are decimal; the keybox serial is hexadecimal.
+# Google lists serials in string form (the hex string for RKP keys, the digit
+# string the serial spells for classic keys); a few are listed by decimal
+# integer value instead. Try the serial as given first, then its decimal form.
 google_revocation_info() {
   _gri_file=$(_google_revocation_cache_file 2>/dev/null || true)
   [ -n "$_gri_file" ] || return 1
   _gri_dec=$(hex_to_dec "$1")
-  [ -n "$_gri_dec" ] || { unset _gri_file _gri_dec; return 1; }
-  _gri_obj=$(tr -d '\n\r' < "$_gri_file" 2>/dev/null \
-    | grep -o "\"$_gri_dec\"[[:space:]]*:[[:space:]]*{[^}]*}" 2>/dev/null \
-    | head -1 || true)
+  _gri_obj=""
+  for _gri_key in "$1" "$_gri_dec"; do
+    [ -n "$_gri_key" ] || continue
+    _gri_obj=$(tr -d '\n\r' < "$_gri_file" 2>/dev/null \
+      | grep -o "\"$_gri_key\"[[:space:]]*:[[:space:]]*{[^}]*}" 2>/dev/null \
+      | head -1 || true)
+    [ -n "$_gri_obj" ] && break
+  done
   if [ -z "$_gri_obj" ]; then
-    unset _gri_file _gri_dec _gri_obj
+    unset _gri_file _gri_dec _gri_key _gri_obj
     return 1
   fi
   _gri_status=$(printf '%s' "$_gri_obj" | sed -n 's/.*"status"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
   [ -n "$_gri_status" ] || { unset _gri_file _gri_dec _gri_obj _gri_status; return 1; }
   _gri_reason=$(printf '%s' "$_gri_obj" | sed -n 's/.*"reason"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
   printf '%s|%s\n' "$_gri_status" "$_gri_reason"
-  unset _gri_file _gri_dec _gri_obj _gri_status _gri_reason
+  unset _gri_file _gri_dec _gri_key _gri_obj _gri_status _gri_reason
 }
 
 check_google_revocation() {

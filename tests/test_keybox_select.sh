@@ -98,13 +98,15 @@ assert_contains "catalog cache: error keeps last-known-good" "$_cat_stale" '"sou
 assert_contains "catalog cache: cache not overwritten by error" "$(cat "$SPECTER_DIR/cache/keybox_catalog.json")" '"source":"cached"'
 
 : > "$_dl_count"
-download() { echo x >> "$_dl_count"; printf '%s' '{"entries":{"10":{"status":"REVOKED"},"3207438651777393527":{"status":"REVOKED"}}}'; }
+download() { echo x >> "$_dl_count"; printf '%s' '{"entries":{"10":{"status":"REVOKED"},"3207438651777393527":{"status":"REVOKED"},"806b52bbc8ddb62a5f43742401412562":{"status":"REVOKED"}}}'; }
 check_google_revocation 2c831c75c60ca377
 assert_eq "crl: issue serial is revoked" "0" "$?"
 check_google_revocation a
 assert_eq "crl: hex a is decimal 10" "0" "$?"
-check_google_revocation 10
-assert_eq "crl: hex 10 is not decimal 10" "1" "$?"
+check_google_revocation 806b52bbc8ddb62a5f43742401412562
+assert_eq "crl: hex string serial is revoked" "0" "$?"
+check_google_revocation ff
+assert_eq "crl: unlisted serial is not revoked" "1" "$?"
 assert_eq "crl cache: one download" "1" "$(grep -c x "$_dl_count")"
 
 # --- keybox.sh --if-needed skips a healthy installed keybox ---
