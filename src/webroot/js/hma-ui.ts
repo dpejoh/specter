@@ -2,6 +2,7 @@ import { t } from './i18n.js';
 import { wireRowDialog } from './toggles.js';
 import { openSubPage } from './subpage.js';
 import { exec } from './bridge.js';
+import { afterPaint, escapeHtml } from './utils.js';
 
 
 const HMA_AUTO_RELOAD_VERSION = 175;
@@ -21,10 +22,11 @@ async function getHmaVersion(): Promise<number | null> {
 }
 
 export async function openHmaDialog() {
-  const hmaVersion = await getHmaVersion();
-  const oldHma = hmaVersion !== null && hmaVersion < HMA_AUTO_RELOAD_VERSION;
-
-  openSubPage({
+  // The dialog opens immediately; once it has painted, the HMA version
+  // check (a shell read, sometimes a dumpsys call) runs, and the
+  // old-version warning note is inserted in the same spot the subpage
+  // renders its info card.
+  const page = await openSubPage({
     id: 'hma-config',
     title: t('hma_dialog_title', 'HMA-OSS Configs'),
     description: t(
@@ -45,15 +47,29 @@ export async function openHmaDialog() {
         ],
       },
     ],
-    infoCard: oldHma ? {
-      icon: 'warning',
-      title: `${t('hma_version_old_title', 'Update HMA-OSS')} (oss-${hmaVersion})`,
-      text: t(
+  });
+
+  await new Promise<void>(resolve => afterPaint(resolve, 300));
+
+  const hmaVersion = await getHmaVersion();
+  const oldHma = hmaVersion !== null && hmaVersion < HMA_AUTO_RELOAD_VERSION;
+  if (!oldHma) return;
+
+  const note = document.createElement('div');
+  note.className = 'subpage-info-note';
+  note.innerHTML = `
+    <md-icon aria-hidden="true">warning</md-icon>
+    <div>
+      <strong class="subpage-info-title">${escapeHtml(`${t('hma_version_old_title', 'Update HMA-OSS')} (oss-${hmaVersion})`)}</strong>
+      <p>${escapeHtml(t(
         'hma_version_old_text',
         'This HMA-OSS service is older than oss-175, so it will not apply generated config changes automatically. Update the HMA-OSS Zygisk module, or open HMA-OSS and long-press the Home status card to apply the generated config.'
-      ),
-    } : undefined,
-  });
+      ))}</p>
+    </div>
+  `;
+  const footer = page.overlay.querySelector('#subpage-footer');
+  if (footer) footer.after(note);
+  else page.overlay.querySelector('.subpage-content')?.append(note);
 }
 
 export function wireHma() {
