@@ -139,6 +139,23 @@ describe('target apps manager', () => {
     expect(itemByPkg('com.c.app').state).toBe('conditional');
   });
 
+  it('renders apps as settings rows in a grouped section', async () => {
+    await openTargetAppsManager();
+
+    const section = document.querySelector('#ta-list sp-settings-section');
+    expect(section).not.toBeNull();
+    const rows = [...section!.querySelectorAll('sp-settings-row.ta-item')];
+    expect(rows.length).toBe(items().length);
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(row.getAttribute('variant')).toBe('custom');
+      expect(row.querySelector('[slot="leading"]')).not.toBeNull();
+      expect(row.querySelector('[slot="headline"]')?.textContent).not.toBe('');
+      expect(row.querySelector('[slot="supporting"]')?.textContent).toBe(row.dataset.package);
+      expect(row.querySelector('[slot="trailing"]')?.classList.contains('ta-state-circle')).toBe(true);
+    }
+  });
+
   it('filters by search text and by the selected/not-selected chips', async () => {
     await openTargetAppsManager();
 

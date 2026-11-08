@@ -1633,46 +1633,8 @@ md-filled-tonal-button {
   display: none;
 }
 
-.ta-item {
-  box-sizing: border-box;
-  border-radius: 16px;
-  align-items: center;
-  gap: 16px;
-  min-height: 60px;
-  padding: 14px 20px;
-  background: var(--md-sys-color-surface-container-high);
-  transition: border-radius 0.2s ease;
-  display: flex;
-  position: relative;
-  cursor: default;
-  overflow: clip;
-}
-
-.ta-item + .ta-item {
-  margin-top: 2px;
-}
-
-.ta-item:active {
-  border-radius: 24px;
-}
-
-@media (hover: hover) {
-  .ta-item:hover {
-    background: var(--md-sys-color-surface-container-highest);
-  }
-}
-
-.ta-item-content {
-  pointer-events: none;
-  flex-direction: column;
-  flex: 1;
-  gap: 4px;
-  min-width: 0;
-  display: flex;
-}
-
-
 .ta-item-name {
+  display: block;
   font-size: 0.9375rem;
   font-weight: 500;
   color: var(--md-sys-color-on-surface);
@@ -1682,6 +1644,7 @@ md-filled-tonal-button {
 }
 
 .ta-item-pkg {
+  display: block;
   font-size: 0.8125rem;
   color: var(--md-sys-color-secondary);
   line-height: 1.4;

@@ -12,6 +12,8 @@ import type { TargetDialogsContext } from './target-apps-dialogs.js';
 import { setupOverlayA11y } from './overlay-a11y.js';
 import { closeMenu, wireMenuTrigger } from './menu-utils.js';
 import { overlayHeader } from './ui-overlay.js';
+import './ui/sp-settings-row.js';
+import './ui/sp-settings-section.js';
 
 export type TargetState = 'unchecked' | 'bare' | 'conditional' | 'force';
 type BlacklistState = 'unchecked' | 'blacklisted';
@@ -688,10 +690,12 @@ export async function openTargetAppsManager() {
 
   function renderList() {
     list.innerHTML = '';
+    const section = document.createElement('sp-settings-section');
     const fragment = document.createDocumentFragment();
 
     for (const app of filteredApps) {
-      const item = document.createElement('div');
+      const item = document.createElement('sp-settings-row');
+      item.setAttribute('variant', 'custom');
       item.className = 'ta-item';
       item.dataset.package = app.packageName;
       item.dataset.state = app.state;
@@ -699,22 +703,20 @@ export async function openTargetAppsManager() {
       item.tabIndex = 0;
 
       const { wrap: iconContainer } = iconMgr.createElements(app.packageName);
+      iconContainer.setAttribute('slot', 'leading');
 
-      const label = document.createElement('div');
-      label.className = 'ta-item-content';
-
-      const nameEl = document.createElement('div');
+      const nameEl = document.createElement('span');
+      nameEl.setAttribute('slot', 'headline');
       nameEl.className = 'ta-item-name';
       nameEl.textContent = app.appName;
 
-      const pkgEl = document.createElement('div');
+      const pkgEl = document.createElement('span');
+      pkgEl.setAttribute('slot', 'supporting');
       pkgEl.className = 'ta-item-pkg';
       pkgEl.textContent = app.packageName;
 
-      label.appendChild(nameEl);
-      label.appendChild(pkgEl);
-
       const circle = document.createElement('div');
+      circle.setAttribute('slot', 'trailing');
       circle.className = 'ta-state-circle';
       circle.setAttribute('data-state', app.state);
       circle.setAttribute('aria-hidden', 'true');
@@ -783,15 +785,15 @@ export async function openTargetAppsManager() {
         item.click();
       });
 
-      const ripple = document.createElement('md-ripple');
       item.appendChild(iconContainer);
-      item.appendChild(label);
+      item.appendChild(nameEl);
+      item.appendChild(pkgEl);
       item.appendChild(circle);
-      item.appendChild(ripple);
       fragment.appendChild(item);
     }
 
-    list.appendChild(fragment);
+    section.appendChild(fragment);
+    list.appendChild(section);
 
     if (filteredApps.length === 0) {
       const empty = document.createElement('div');
