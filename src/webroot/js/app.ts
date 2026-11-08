@@ -173,6 +173,7 @@ async function loadToolsUI() {
   omk?.wireOmkRestart();
 
   wireLazyClick('target-apps-btn', () => import('./target-apps.js').then(m => m.openTargetAppsManager()));
+  wireLazyClick('hma-apps-btn', () => import('./hma-apps.js').then(m => m.openHmaAppsManager()));
   const pifRow = document.getElementById('pif-choose-device');
   if (pifRow) pifRow.hidden = false;
   wireLazyClick('pif-choose-device', () => import('./pif-device-ui.js').then(m => m.openPifDeviceSubpage()));

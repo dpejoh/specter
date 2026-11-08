@@ -1,3 +1,19 @@
+# v1.6.0
+
+- Home keybox and setup cards now open detail pages for keybox health, revocation, RKP expiry, file info, device modules, and warnings.
+- Added keybox catalog and details pages with status/provider filters, RKP expiry, custom source install, and a 5-minute revocation watch with auto-replace.
+- HMA-OSS config is now generated on-device instead of downloaded from the web. It uses installed apps and all seven HMA-OSS presets, merges without wiping existing config, and supports auto-update, launch policy, and live reload.
+- Action pipeline is faster and non-interactive: no volume-key prompts, skips missing PIF, reuses healthy keyboxes, skips background-managed target/HMA jobs, and caches network responses.
+- Added Boot Hash, Security Patch, OMK trust/restart, action pipeline, auto-target, auto-HMA, and keybox watch pages.
+- Refactored the WebUI to use one shared component system across Settings, Tools, Control, and subpages.
+- Removed classic HMA/HMAL config generation.
+- Tricky Store OSS is now the automatic fallback keystore backend instead of TEESimulator-RS.
+- Android is no longer force-added to the target list.
+- Keybox names now use `<name> by <provider>` with Normal/RKP and expired states.
+- Fixed revoked keybox installs, blacklisted fixed targets, HMA merge/ownership issues, keybox filters, home truncation, log tab switching, theme persistence, and dialog/back behavior.
+- Dynamic colors use the system Material palette when available.
+- New keybox/setup strings are translated into all ten languages.
+
 # v1.5.0
 
 ### Highlights:
@@ -17,9 +33,6 @@
 ### System & Backend
 
 - **Boot Hash Resolution**: Completely reworked the boot hash resolution. The old implementation was a bit of a mess, it's now much cleaner, self-contained, and properly cached.  
-- **Monet Reliability**: Normalized the Android 17 `cmd overlay lookup` output (`@id -> #AARRGGBB`), added seed fallbacks that tolerate `null`, and fixed the wallpaper watcher to watch `/data/system/users/0` instead of the removed `wallpaper` file. Hot installs now install the arch-specific `inotifyd` too.
-- **Exact Dynamic Colors**: On ROMs that expose the system Material role resources, Specter now applies the full `system_primary_*` / `system_surface_*` palette instead of snapping to one of nine presets. ROMs without those resources keep the seed-based preset fallback. Stale `monet_seed` cache entries are no longer trusted.
-- **Palette Fixes**: “Grey” now uses a neutral (non-teal) palette; the purple anchor uses its real HCT hue; low-chroma seeds use Google’s chroma threshold; saturated teal is no longer routed through the grey palette.
 - **Boot Props**: Force-set `ro.boot.flash.locked` even if it was completely missing from the device props.  
 - **UI Polish**: Reactive rounded corners on grouped lists, refined 24px card and 20px logs radii, cleaner hero card typography, improved ripples, and updated top contributors.  
 - **Theme Defaults**: Monet dynamic theming is now set as the default preset on supported Android versions.

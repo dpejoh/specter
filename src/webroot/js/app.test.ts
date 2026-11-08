@@ -251,7 +251,7 @@ describe('app bootstrap', () => {
     expect(m.wireSecurityPatch).toHaveBeenCalled();
     expect(m.wireOmkTrust).toHaveBeenCalled();
     expect(m.wireOmkRestart).toHaveBeenCalled();
-    expect(h.lazyClicks).toEqual(['target-apps-btn', 'pif-choose-device', 'boot-hash-btn']);
+    expect(h.lazyClicks).toEqual(['target-apps-btn', 'hma-apps-btn', 'pif-choose-device', 'boot-hash-btn']);
     expect(document.getElementById('pif-choose-device')!.hidden).toBe(false);
     await vi.waitFor(() => expect(m.refreshPifChooseDesc).toHaveBeenCalled());
     expect(m.updatePlayIntegritySectionVisibility).toHaveBeenCalled();
