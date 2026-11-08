@@ -557,5 +557,20 @@
   "keybox_refresh_interval": "Interval pemeriksaan (menit)",
   "keybox_refresh_interval_desc": "Minimal 1 menit. Standar 60 menit. Membuka WebUI akan memeriksa segera.",
   "keybox_refresh_replace": "Ganti keybox jika dicabut",
-  "keybox_refresh_replace_desc": "Secara otomatis memasang keybox baru saat yang saat ini digunakan dicabut atau kedaluwarsa."
+  "keybox_refresh_replace_desc": "Secara otomatis memasang keybox baru saat yang saat ini digunakan dicabut atau kedaluwarsa.",
+  "ta_mode_bare_desc": "Deteksi otomatis berdasarkan dukungan TEE perangkat",
+  "ta_mode_conditional_desc": "Tambal sertifikat daun dari TEE perangkat keras",
+  "ta_mode_force_desc": "Buat rantai sertifikat dari keybox",
+  "ta_filter_all_modes": "Semua Mode",
+  "ta_filter_mode_aria": "Filter aplikasi berdasarkan mode",
+  "menu_hma_apps": "HMA-OSS Scope",
+  "menu_hma_apps_desc": "Manage per-app hiding states and blacklist interactively",
+  "ha_title": "HMA-OSS Scope",
+  "ha_state_unchecked": "Not in HMA scope",
+  "ha_state_targeted": "In HMA scope",
+  "ha_prompt_saved": "HMA-OSS scope saved",
+  "ha_regenerate": "Regenerate",
+  "ha_regenerate_confirm": "This will re-scan all installed apps and rebuild HMA-OSS configuration. Custom selections will be overwritten. A backup will be saved.",
+  "ha_regenerate_success": "HMA-OSS configuration regenerated",
+  "ha_edit_scope": "Back to scope"
 }

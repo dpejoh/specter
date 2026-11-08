@@ -557,5 +557,20 @@
   "keybox_refresh_interval": "Khoảng thời gian kiểm tra (phút)",
   "keybox_refresh_interval_desc": "Tối thiểu 1 phút. Mặc định 60 phút. Mở WebUI sẽ kiểm tra ngay lập tức.",
   "keybox_refresh_replace": "Thay thế keybox nếu bị thu hồi",
-  "keybox_refresh_replace_desc": "Tự động cài đặt keybox mới khi keybox hiện tại bị thu hồi hoặc hết hạn."
+  "keybox_refresh_replace_desc": "Tự động cài đặt keybox mới khi keybox hiện tại bị thu hồi hoặc hết hạn.",
+  "ta_mode_bare_desc": "Tự động phát hiện dựa trên hỗ trợ TEE của thiết bị",
+  "ta_mode_conditional_desc": "Vá chứng chỉ lá từ phần cứng TEE",
+  "ta_mode_force_desc": "Tạo chuỗi chứng chỉ từ keybox",
+  "ta_filter_all_modes": "Tất cả chế độ",
+  "ta_filter_mode_aria": "Lọc ứng dụng theo chế độ",
+  "menu_hma_apps": "HMA-OSS Scope",
+  "menu_hma_apps_desc": "Manage per-app hiding states and blacklist interactively",
+  "ha_title": "HMA-OSS Scope",
+  "ha_state_unchecked": "Not in HMA scope",
+  "ha_state_targeted": "In HMA scope",
+  "ha_prompt_saved": "HMA-OSS scope saved",
+  "ha_regenerate": "Regenerate",
+  "ha_regenerate_confirm": "This will re-scan all installed apps and rebuild HMA-OSS configuration. Custom selections will be overwritten. A backup will be saved.",
+  "ha_regenerate_success": "HMA-OSS configuration regenerated",
+  "ha_edit_scope": "Back to scope"
 }

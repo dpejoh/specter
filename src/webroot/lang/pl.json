@@ -557,5 +557,20 @@
   "keybox_refresh_interval": "Interwał sprawdzania (minuty)",
   "keybox_refresh_interval_desc": "Minimum 1 minuta. Domyślnie 60 minut. Otwarcie WebUI natychmiast sprawdza stan.",
   "keybox_refresh_replace": "Zastąp keybox w przypadku unieważnienia",
-  "keybox_refresh_replace_desc": "Automatycznie zainstaluj nowy keybox, gdy obecny zostanie unieważniony lub wygaśnie."
+  "keybox_refresh_replace_desc": "Automatycznie zainstaluj nowy keybox, gdy obecny zostanie unieważniony lub wygaśnie.",
+  "ta_mode_bare_desc": "Automatyczne wykrywanie na podstawie obsługi TEE urządzenia",
+  "ta_mode_conditional_desc": "Modyfikacja certyfikatu liścia ze sprzętowego TEE",
+  "ta_mode_force_desc": "Generowanie łańcucha certyfikatów z keybox",
+  "ta_filter_all_modes": "Wszystkie tryby",
+  "ta_filter_mode_aria": "Filtruj aplikacje według trybu",
+  "menu_hma_apps": "HMA-OSS Scope",
+  "menu_hma_apps_desc": "Manage per-app hiding states and blacklist interactively",
+  "ha_title": "HMA-OSS Scope",
+  "ha_state_unchecked": "Not in HMA scope",
+  "ha_state_targeted": "In HMA scope",
+  "ha_prompt_saved": "HMA-OSS scope saved",
+  "ha_regenerate": "Regenerate",
+  "ha_regenerate_confirm": "This will re-scan all installed apps and rebuild HMA-OSS configuration. Custom selections will be overwritten. A backup will be saved.",
+  "ha_regenerate_success": "HMA-OSS configuration regenerated",
+  "ha_edit_scope": "Back to scope"
 }

@@ -557,5 +557,20 @@
   "keybox_refresh_interval": "Интервал проверки (минуты)",
   "keybox_refresh_interval_desc": "Минимум 1 минута. По умолчанию 60 минут. Проверяется сразу при открытии WebUI.",
   "keybox_refresh_replace": "Заменить keybox при отзыве",
-  "keybox_refresh_replace_desc": "Автоматически устанавливать новый keybox, если текущий отозван или истек."
+  "keybox_refresh_replace_desc": "Автоматически устанавливать новый keybox, если текущий отозван или истек.",
+  "ta_mode_bare_desc": "Автовыбор на основе поддержки TEE устройством",
+  "ta_mode_conditional_desc": "Патч конечного сертификата из аппаратного TEE",
+  "ta_mode_force_desc": "Генерация цепочки сертификатов из keybox",
+  "ta_filter_all_modes": "Все режимы",
+  "ta_filter_mode_aria": "Фильтрация приложений по режиму",
+  "menu_hma_apps": "HMA-OSS Scope",
+  "menu_hma_apps_desc": "Manage per-app hiding states and blacklist interactively",
+  "ha_title": "HMA-OSS Scope",
+  "ha_state_unchecked": "Not in HMA scope",
+  "ha_state_targeted": "In HMA scope",
+  "ha_prompt_saved": "HMA-OSS scope saved",
+  "ha_regenerate": "Regenerate",
+  "ha_regenerate_confirm": "This will re-scan all installed apps and rebuild HMA-OSS configuration. Custom selections will be overwritten. A backup will be saved.",
+  "ha_regenerate_success": "HMA-OSS configuration regenerated",
+  "ha_edit_scope": "Back to scope"
 }

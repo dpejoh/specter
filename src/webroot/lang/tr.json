@@ -557,5 +557,20 @@
   "keybox_refresh_interval": "Kontrol sıklığı (dakika)",
   "keybox_refresh_interval_desc": "En az 1 dakika. Varsayılan 60 dakika. WebUI açıldığında hemen kontrol eder.",
   "keybox_refresh_replace": "İptal edildiyse keybox'ı değiştir",
-  "keybox_refresh_replace_desc": "Mevcut keybox iptal edildiğinde veya süresi dolduğunda otomatik olarak yeni bir keybox yükler."
+  "keybox_refresh_replace_desc": "Mevcut keybox iptal edildiğinde veya süresi dolduğunda otomatik olarak yeni bir keybox yükler.",
+  "ta_mode_bare_desc": "Cihaz TEE desteğine göre otomatik algılama",
+  "ta_mode_conditional_desc": "Donanım TEE'sinden yaprak sertifikasını yamala",
+  "ta_mode_force_desc": "Keybox'tan sertifika zinciri oluştur",
+  "ta_filter_all_modes": "Tüm Modlar",
+  "ta_filter_mode_aria": "Uygulamaları moda göre filtrele",
+  "menu_hma_apps": "HMA-OSS Scope",
+  "menu_hma_apps_desc": "Manage per-app hiding states and blacklist interactively",
+  "ha_title": "HMA-OSS Scope",
+  "ha_state_unchecked": "Not in HMA scope",
+  "ha_state_targeted": "In HMA scope",
+  "ha_prompt_saved": "HMA-OSS scope saved",
+  "ha_regenerate": "Regenerate",
+  "ha_regenerate_confirm": "This will re-scan all installed apps and rebuild HMA-OSS configuration. Custom selections will be overwritten. A backup will be saved.",
+  "ha_regenerate_success": "HMA-OSS configuration regenerated",
+  "ha_edit_scope": "Back to scope"
 }

@@ -557,5 +557,20 @@
   "keybox_refresh_interval": "Ellenőrzési időköz (perc)",
   "keybox_refresh_interval_desc": "Minimum 1 perc. Alapértelmezett 60 perc. A WebUI megnyitása azonnal ellenőrzi.",
   "keybox_refresh_replace": "Keybox cseréje, ha vissza lett vonva",
-  "keybox_refresh_replace_desc": "Automatikusan új keyboxot telepít, ha a jelenlegi visszavonásra került vagy lejárt."
+  "keybox_refresh_replace_desc": "Automatikusan új keyboxot telepít, ha a jelenlegi visszavonásra került vagy lejárt.",
+  "ta_mode_bare_desc": "Automatikus észlelés az eszköz TEE támogatása alapján",
+  "ta_mode_conditional_desc": "Levéltanúsítvány módosítása a hardveres TEE-ből",
+  "ta_mode_force_desc": "Tanúsítványlánc generálása a keyboxból",
+  "ta_filter_all_modes": "Minden mód",
+  "ta_filter_mode_aria": "Alkalmazások szűrése mód szerint",
+  "menu_hma_apps": "HMA-OSS Scope",
+  "menu_hma_apps_desc": "Manage per-app hiding states and blacklist interactively",
+  "ha_title": "HMA-OSS Scope",
+  "ha_state_unchecked": "Not in HMA scope",
+  "ha_state_targeted": "In HMA scope",
+  "ha_prompt_saved": "HMA-OSS scope saved",
+  "ha_regenerate": "Regenerate",
+  "ha_regenerate_confirm": "This will re-scan all installed apps and rebuild HMA-OSS configuration. Custom selections will be overwritten. A backup will be saved.",
+  "ha_regenerate_success": "HMA-OSS configuration regenerated",
+  "ha_edit_scope": "Back to scope"
 }

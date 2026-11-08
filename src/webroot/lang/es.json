@@ -557,5 +557,20 @@
   "keybox_refresh_interval": "Intervalo de comprobación (minutos)",
   "keybox_refresh_interval_desc": "Mínimo 1 minuto. Por defecto 60 minutos. Al abrir la interfaz web se comprueba inmediatamente.",
   "keybox_refresh_replace": "Reemplazar keybox si está revocada",
-  "keybox_refresh_replace_desc": "Instala automáticamente una nueva keybox cuando la actual esté revocada o caducada."
+  "keybox_refresh_replace_desc": "Instala automáticamente una nueva keybox cuando la actual esté revocada o caducada.",
+  "ta_mode_bare_desc": "Detección automática según el soporte TEE del dispositivo",
+  "ta_mode_conditional_desc": "Modificar certificado hoja desde el TEE del hardware",
+  "ta_mode_force_desc": "Generar cadena de certificados desde la keybox",
+  "ta_filter_all_modes": "Todos los modos",
+  "ta_filter_mode_aria": "Filtrar aplicaciones por modo",
+  "menu_hma_apps": "HMA-OSS Scope",
+  "menu_hma_apps_desc": "Manage per-app hiding states and blacklist interactively",
+  "ha_title": "HMA-OSS Scope",
+  "ha_state_unchecked": "Not in HMA scope",
+  "ha_state_targeted": "In HMA scope",
+  "ha_prompt_saved": "HMA-OSS scope saved",
+  "ha_regenerate": "Regenerate",
+  "ha_regenerate_confirm": "This will re-scan all installed apps and rebuild HMA-OSS configuration. Custom selections will be overwritten. A backup will be saved.",
+  "ha_regenerate_success": "HMA-OSS configuration regenerated",
+  "ha_edit_scope": "Back to scope"
 }

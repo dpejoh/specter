@@ -8,6 +8,7 @@ import { showToast } from './toast.js';
 import { t } from './i18n.js';
 import { appendToOutput } from './terminal.js';
 import { showDialog } from './dialog.js';
+import { openSubPage, type SubPageInstance } from './subpage.js';
 import type { TargetApp, AppState } from './target-apps.js';
 
 
@@ -100,61 +101,137 @@ function paintSeg(root: HTMLElement): void {
     });
   }
 
-export function openModeDialog(ctx: TargetDialogsContext) {
-    const overrideLabel = escapeHtml(t('ta_mode_override_label', 'Override existing'));
-    const overrideDesc = escapeHtml(t('ta_mode_override_desc', 'Apply this mode to all currently selected apps'));
-    const overrideRow = `
-      <sp-settings-section>
-        <sp-settings-row variant="toggle">
-          <md-icon slot="icon" aria-hidden="true">compare_arrows</md-icon>
-          <span slot="headline">${overrideLabel}</span>
-          <span slot="supporting">${overrideDesc}</span>
-          <md-switch slot="trailing" icons id="ta-mode-do-override" aria-label="${overrideLabel}"></md-switch>
-        </sp-settings-row>
-      </sp-settings-section>`;
-    const d = showDialog(
-      escapeHtml(t('ta_mode_settings', 'Default Mode')),
-      `<div class="ta-mode-content">
-        <p class="supporting-text ta-mode-desc">${escapeHtml(t('ta_mode_desc', 'Controls the default mode suffix added to new app targets in Tricky Store'))}</p>
-        <md-outlined-segmented-button-set>
-          <md-outlined-segmented-button value="bare"${ctx.getDefaultMode() === 'bare' ? ' selected' : ''} label="${escapeHtml(t('ta_mode_bare', 'Auto'))}"></md-outlined-segmented-button>
-          <md-outlined-segmented-button value="conditional"${ctx.getDefaultMode() === 'conditional' ? ' selected' : ''} label="? ${escapeHtml(t('ta_mode_conditional', 'Leaf'))}"></md-outlined-segmented-button>
-          <md-outlined-segmented-button value="force"${ctx.getDefaultMode() === 'force' ? ' selected' : ''} label="! ${escapeHtml(t('ta_mode_force', 'Gen'))}"></md-outlined-segmented-button>
-        </md-outlined-segmented-button-set>
-        ${overrideRow}
-      </div>`,
-      `<md-text-button class="dialog-action-close">${escapeHtml(t('dialog_cancel', 'Cancel'))}</md-text-button>
-       <md-filled-button id="ta-mode-apply">${escapeHtml(t('dialog_apply', 'Apply'))}</md-filled-button>`
-    );
+export function openModeSubpage(ctx: TargetDialogsContext): Promise<SubPageInstance> {
+  const currentMode = ctx.getDefaultMode();
 
-    let _mode = ctx.getDefaultMode();
-    d.querySelectorAll('md-outlined-segmented-button').forEach(b => {
-      b.addEventListener('click', () => { _mode = b.getAttribute('value') || 'bare'; });
-    });
-    d.querySelector('#ta-mode-apply')!.addEventListener('click', () => {
-      ctx.setDefaultMode(_mode);
-      cfgSet('target_default_mode', _mode);
-      const doOverride = (d.querySelector('#ta-mode-do-override') as HTMLElement & { selected: boolean })?.selected;
-      let count = 0;
-      if (doOverride) {
-        for (const app of ctx.apps) {
-          if (app.state !== 'unchecked') {
-            app.state = _mode as AppState;
-            count++;
-          }
-        }
-        ctx.applyFilters();
-      }
-      d.close();
-      if (count > 0) {
-        showToast(t('ta_mode_applied_both', 'Default saved, {count} apps overridden').replace('{count}', String(count)), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
-      } else {
-        showToast(t('ta_default_saved', 'Default mode saved'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
-      }
-    });
-    d.querySelector('.dialog-action-close')!.addEventListener('click', () => d.close());
-    paintSeg(d);
-  }
+  return openSubPage({
+    id: 'target-default-mode',
+    title: t('ta_mode_settings', 'Default Mode'),
+    description: t('ta_mode_desc', 'Controls the default mode suffix added to new app targets in Tricky Store'),
+    onClose: () => {
+      window.isOverlayOpen = true;
+      document.documentElement.style.overflow = 'hidden';
+    },
+    groups: [
+      {
+        title: t('ta_mode_settings', 'Default Mode'),
+        items: [
+          {
+            type: 'radio',
+            id: 'ta-mode-radio-bare',
+            name: 'target_default_mode',
+            value: 'bare',
+            title: t('ta_mode_bare', 'Auto'),
+            description: t('ta_mode_bare_desc', 'Auto-detect based on device TEE support'),
+            selected: currentMode === 'bare',
+            onSelect: () => {
+              ctx.setDefaultMode('bare');
+              cfgSet('target_default_mode', 'bare');
+              showToast(t('ta_default_saved', 'Default mode saved'), {
+                icon: 'check_circle',
+                type: 'success',
+                autoCloseDelay: 2500,
+              });
+            },
+          },
+          {
+            type: 'radio',
+            id: 'ta-mode-radio-conditional',
+            name: 'target_default_mode',
+            value: 'conditional',
+            title: t('ta_mode_conditional', 'Leaf'),
+            description: t('ta_mode_conditional_desc', 'Patch leaf certificate from hardware TEE'),
+            badge: '?',
+            selected: currentMode === 'conditional',
+            onSelect: () => {
+              ctx.setDefaultMode('conditional');
+              cfgSet('target_default_mode', 'conditional');
+              showToast(t('ta_default_saved', 'Default mode saved'), {
+                icon: 'check_circle',
+                type: 'success',
+                autoCloseDelay: 2500,
+              });
+            },
+          },
+          {
+            type: 'radio',
+            id: 'ta-mode-radio-force',
+            name: 'target_default_mode',
+            value: 'force',
+            title: t('ta_mode_force', 'Gen'),
+            description: t('ta_mode_force_desc', 'Generate certificate chain from keybox'),
+            badge: '!',
+            selected: currentMode === 'force',
+            onSelect: () => {
+              ctx.setDefaultMode('force');
+              cfgSet('target_default_mode', 'force');
+              showToast(t('ta_default_saved', 'Default mode saved'), {
+                icon: 'check_circle',
+                type: 'success',
+                autoCloseDelay: 2500,
+              });
+            },
+          },
+        ],
+      },
+      {
+        items: [
+          {
+            type: 'custom',
+            id: 'ta-mode-override',
+            render: (container) => {
+              const row = document.createElement('sp-settings-row');
+              row.id = 'ta-mode-override-row';
+              row.setAttribute('variant', 'action');
+              row.setAttribute('headline', t('ta_mode_override_label', 'Override existing'));
+              row.setAttribute('supporting-text', t('ta_mode_override_desc', 'Apply this mode to all currently selected apps'));
+              const icon = document.createElement('md-icon');
+              icon.setAttribute('slot', 'icon');
+              icon.setAttribute('aria-hidden', 'true');
+              icon.textContent = 'compare_arrows';
+              row.append(icon);
+
+              const handleOverride = () => {
+                const mode = ctx.getDefaultMode();
+                let count = 0;
+                for (const app of ctx.apps) {
+                  if (app.state !== 'unchecked') {
+                    app.state = mode as AppState;
+                    count++;
+                  }
+                }
+                if (count > 0) {
+                  ctx.applyFilters();
+                  showToast(
+                    t('ta_mode_applied_both', 'Default saved, {count} apps overridden').replace('{count}', String(count)),
+                    { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 },
+                  );
+                } else {
+                  showToast(t('ta_default_saved', 'Default mode saved'), {
+                    icon: 'check_circle',
+                    type: 'success',
+                    autoCloseDelay: 2500,
+                  });
+                }
+              };
+
+              row.addEventListener('sp-activate', handleOverride);
+              row.addEventListener('click', () => {
+                if (!customElements.get('sp-settings-row')) {
+                  handleOverride();
+                }
+              });
+
+              container.replaceWith(row);
+            },
+          },
+        ],
+      },
+    ],
+  });
+}
+
+export const openModeDialog = openModeSubpage;
 
 export function openRegenerateDialog(ctx: TargetDialogsContext) {
     const d = showDialog(

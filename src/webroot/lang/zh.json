@@ -557,5 +557,20 @@
   "keybox_refresh_interval": "检查间隔（分钟）",
   "keybox_refresh_interval_desc": "最少 1 分钟。默认 60 分钟。打开 WebUI 时会立即检查。",
   "keybox_refresh_replace": "若吊销则替换 Keybox",
-  "keybox_refresh_replace_desc": "当当前 Keybox 被吊销或过期时自动安装新的 Keybox。"
+  "keybox_refresh_replace_desc": "当当前 Keybox 被吊销或过期时自动安装新的 Keybox。",
+  "ta_mode_bare_desc": "根据设备 TEE 支持情况自动检测",
+  "ta_mode_conditional_desc": "从硬件 TEE 拦截修补叶证书",
+  "ta_mode_force_desc": "使用 Keybox 生成完整证书链",
+  "ta_filter_all_modes": "所有模式",
+  "ta_filter_mode_aria": "按模式筛选应用",
+  "menu_hma_apps": "HMA-OSS Scope",
+  "menu_hma_apps_desc": "Manage per-app hiding states and blacklist interactively",
+  "ha_title": "HMA-OSS Scope",
+  "ha_state_unchecked": "Not in HMA scope",
+  "ha_state_targeted": "In HMA scope",
+  "ha_prompt_saved": "HMA-OSS scope saved",
+  "ha_regenerate": "Regenerate",
+  "ha_regenerate_confirm": "This will re-scan all installed apps and rebuild HMA-OSS configuration. Custom selections will be overwritten. A backup will be saved.",
+  "ha_regenerate_success": "HMA-OSS configuration regenerated",
+  "ha_edit_scope": "Back to scope"
 }

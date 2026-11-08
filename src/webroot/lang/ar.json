@@ -557,5 +557,20 @@
   "keybox_refresh_interval": "فاصل الفحص (بالدقائق)",
   "keybox_refresh_interval_desc": "الحد الأدنى دقيقة واحدة. الافتراضي 60 دقيقة. يؤدي فتح واجهة الويب إلى الفحص فورًا.",
   "keybox_refresh_replace": "استبدال Keybox إذا تم إلغاؤه",
-  "keybox_refresh_replace_desc": "تثبيت Keybox جديد تلقائيًا عندما يتم إلغاء الحالي أو انتهاء صلاحيته."
+  "keybox_refresh_replace_desc": "تثبيت Keybox جديد تلقائيًا عندما يتم إلغاء الحالي أو انتهاء صلاحيته.",
+  "ta_mode_bare_desc": "كشف تلقائي استنادًا إلى دعم TEE بالجهاز",
+  "ta_mode_conditional_desc": "تعديل شهادة الطرف من TEE العتادي",
+  "ta_mode_force_desc": "توليد سلسلة شهادات كاملة من keybox",
+  "ta_filter_all_modes": "جميع الأوضاع",
+  "ta_filter_mode_aria": "تصفية التطبيقات حسب الوضع",
+  "menu_hma_apps": "HMA-OSS Scope",
+  "menu_hma_apps_desc": "Manage per-app hiding states and blacklist interactively",
+  "ha_title": "HMA-OSS Scope",
+  "ha_state_unchecked": "Not in HMA scope",
+  "ha_state_targeted": "In HMA scope",
+  "ha_prompt_saved": "HMA-OSS scope saved",
+  "ha_regenerate": "Regenerate",
+  "ha_regenerate_confirm": "This will re-scan all installed apps and rebuild HMA-OSS configuration. Custom selections will be overwritten. A backup will be saved.",
+  "ha_regenerate_success": "HMA-OSS configuration regenerated",
+  "ha_edit_scope": "Back to scope"
 }
