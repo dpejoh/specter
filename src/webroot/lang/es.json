@@ -83,6 +83,7 @@
   "menu_target_apps_desc": "Gestionar estados de segmentación por app interactivamente",
   "ta_title": "Segmentación de apps",
   "ta_search_placeholder": "Buscar apps",
+  "ta_search_clear": "Borrar búsqueda",
   "ta_filter_all": "Todas",
   "ta_filter_selected": "Seleccionadas",
   "ta_filter_not_selected": "No seleccionadas",

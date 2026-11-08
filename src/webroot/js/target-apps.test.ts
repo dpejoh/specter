@@ -248,6 +248,64 @@ describe('target apps manager', () => {
     expect(items()).toHaveLength(4);
   });
 
+  it('keeps the search field collapsed until the header search icon is tapped', async () => {
+    await openTargetAppsManager();
+
+    const container = document.querySelector('.ta-search-container') as HTMLElement;
+    const header = document.querySelector('.ta-header') as HTMLElement;
+    const searchBtn = document.querySelector('#ta-search-btn') as HTMLElement;
+    expect(container.hidden).toBe(true);
+    expect(header.classList.contains('ta-header--searching')).toBe(false);
+
+    click(searchBtn);
+    expect(container.hidden).toBe(false);
+    expect(header.classList.contains('ta-header--searching')).toBe(true);
+    expect(searchBtn.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('collapses an open search on Back before closing the overlay', async () => {
+    await openTargetAppsManager();
+    // The open class lands in a requestAnimationFrame callback.
+    await vi.waitFor(() => {
+      expect((document.querySelector('.ta-overlay') as HTMLElement).classList.contains('ta-overlay--open')).toBe(true);
+    });
+
+    click(document.querySelector('#ta-search-btn')!);
+    const search = document.querySelector('#ta-search') as unknown as HTMLElement & { value: string };
+    search.value = 'b.app';
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(items().map(i => i.pkg)).toEqual(['com.b.app']);
+
+    window.dispatchEvent(new Event('popstate'));
+    const overlay = document.querySelector('.ta-overlay') as HTMLElement;
+    expect(overlay.classList.contains('ta-overlay--open')).toBe(true);
+    expect((document.querySelector('.ta-search-container') as HTMLElement).hidden).toBe(true);
+    expect(search.value).toBe('');
+    expect(items()).toHaveLength(4);
+
+    window.dispatchEvent(new Event('popstate'));
+    expect(overlay.classList.contains('ta-overlay--open')).toBe(false);
+  });
+
+  it('clears the query from the field clear button', async () => {
+    await openTargetAppsManager();
+
+    click(document.querySelector('#ta-search-btn')!);
+    const search = document.querySelector('#ta-search') as unknown as HTMLElement & { value: string };
+    const clearBtn = document.querySelector('#ta-search-clear') as HTMLElement;
+    expect(clearBtn.style.display).toBe('none');
+
+    search.value = 'b.app';
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(clearBtn.style.display).toBe('');
+    expect(items().map(i => i.pkg)).toEqual(['com.b.app']);
+
+    click(clearBtn);
+    expect(search.value).toBe('');
+    expect(clearBtn.style.display).toBe('none');
+    expect(items()).toHaveLength(4);
+  });
+
   it('selects and deselects all from the menu', async () => {
     await openTargetAppsManager();
 

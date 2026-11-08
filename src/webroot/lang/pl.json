@@ -83,6 +83,7 @@
   "menu_target_apps_desc": "Interaktywne zarządzanie targetowaniem per-app",
   "ta_title": "Targetowanie aplikacji",
   "ta_search_placeholder": "Szukaj aplikacji",
+  "ta_search_clear": "Wyczyść wyszukiwanie",
   "ta_filter_all": "Wszystkie",
   "ta_filter_selected": "Wybrane",
   "ta_filter_not_selected": "Niewybrane",

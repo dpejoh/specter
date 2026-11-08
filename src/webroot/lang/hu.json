@@ -83,6 +83,7 @@
   "menu_target_apps_desc": "Célpontozás módok interaktív kezelése",
   "ta_title": "Célpontozás",
   "ta_search_placeholder": "Keresés applikációk között",
+  "ta_search_clear": "Keresés törlése",
   "ta_filter_all": "Mind",
   "ta_filter_selected": "Kiválasztott",
   "ta_filter_not_selected": "Nem kiválasztott",

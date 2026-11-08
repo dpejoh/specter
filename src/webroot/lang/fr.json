@@ -83,6 +83,7 @@
   "menu_target_apps_desc": "Gestion interactive du ciblage des applications par l'outil de gestion du Keystore",
   "ta_title": "Ciblage des applications",
   "ta_search_placeholder": "Rechercher des applications",
+  "ta_search_clear": "Effacer la recherche",
   "ta_filter_all": "Toutes",
   "ta_filter_selected": "Sélectionnées",
   "ta_filter_not_selected": "Non sélectionnées",

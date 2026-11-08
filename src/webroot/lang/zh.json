@@ -83,6 +83,7 @@
   "menu_target_apps_desc": "以交互方式管理每个应用的目标状态",
   "ta_title": "应用目标",
   "ta_search_placeholder": "搜索应用",
+  "ta_search_clear": "清除搜索",
   "ta_filter_all": "全部",
   "ta_filter_selected": "已选择",
   "ta_filter_not_selected": "未选择",

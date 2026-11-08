@@ -180,7 +180,17 @@ function buildOverlayHTML(): string {
         titleTag: 'h2',
         titleClass: 'ta-title',
         titleId: 'ta-title',
-        actions: `<button id="ta-menu-btn" class="ta-menu-btn" aria-label="${escapeHtml(t('ta_menu_more', 'More options'))}">
+        actions: `<div class="ta-search-container" hidden>
+          <md-outlined-text-field id="ta-search" class="ta-search" placeholder="${t('ta_search_placeholder', 'Search apps')}" aria-label="${escapeHtml(t('ta_search_placeholder', 'Search apps'))}">
+            <md-icon-button slot="trailing-icon" id="ta-search-clear" aria-label="${escapeHtml(t('ta_search_clear', 'Clear search'))}" style="display: none;">
+              <md-icon aria-hidden="true">close</md-icon>
+            </md-icon-button>
+          </md-outlined-text-field>
+        </div>
+        <button id="ta-search-btn" class="ta-menu-btn" aria-label="${escapeHtml(t('ta_search_placeholder', 'Search apps'))}" aria-expanded="false">
+          <md-icon aria-hidden="true">search</md-icon>
+        </button>
+        <button id="ta-menu-btn" class="ta-menu-btn" aria-label="${escapeHtml(t('ta_menu_more', 'More options'))}">
           <md-icon aria-hidden="true">more_vert</md-icon>
         </button>
         <md-menu id="ta-menu" class="ta-menu" anchor="ta-menu-btn" positioning="fixed">
@@ -210,12 +220,6 @@ function buildOverlayHTML(): string {
           </md-menu-item>
         </md-menu>`,
       })}
-
-      <div class="ta-search-container">
-        <md-outlined-text-field id="ta-search" class="ta-search" placeholder="${t('ta_search_placeholder', 'Search apps')}" aria-label="${escapeHtml(t('ta_search_placeholder', 'Search apps'))}">
-          <md-icon slot="leading-icon" aria-hidden="true">search</md-icon>
-        </md-outlined-text-field>
-      </div>
 
       <div class="ta-filters" id="ta-filters"></div>
 
@@ -266,6 +270,11 @@ export async function openTargetAppsManager() {
   const loading = overlay.querySelector('#ta-loading') as HTMLElement;
   const searchInput = overlay.querySelector('#ta-search') as MdOutlinedTextField;
   const titleEl = overlay.querySelector('.ta-title') as HTMLElement;
+  const headerEl = overlay.querySelector('.ta-header') as HTMLElement;
+  const searchContainer = overlay.querySelector('.ta-search-container') as HTMLElement;
+  const searchBtn = overlay.querySelector('#ta-search-btn') as HTMLButtonElement;
+  const searchClearBtn = overlay.querySelector('#ta-search-clear') as HTMLElement;
+  let searchOpen = false;
 
   const filterOptions = (): FilterOption[] => [
     { value: 'all', label: t('ta_filter_all', 'All') },
@@ -304,12 +313,20 @@ export async function openTargetAppsManager() {
     chunkObserver?.disconnect();
     iconMgr.destroy();
     window.isOverlayOpen = false;
-    window.removeEventListener('popstate', closeOverlay);
+    searchOpen = false;
+    window.removeEventListener('popstate', onPopState);
     overlay.classList.remove('ta-overlay--open');
     document.documentElement.style.overflow = '';
     setTimeout(() => {
       if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
     }, 300);
+  }
+
+  // Back (hardware or the header button, both go through history) first
+  // collapses an open search; only a second Back closes the overlay.
+  function onPopState() {
+    if (searchOpen) exitSearch();
+    else closeOverlay();
   }
 
   cleanupA11y = setupOverlayA11y(overlay, {
@@ -913,7 +930,57 @@ export async function openTargetAppsManager() {
 
   searchInput.addEventListener('input', () => {
     currentSearch = (searchInput.value || '').trim();
+    syncSearchClear();
     applyFilters();
+  });
+
+  function syncSearchClear() {
+    searchClearBtn.style.display = searchInput.value ? '' : 'none';
+  }
+
+  // The search field lives in the header, collapsed behind its icon like
+  // the Settings app: opening it swaps the title and actions for the
+  // field and pushes a history state, so Back collapses it again.
+  function openSearch() {
+    if (searchOpen) return;
+    searchOpen = true;
+    history.pushState({ overlay: 'target-apps', search: true }, '');
+    headerEl.classList.add('ta-header--searching');
+    searchContainer.hidden = false;
+    searchBtn.setAttribute('aria-expanded', 'true');
+    searchInput.focus();
+  }
+
+  function exitSearch() {
+    if (!searchOpen) return;
+    searchOpen = false;
+    headerEl.classList.remove('ta-header--searching');
+    searchContainer.hidden = true;
+    searchBtn.setAttribute('aria-expanded', 'false');
+    if (currentSearch) {
+      searchInput.value = '';
+      currentSearch = '';
+      syncSearchClear();
+      applyFilters();
+    }
+  }
+
+  searchBtn.addEventListener('click', openSearch);
+
+  searchClearBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    currentSearch = '';
+    syncSearchClear();
+    applyFilters();
+    searchInput.focus();
+  });
+
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && searchOpen) {
+      e.preventDefault();
+      e.stopPropagation();
+      history.back();
+    }
   });
 
   const applyBtn = overlay.querySelector('#ta-apply') as HTMLButtonElement;
@@ -970,7 +1037,7 @@ export async function openTargetAppsManager() {
     else closeOverlay();
   });
 
-  window.addEventListener('popstate', closeOverlay);
+  window.addEventListener('popstate', onPopState);
 
   setupPullToRefresh();
   // Let the overlay and its skeleton paint before the list work starts:

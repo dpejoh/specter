@@ -1492,18 +1492,36 @@ sp-snackbar.sp-snackbar--error .sp-snackbar__leading md-icon {
 }
 
 .ta-search-container {
-  padding: 0 20px 16px;
-  flex-shrink: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.ta-header--searching .ta-title,
+.ta-header--searching #ta-search-btn,
+.ta-header--searching #ta-menu-btn {
+  display: none;
+}
+
+.ta-header--searching .ta-search {
+  --md-outlined-text-field-outline-color: transparent;
+  --md-outlined-text-field-hover-outline-color: transparent;
+  --md-outlined-text-field-focus-outline-color: transparent;
+  /* The outlined field starts its text at max(leading-space, corner
+     radius + label padding), so all three go to zero for the text to
+     land exactly where the header title starts. */
+  --md-outlined-text-field-leading-space: 0px;
+  --md-outlined-text-field-container-shape: 0px;
+  --md-outlined-field-outline-label-padding: 0px;
+}
+
+.ta-search md-icon-button[slot="trailing-icon"] {
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .ta-search {
   width: 100%;
   --md-outlined-text-field-container-shape: 28px;
   --md-outlined-text-field-outline-color: var(--md-sys-color-outline);
-}
-
-.ta-search md-icon[slot="leading-icon"] {
-  color: var(--md-sys-color-on-surface-variant);
 }
 
 .ta-filters {

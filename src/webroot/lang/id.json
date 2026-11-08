@@ -83,6 +83,7 @@
   "menu_target_apps_desc": "Kelola status penargetan per aplikasi secara interaktif",
   "ta_title": "Penargetan Aplikasi",
   "ta_search_placeholder": "Cari aplikasi",
+  "ta_search_clear": "Hapus pencarian",
   "ta_filter_all": "Semua",
   "ta_filter_selected": "Terpilih",
   "ta_filter_not_selected": "Tidak Terpilih",

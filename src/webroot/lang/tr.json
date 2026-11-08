@@ -83,6 +83,7 @@
   "menu_target_apps_desc": "Arayüzden ayrı uygulamalar için Tricky Store kapsam listesini yapılandırın.",
   "ta_title": "Uygulama Hedefleme",
   "ta_search_placeholder": "Ara",
+  "ta_search_clear": "Aramayı temizle",
   "ta_filter_all": "Tümü",
   "ta_filter_selected": "Seçilenler",
   "ta_filter_not_selected": "Seçilmeyenler",

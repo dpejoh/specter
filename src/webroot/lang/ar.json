@@ -83,6 +83,7 @@
   "menu_target_apps_desc": "إدارة حالات توجيه التطبيقات بشكل تفاعلي",
   "ta_title": "توجيه التطبيقات",
   "ta_search_placeholder": "البحث عن تطبيقات",
+  "ta_search_clear": "مسح البحث",
   "ta_filter_all": "الكل",
   "ta_filter_selected": "المحددة",
   "ta_filter_not_selected": "غير المحددة",

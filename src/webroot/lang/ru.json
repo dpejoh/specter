@@ -83,6 +83,7 @@
   "menu_target_apps_desc": "Интерактивное управление настройками таргетинга для каждого приложения",
   "ta_title": "Настройки таргетинга",
   "ta_search_placeholder": "Поиск приложений",
+  "ta_search_clear": "Очистить поиск",
   "ta_filter_all": "Все",
   "ta_filter_selected": "Выбранные",
   "ta_filter_not_selected": "Не выбранные",
