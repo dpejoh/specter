@@ -58,6 +58,33 @@ function makeContainer(): HTMLElement {
 }
 
 describe('keybox catalog', () => {
+  it('shows skeleton rows in a section while loading', async () => {
+    let release!: (v: unknown) => void;
+    fetchJson.mockReturnValue(new Promise(r => { release = r; }));
+    const container = makeContainer();
+    const catalog = mountKeyboxCatalog(container);
+    const loading = catalog.load();
+
+    const section = container.querySelector('.kb-catalog-loading sp-settings-section');
+    expect(section).not.toBeNull();
+    expect(section!.getAttribute('aria-hidden')).toBe('true');
+    const rows = section!.querySelectorAll('sp-settings-row.kb-skeleton-row');
+    expect(rows).toHaveLength(3);
+    // Rows must not be aria-hidden: the section treats those as filtered
+    // out and would strip the grouped corners and gaps from the skeleton.
+    for (const row of rows) expect(row.hasAttribute('aria-hidden')).toBe(false);
+    expect(rows[0]!.querySelectorAll('sp-skeleton[variant="circular"]')).toHaveLength(2);
+    expect(rows[0]!.querySelector('[slot="headline"] sp-skeleton')?.getAttribute('variant')).toBe('text');
+    expect(rows[0]!.querySelector('[slot="supporting"] sp-skeleton')?.getAttribute('variant')).toBe('text');
+    expect(container.querySelectorAll('.kb-catalog-loading > sp-skeleton')).toHaveLength(0);
+    expect(container.querySelector('.kb-catalog-loading p')?.textContent).toContain('Loading keyboxes');
+
+    release(CATALOG);
+    await loading;
+    expect(container.querySelector('.kb-catalog-loading')).toBeNull();
+    expect(container.querySelector('#kb-catalog-list')).not.toBeNull();
+  });
+
   beforeEach(() => {
     document.body.innerHTML = '';
     cfgInvalidate();

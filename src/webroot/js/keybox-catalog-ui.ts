@@ -132,11 +132,23 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
 
   const renderLoading = () => {
     if (!catalogBody) return;
+    // Mirror the loaded list's structure — same section, same rows — so
+    // the skeleton has the grouped shape (position corners, 2px gaps,
+    // row height) instead of three detached blocks. The aria-hidden goes
+    // on the section, never on the rows: updatePositions() treats
+    // aria-hidden rows as filtered out and strips their corners/margins.
+    const skeletonRow = `
+      <sp-settings-row variant="custom" class="kb-catalog-row kb-skeleton-row">
+        <div slot="leading" class="kb-skeleton-leading">
+          <sp-skeleton variant="circular" style="--sp-skeleton-size: 20px"></sp-skeleton>
+          <sp-skeleton variant="circular"></sp-skeleton>
+        </div>
+        <span slot="headline"><sp-skeleton variant="text" class="kb-skeleton-title"></sp-skeleton></span>
+        <span slot="supporting"><sp-skeleton variant="text" class="kb-skeleton-desc"></sp-skeleton></span>
+      </sp-settings-row>`;
     catalogBody.innerHTML = `
-      <div class="kb-catalog-status kb-catalog-loading" role="status">
-        <sp-skeleton variant="rounded"></sp-skeleton>
-        <sp-skeleton variant="rounded"></sp-skeleton>
-        <sp-skeleton variant="rounded"></sp-skeleton>
+      <div class="kb-catalog-loading" role="status">
+        <sp-settings-section aria-hidden="true">${skeletonRow.repeat(3)}</sp-settings-section>
         <p>${t('kb_catalog_loading', 'Loading keyboxes...')}</p>
       </div>
     `;

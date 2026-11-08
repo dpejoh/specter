@@ -2786,17 +2786,34 @@ md-filled-tonal-button {
 }
 
 .kb-catalog-loading {
-  align-items: stretch;
-  text-align: start;
-}
-
-.kb-catalog-loading sp-skeleton {
-  width: 100%;
-  --sp-skeleton-height: 72px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .kb-catalog-loading p {
   align-self: center;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.kb-skeleton-row {
+  pointer-events: none;
+}
+
+.kb-skeleton-leading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.kb-skeleton-title {
+  width: 45%;
+}
+
+.kb-skeleton-desc {
+  width: 70%;
 }
 
 .kb-catalog-status p {
