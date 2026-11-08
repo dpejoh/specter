@@ -1189,152 +1189,78 @@ md-filled-tonal-button {
   --md-filled-tonal-button-container-shape: 12px;
 }
 
-#toast-region {
+/* Snackbar (<sp-snackbar>, Specter UI kit) — positioned above the
+   nav bar, one at a time (toast.ts is the SnackbarHostState port and
+   queues). The component supplies the spec surface/shape/elevation;
+   Specter positions it, presents it with the host's fade+scale motion,
+   adapts its width to small screens, and tints the result states. */
+sp-snackbar.sp-snackbar {
   position: fixed;
   bottom: calc(84px + var(--sp-safe-bottom));
   left: 50%;
-  transform: translateX(-50%);
   z-index: 10010;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  width: max-content;
+  min-width: min(344px, calc(100vw - 24px));
   max-width: calc(100vw - 24px);
-  pointer-events: none;
+  --md-snackbar-container-shape: var(--md-sys-shape-corner-small);
+  /* SnackbarHost's presentation (FadeInFadeOutWithScale in the Kotlin
+     source): fade + scale from 0.8, driven by the host's --in class. */
+  opacity: 0;
+  transform: translateX(-50%) scale(0.8);
+  transition: opacity 150ms ease, transform 250ms cubic-bezier(0.2, 0, 0, 1);
 }
 
-.md-toast {
-  position: relative;
-  transform: translateY(120px);
-  padding: 0 4px 0 12px;
-  min-height: 52px;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  gap: 0;
-  transition: transform 0.35s cubic-bezier(0.2, 0, 0, 1);
-  min-width: min(288px, calc(100vw - 24px));
-  max-width: calc(100vw - 24px);
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  box-sizing: border-box;
-  user-select: none;
-  pointer-events: auto;
-  background: var(--md-sys-color-inverse-surface);
-  color: var(--md-sys-color-inverse-on-surface);
-}
-
-[dir="rtl"] .md-toast {
-  transform: translateY(120px);
-}
-
-.md-toast--success {
-  background: var(--md-sys-color-tertiary-container);
-  color: var(--md-sys-color-on-tertiary-container);
-}
-
-.md-toast--error {
-  background: var(--md-sys-color-error-container);
-  color: var(--md-sys-color-on-error-container);
-}
-
-.md-toast--info {
-  background: var(--md-sys-color-surface-container-high);
-  color: var(--md-sys-color-on-surface);
-}
-
-.md-toast--open {
-  transform: translateY(0);
-}
-
-.md-toast__icon {
-  font-size: 22px;
-  flex-shrink: 0;
-}
-
-.md-toast--success .md-toast__icon {
-  color: var(--md-sys-color-on-tertiary-container);
-}
-
-.md-toast--error .md-toast__icon {
-  color: var(--md-sys-color-on-surface);
-}
-
-.md-toast__message {
-  flex: 1;
-  padding: 14px 12px;
-  font-weight: 500;
-}
-
-.md-toast__action {
-  background: none;
-  border: none;
-  font: inherit;
-  font-weight: 600;
-  letter-spacing: 0.0125em;
-  cursor: pointer;
-  white-space: nowrap;
-  padding: 6px 14px;
-  min-height: 40px;
-  border-radius: 10px;
-  transition: background 0.15s;
-  color: var(--md-sys-color-inverse-primary);
-}
-
-.md-toast--success .md-toast__action {
-  color: var(--md-sys-color-on-tertiary-container);
-}
-
-.md-toast--error .md-toast__action {
-  color: var(--md-sys-color-on-error-container);
-  font-weight: 700;
-}
-
-.md-toast__action:hover {
-  background: rgba(0,0,0,0.08);
-}
-
-.md-toast__actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  flex-shrink: 0;
-  margin: 4px 0;
-}
-
-.md-toast__close {
-  background: none;
-  border: none;
-  cursor: pointer;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s;
-  opacity: 0.7;
-  color: inherit;
-}
-
-.md-toast__close:hover {
-  background: rgba(0,0,0,0.08);
+sp-snackbar.sp-snackbar--in {
   opacity: 1;
+  transform: translateX(-50%) scale(1);
 }
 
-.md-toast__close md-icon {
+@media (prefers-reduced-motion: reduce) {
+  sp-snackbar.sp-snackbar {
+    transition: opacity 150ms ease;
+    transform: translateX(-50%);
+  }
+
+  sp-snackbar.sp-snackbar--in {
+    transform: translateX(-50%);
+  }
+}
+
+sp-snackbar.sp-snackbar--success {
+  --md-snackbar-container-color: var(--md-sys-color-tertiary-container);
+  --md-snackbar-supporting-text-color: var(--md-sys-color-on-tertiary-container);
+  --md-snackbar-action-label-text-color: var(--md-sys-color-on-tertiary-container);
+  --md-snackbar-icon-color: var(--md-sys-color-on-tertiary-container);
+}
+
+sp-snackbar.sp-snackbar--error {
+  --md-snackbar-container-color: var(--md-sys-color-error-container);
+  --md-snackbar-supporting-text-color: var(--md-sys-color-on-error-container);
+  --md-snackbar-action-label-text-color: var(--md-sys-color-on-error-container);
+  --md-snackbar-icon-color: var(--md-sys-color-on-error-container);
+}
+
+.sp-snackbar__leading {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: -5px;
+  margin-inline-end: 10px;
+}
+
+.sp-snackbar__leading md-icon {
   font-size: 20px;
 }
 
-[data-theme-resolved="dark"] .md-toast__action:hover {
-  background: rgba(255,255,255,0.08);
+.sp-snackbar__leading md-circular-progress {
+  --md-circular-progress-size: 20px;
+  --md-circular-progress-active-indicator-width: 12;
 }
 
-[data-theme-resolved="dark"] .md-toast__close:hover {
-  background: rgba(255,255,255,0.08);
-  color: var(--md-sys-color-on-surface);
+sp-snackbar.sp-snackbar--success .sp-snackbar__leading md-icon {
+  color: var(--md-sys-color-on-tertiary-container);
+}
+
+sp-snackbar.sp-snackbar--error .sp-snackbar__leading md-icon {
+  color: var(--md-sys-color-on-error-container);
 }
 
 @media (hover: hover) {
