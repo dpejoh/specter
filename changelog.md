@@ -1,19 +1,3 @@
-# v1.6.0
-
-- Home keybox and setup cards now open detail pages for keybox health, revocation, RKP expiry, file info, device modules, and warnings.
-- Added keybox catalog and details pages with status/provider filters, RKP expiry, custom source install, and a 5-minute revocation watch with auto-replace.
-- HMA-OSS config is now generated on-device instead of downloaded from the web. It uses installed apps and all seven HMA-OSS presets, merges without wiping existing config, and supports auto-update, launch policy, and live reload.
-- Action pipeline is faster and non-interactive: no volume-key prompts, skips missing PIF, reuses healthy keyboxes, skips background-managed target/HMA jobs, and caches network responses.
-- Added Boot Hash, Security Patch, OMK trust/restart, action pipeline, auto-target, auto-HMA, and keybox watch pages.
-- Refactored the WebUI to use one shared component system across Settings, Tools, Control, and subpages.
-- Removed classic HMA/HMAL config generation.
-- Tricky Store OSS is now the automatic fallback keystore backend instead of TEESimulator-RS.
-- Android is no longer force-added to the target list.
-- Keybox names now use `<name> by <provider>` with Normal/RKP and expired states.
-- Fixed revoked keybox installs, blacklisted fixed targets, HMA merge/ownership issues, keybox filters, home truncation, log tab switching, theme persistence, and dialog/back behavior.
-- Dynamic colors use the system Material palette when available.
-- New keybox/setup strings are translated into all ten languages.
-
 # v1.5.0
 
 ### Highlights:
