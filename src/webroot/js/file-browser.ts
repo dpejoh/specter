@@ -481,6 +481,9 @@ export async function openFileBrowser(
 
   async function loadDir(path: string, pushHistory = true) {
     currentPath = path;
+    // Reset before listing: an empty find result must not re-render the
+    // previous directory's entries or skip the ls fallback below.
+    entries = [];
     if (pushHistory) {
       historySteps++;
       history.pushState({ subpage: 'file-browser', path: currentPath }, '');
