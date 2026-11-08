@@ -51,7 +51,7 @@ export interface SubPageInputItem {
 export interface SubPageCustomItem {
   type: 'custom';
   id?: string;
-  render: (container: HTMLElement, isEnabled: () => boolean, posClass?: string) => void;
+  render: (container: HTMLElement, isEnabled: () => boolean) => void;
 }
 
 export interface SubPageRadioItem {
@@ -381,13 +381,13 @@ async function openSubPageInternal(config: SubPageConfig): Promise<SubPageInstan
       section.append(row);
     });
 
-    // Custom renderers still use the legacy position classes.
+    // Custom renderers replace their host with an sp-settings-row (or keep
+    // plain content inside it); the section owns positioning either way, so
+    // no legacy position classes are handed out here anymore.
     group.items.forEach((item, iIdx) => {
       if (item.type !== 'custom') return;
-      const total = group.items.length;
-      const posClass = total === 1 ? 'list-item--only' : iIdx === 0 ? 'list-item--first' : iIdx === total - 1 ? 'list-item--last' : 'list-item--middle';
       const host = overlay.querySelector(`#subpage-custom-${gIdx}-${iIdx}`) as HTMLElement | null;
-      if (host) item.render(host, () => masterEnabled, posClass);
+      if (host) item.render(host, () => masterEnabled);
     });
   });
 

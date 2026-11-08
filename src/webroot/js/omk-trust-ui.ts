@@ -7,7 +7,6 @@ import { openSubPage } from './subpage.js';
 
 function renderOmkRestartRow(
   container: HTMLElement,
-  _posClass: string | undefined,
   id: string,
   icon: string,
   title: string,
@@ -61,10 +60,9 @@ export function openOmkRestartPage() {
           {
             type: 'custom',
             id: 'omk-restart-keymint-item',
-            render: (container, _isEnabled, posClass) => {
+            render: (container, _isEnabled) => {
               renderOmkRestartRow(
                 container,
-                posClass,
                 'omk-restart-keymint-row',
                 'memory',
                 t('tools_restart_omk_keymint', 'Restart OMK keymint'),
@@ -77,10 +75,9 @@ export function openOmkRestartPage() {
           {
             type: 'custom',
             id: 'omk-restart-injector-item',
-            render: (container, _isEnabled, posClass) => {
+            render: (container, _isEnabled) => {
               renderOmkRestartRow(
                 container,
-                posClass,
                 'omk-restart-injector-row',
                 'tune',
                 t('tools_restart_omk_injector', 'Restart OMK injector'),

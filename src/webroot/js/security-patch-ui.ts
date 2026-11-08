@@ -157,7 +157,6 @@ export async function openSecurityPatchPage() {
 
   const renderActionRow = (
     container: HTMLElement,
-    _posClass: string | undefined,
     id: string,
     icon: string,
     title: string,
@@ -191,42 +190,58 @@ export async function openSecurityPatchPage() {
           {
             type: 'custom',
             id: 'sp-input-field',
-            render: (container, _isEnabled, posClass) => {
-              container.innerHTML = `
-                <div class="list-item list-item--stacked ${posClass || 'list-item--only'}" id="sp-input-row">
-                  <div class="sp-field-header">
-                    <div class="li-icon"><md-icon aria-hidden="true">security_update_good</md-icon></div>
-                    <div class="list-item-content">
-                      <div class="toggle-text">${label}</div>
-                      <span class="supporting-text" id="sp-input-help" aria-live="polite">${helper}</span>
-                    </div>
-                  </div>
-                  <input
-                    type="text"
-                    id="sp-input"
-                    class="sp-date-input"
-                    value="${value}"
-                    placeholder="${placeholder}"
-                    maxlength="10"
-                    inputmode="${isOmk ? 'text' : 'numeric'}"
-                    autocapitalize="none"
-                    autocomplete="off"
-                    spellcheck="false"
-                    aria-label="${label}"
-                    aria-describedby="sp-input-help"
-                  />
-                  ${isOmk ? `
-                    <div class="sp-quick-row">
-                      <button type="button" class="sp-quick-chip" data-value="auto" aria-pressed="false">${t('sp_auto', 'Auto')}</button>
-                      <button type="button" class="sp-quick-chip" data-value="latest" aria-pressed="false">${t('sp_latest', 'Latest')}</button>
-                    </div>
-                  ` : ''}
-                </div>
-              `;
+            render: (container, _isEnabled) => {
+              const row = document.createElement('sp-settings-row');
+              row.id = 'sp-input-row';
+              row.setAttribute('variant', 'custom');
+              row.setAttribute('stacked', '');
+              row.setAttribute('headline', label);
 
-              inputEl = container.querySelector('#sp-input');
-              helpEl = container.querySelector('#sp-input-help');
-              quickButtons = [...container.querySelectorAll<HTMLButtonElement>('.sp-quick-chip')];
+              const icon = document.createElement('md-icon');
+              icon.setAttribute('slot', 'icon');
+              icon.setAttribute('aria-hidden', 'true');
+              icon.textContent = 'security_update_good';
+              row.append(icon);
+
+              const help = document.createElement('span');
+              help.id = 'sp-input-help';
+              help.className = 'supporting-text';
+              help.setAttribute('slot', 'supporting');
+              help.setAttribute('aria-live', 'polite');
+              help.textContent = helper;
+              row.append(help);
+
+              const stack = document.createElement('div');
+              stack.className = 'sp-input-stack';
+              stack.setAttribute('slot', 'trailing');
+              stack.innerHTML = `
+                <input
+                  type="text"
+                  id="sp-input"
+                  class="sp-date-input"
+                  value="${value}"
+                  placeholder="${placeholder}"
+                  maxlength="10"
+                  inputmode="${isOmk ? 'text' : 'numeric'}"
+                  autocapitalize="none"
+                  autocomplete="off"
+                  spellcheck="false"
+                  aria-label="${label}"
+                  aria-describedby="sp-input-help"
+                />
+                ${isOmk ? `
+                  <div class="sp-quick-row">
+                    <button type="button" class="sp-quick-chip" data-value="auto" aria-pressed="false">${t('sp_auto', 'Auto')}</button>
+                    <button type="button" class="sp-quick-chip" data-value="latest" aria-pressed="false">${t('sp_latest', 'Latest')}</button>
+                  </div>
+                ` : ''}
+              `;
+              row.append(stack);
+              container.replaceWith(row);
+
+              inputEl = row.querySelector('#sp-input');
+              helpEl = row.querySelector('#sp-input-help');
+              quickButtons = [...row.querySelectorAll<HTMLButtonElement>('.sp-quick-chip')];
               syncQuick(value);
 
               inputEl?.addEventListener('input', () => {
@@ -254,10 +269,9 @@ export async function openSecurityPatchPage() {
           {
             type: 'custom',
             id: 'sp-device-action',
-            render: (container, _isEnabled, posClass) => {
+            render: (container, _isEnabled) => {
               renderActionRow(
                 container,
-                posClass,
                 'sp-device-row',
                 'smartphone',
                 t('sp_use_device', 'Use device date'),
@@ -269,10 +283,9 @@ export async function openSecurityPatchPage() {
           {
             type: 'custom',
             id: 'sp-fetch-action',
-            render: (container, _isEnabled, posClass) => {
+            render: (container, _isEnabled) => {
               renderActionRow(
                 container,
-                posClass,
                 'sp-fetch-row',
                 'language',
                 t('sp_fetch_latest', 'Fetch latest date'),

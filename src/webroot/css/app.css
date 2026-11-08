@@ -2983,6 +2983,20 @@ md-filled-tonal-button {
   opacity: 0.7;
 }
 
+.kb-catalog-loading {
+  align-items: stretch;
+  text-align: start;
+}
+
+.kb-catalog-loading sp-skeleton {
+  width: 100%;
+  --sp-skeleton-height: 72px;
+}
+
+.kb-catalog-loading p {
+  align-self: center;
+}
+
 .kb-catalog-status p {
   margin: 0;
   max-width: 360px;
@@ -2998,15 +3012,9 @@ md-filled-tonal-button {
   flex-direction: column;
 }
 
+
 .subpage-custom-item {
   display: contents;
-}
-
-/* Custom renderers that emit cards directly (without their own .list-container)
-   lost the legacy 2px gap when sections replaced list containers. */
-.subpage-options-wrapper sp-settings-section .subpage-custom-item > .list-item.list-item--first,
-.subpage-options-wrapper sp-settings-section .subpage-custom-item > .list-item.list-item--middle {
-  margin-block-end: 2px;
 }
 
 /* Grouped M3 Expressive rounded cards for sub-options */
@@ -3146,17 +3154,14 @@ sp-settings-row#subpage-master-card.subpage-master-item--active .supporting-text
   font-variant-ligatures: none;
 }
 
-.list-item--stacked {
+
+/* Stacked content inside an sp-settings-row trailing slot (security patch). */
+.sp-input-stack {
+  display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 12px;
-  cursor: default;
-}
-
-.sp-field-header {
-  display: flex;
-  align-items: center;
-  gap: 14px;
+  width: 100%;
 }
 
 .sp-date-input {
@@ -3761,28 +3766,8 @@ button.sp-action-row:disabled {
   font-size: 20px;
 }
 
-/* Boot Hash subpage */
-.bh-card {
-  width: 100%;
-  max-width: 800px;
-  margin-inline: auto;
-  box-sizing: border-box;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 8px;
-  cursor: default;
-}
-
-.bh-card--compact {
-  gap: 4px;
-}
-
-.bh-row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
+/* Boot Hash subpage: cards are sp-settings-rows; only the mono value,
+   actions row, and pill buttons still need page CSS. */
 .bh-mono {
   font-family: var(--sp-font-mono, 'JetBrains Mono', 'Courier New', monospace);
   font-size: 0.8125rem;
@@ -3797,11 +3782,6 @@ button.sp-action-row:disabled {
 
 .bh-mono--primary {
   color: var(--md-sys-color-primary);
-}
-
-.bh-content-flex {
-  flex: 1;
-  min-width: 0;
 }
 
 .bh-actions-row {
