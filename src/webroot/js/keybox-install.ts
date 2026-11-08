@@ -30,7 +30,7 @@ export async function installKeybox(options: InstallKeyboxOptions = {}): Promise
   if (code !== 0) return false;
 
   await exec(`sh ${shellEscape(moddir + '/features/keybox_info.sh')}`).catch(() => {});
-  await exec(`sh ${shellEscape(moddir + '/features/refresh_desc.sh')}`).catch(() => {});
+  await exec(`sh ${shellEscape(moddir + '/refresh_desc.sh')}`).catch(() => {});
   await refreshKeyboxStatus();
   options.onInstalled?.();
   return true;
