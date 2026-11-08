@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { openSubPage, runAction, exec } = vi.hoisted(() => ({
+const { openSubPage, runAction, exec, afterPaint, paintState } = vi.hoisted(() => {
+  const paintState = { callback: null as (() => void) | null }
+  return {
   openSubPage: vi.fn((config: {
     groups: { items: { type?: string; render?: (container: HTMLElement, isEnabled: () => boolean, posClass?: string) => void }[] }[];
   }) => {
@@ -18,12 +20,19 @@ const { openSubPage, runAction, exec } = vi.hoisted(() => ({
   }),
   runAction: vi.fn(async () => 0),
   exec: vi.fn(async (_cmd: string) => ({ code: 0, stdout: '', stderr: '' })),
-}))
+  afterPaint: vi.fn((fn: () => void) => { paintState.callback = fn }),
+  paintState,
+  }
+})
 
 vi.mock('./subpage.js', () => ({ openSubPage }))
 vi.mock('./actions.js', () => ({ runAction }))
 vi.mock('./bridge.js', () => ({ exec, getModuleDir: () => '/data/adb/modules/specter' }))
 vi.mock('./toast.js', () => ({ showToast: vi.fn() }))
+vi.mock('./utils.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./utils.js')>()
+  return { ...actual, afterPaint }
+})
 
 import { openOmkRestartPage, openOmkTrustPage } from './omk-trust-ui.js'
 
@@ -32,6 +41,8 @@ beforeEach(() => {
   runAction.mockClear()
   exec.mockReset()
   exec.mockImplementation(async () => ({ code: 0, stdout: '', stderr: '' }))
+  afterPaint.mockClear()
+  paintState.callback = null
 })
 
 describe('OMK restart page', () => {
@@ -115,18 +126,54 @@ describe('OMK trust page', () => {
       type: 'input',
       id: 'omk-os-version',
       layout: 'block',
-      value: '15',
+      value: '',
       placeholder: 'auto',
     })
     expect(items[1]).toMatchObject({
       type: 'input',
       id: 'omk-vb-key',
       layout: 'block',
-      value: 'auto',
+      value: '',
       maxLength: 64,
       mono: true,
     })
     expect(config.fab).toBeTypeOf('function')
+  })
+
+  it('fills the fields with the loaded values once the reads land', async () => {
+    exec.mockImplementation(async (cmd: string) => {
+      if (cmd.includes('--get os_version')) return { code: 0, stdout: '15\n', stderr: '' }
+      if (cmd.includes('--get vb_key')) return { code: 0, stdout: 'auto\n', stderr: '' }
+      return { code: 0, stdout: '', stderr: '' }
+    })
+    const osInput = document.createElement('input')
+    osInput.id = 'omk-os-version'
+    const vbInput = document.createElement('input')
+    vbInput.id = 'omk-vb-key'
+    openSubPage.mockImplementationOnce(async () => {
+      const overlay = document.createElement('div')
+      overlay.append(osInput, vbInput)
+      return { overlay, close: vi.fn(), isMasterEnabled: () => true }
+    })
+
+    await openOmkTrustPage()
+
+    // The reads wait for the page's first paint: fields are still empty
+    // and disabled, and no script call has been made yet.
+    expect(exec).not.toHaveBeenCalled()
+    expect(osInput.value).toBe('')
+    expect(osInput.disabled).toBe(true)
+    expect(vbInput.disabled).toBe(true)
+
+    expect(paintState.callback).not.toBeNull()
+    paintState.callback!()
+    await new Promise(resolve => setTimeout(resolve, 0))
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(osInput.value).toBe('15')
+    expect(vbInput.value).toBe('auto')
+    expect(osInput.disabled).toBe(false)
+    expect(vbInput.disabled).toBe(false)
   })
 
   it('saves both values and closes the subpage', async () => {

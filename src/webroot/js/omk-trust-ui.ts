@@ -1,7 +1,7 @@
 import { exec, getModuleDir } from './bridge.js';
 import { t } from './i18n.js';
 import { showToast } from './toast.js';
-import { shellEscape, wireRowActivation } from './utils.js';
+import { afterPaint, shellEscape, wireRowActivation } from './utils.js';
 import { runAction } from './actions.js';
 import { openSubPage } from './subpage.js';
 
@@ -110,13 +110,13 @@ export async function openOmkTrustPage(): Promise<void> {
   }
 
   const scriptPath = shellEscape(moddir + '/features/omk_trust.sh');
-  const [initialOsVersion, initialVbKey] = await Promise.all([
-    readOmkValue(scriptPath, 'os_version'),
-    readOmkValue(scriptPath, 'vb_key'),
-  ]);
-  const previousVbKey = initialVbKey;
 
-  await openSubPage({
+  // The page opens immediately with disabled empty fields; once it has
+  // painted, the two script reads (each a shell round trip) run and fill
+  // the fields in.
+  let previousVbKey = '';
+
+  const pageInstance = await openSubPage({
     id: 'omk-trust',
     title: t('omk_title', 'OMK OS & Boot Key'),
     description: t('omk_desc', 'Configure OS version and verified boot key reported by OhMyKeymint.'),
@@ -131,7 +131,7 @@ export async function openOmkTrustPage(): Promise<void> {
             description: t('omk_os_version_helper', 'auto or number (e.g. 15)'),
             inputType: 'text',
             layout: 'block',
-            value: initialOsVersion,
+            value: '',
             placeholder: 'auto',
             autocapitalize: 'none',
             autocomplete: 'off',
@@ -145,7 +145,7 @@ export async function openOmkTrustPage(): Promise<void> {
             description: t('omk_vb_key_helper', 'auto, random, or 64 hex chars'),
             inputType: 'text',
             layout: 'block',
-            value: initialVbKey,
+            value: '',
             placeholder: 'auto',
             maxLength: 64,
             mono: true,
@@ -162,6 +162,9 @@ export async function openOmkTrustPage(): Promise<void> {
       fab.className = 'subpage-fab';
       fab.setAttribute('variant', 'primary');
       fab.setAttribute('label', t('dialog_save', 'Save'));
+      // Enabled once the current values have loaded, so an early tap
+      // cannot save empty fields over the real configuration.
+      fab.setAttribute('disabled', '');
       fab.innerHTML = '<md-icon slot="icon" aria-hidden="true">save</md-icon>';
       container.append(fab);
 
@@ -241,6 +244,34 @@ export async function openOmkTrustPage(): Promise<void> {
       });
     },
   });
+
+  const osInput = pageInstance.overlay.querySelector<HTMLInputElement>('#omk-os-version');
+  const vbInput = pageInstance.overlay.querySelector<HTMLInputElement>('#omk-vb-key');
+  // The fields stay disabled until their values land, so an early tap
+  // cannot save blanks over the real values.
+  if (osInput) osInput.disabled = true;
+  if (vbInput) vbInput.disabled = true;
+
+  const loadValues = async () => {
+    // First let the opened page paint, then start the reads; starting them
+    // in the same task as the opening can block that first paint.
+    await new Promise<void>(resolve => afterPaint(resolve, 300));
+
+    const [osVersion, vbKey] = await Promise.all([
+      readOmkValue(scriptPath, 'os_version'),
+      readOmkValue(scriptPath, 'vb_key'),
+    ]);
+    previousVbKey = vbKey;
+
+    // Fields the user already typed into are never overwritten.
+    if (osInput && !osInput.value) osInput.value = osVersion;
+    if (vbInput && !vbInput.value) vbInput.value = vbKey;
+    if (osInput) osInput.disabled = false;
+    if (vbInput) vbInput.disabled = false;
+    pageInstance.overlay.querySelector('#omk-save-fab')?.removeAttribute('disabled');
+  };
+
+  void loadValues();
 }
 
 export function wireOmkTrust() {
