@@ -20,6 +20,11 @@ detect_root_solution() {
         # A live Magisk daemon is stronger evidence than any stale directory.
         ROOT_SOL="magisk"; ROOT_TYPE="Magisk"
         PATH="/data/adb/magisk:$PATH"
+    elif [ -x "/data/adb/ksud" ] && "/data/adb/ksud" module list >/dev/null 2>&1; then
+        # Same for a live KernelSU kernel interface: /data/adb/ksu can be
+        # stale after switching managers, but only an active KSU answers this.
+        ROOT_SOL="kernelsu"
+        PATH="/data/adb/ksu/bin:$PATH"
     elif [ -d "/data/adb/ap" ]; then
         ROOT_SOL="apatch"; ROOT_TYPE="APatch"
         PATH="/data/adb/ap/bin:$PATH"
