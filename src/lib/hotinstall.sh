@@ -31,12 +31,25 @@ specter_hot_install() {
     return 0
   fi
 
-  # KernelSU with native hot install: ksud performs the swap itself once
-  # the install script succeeds, so only record the request for its
-  # installer to pick up. The run script is a launcher: ksud bounds it
-  # to 30s, the live-apply does not fit in that window.
-  if [ "$ROOT_SOL" = "kernelsu" ] && [ "${KSU_HAS_HOT_INSTALL:-}" = "true" ]; then
-    # Read by KernelSU's installer.sh in this shell after customize.sh returns.
+  # Delegate when a consumer for the request exists, and let it own the
+  # swap: ksud itself when it has native hot install, or a metamodule
+  # that performs the swap after the install script (mountify exports
+  # MOUNTIFY_HAS_HOT_INSTALL into the install shell on KernelSU and
+  # APatch). The manual swap below is the last resort, for installs
+  # with neither. The run script is a launcher: ksud bounds it to 30s,
+  # the live-apply does not fit in that window.
+  _hi_delegate=0
+  case "$ROOT_SOL" in
+    kernelsu)
+      [ "${KSU_HAS_HOT_INSTALL:-}" = "true" ] && _hi_delegate=1
+      [ "${MOUNTIFY_HAS_HOT_INSTALL:-}" = "true" ] && _hi_delegate=1
+      ;;
+    apatch)
+      [ "${MOUNTIFY_HAS_HOT_INSTALL:-}" = "true" ] && _hi_delegate=1
+      ;;
+  esac
+  if [ "$_hi_delegate" = "1" ]; then
+    # Read by the installer's shell after customize.sh returns.
     # shellcheck disable=SC2034
     MODULE_HOT_INSTALL_REQUEST=true
     # shellcheck disable=SC2034
@@ -44,9 +57,10 @@ specter_hot_install() {
     rm -f "$SPECTER_DIR/.first_boot_pending" 2>/dev/null || true
     _specter_hot_done=1
     ui_print "- Hot install requested ($ROOT_TYPE)"
-    unset _hi_modid _hi_live _hi_stage
+    unset _hi_modid _hi_live _hi_stage _hi_delegate
     return 0
   fi
+  unset _hi_delegate
 
   case "$ROOT_SOL" in
     kernelsu|magisk|apatch) ;;

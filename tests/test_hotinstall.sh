@@ -88,6 +88,39 @@ assert_file_not_exists "native: first_boot_pending cleared" "$SPECTER_DIR/.first
 assert_eq "native: hot-done set" "1" "${_specter_hot_done:-}"
 unset KSU_HAS_HOT_INSTALL MODULE_HOT_INSTALL_REQUEST MODULE_HOT_RUN_SCRIPT
 
+# ---- KSU with mountify: request recorded for the metamodule ----
+bootstrap
+source_libs
+_hi_setup
+unset _specter_hot_done
+MOUNTIFY_HAS_HOT_INSTALL=true
+specter_hot_install
+assert_eq "mountify-ksu: request set" "true" "${MODULE_HOT_INSTALL_REQUEST:-}"
+assert_eq "mountify-ksu: run script" "hotinstall-launcher.sh" "${MODULE_HOT_RUN_SCRIPT:-}"
+assert_file_eq "mountify-ksu: live untouched" "$LIVE/module.prop" "$(printf 'id=specter\nname=OldVersion\nversionCode=1\n')"
+assert_file_exists "mountify-ksu: staging intact" "$STAGE/module.prop"
+assert_file_not_exists "mountify-ksu: executor not run" "$STAGE/hi.ran"
+assert_file_not_exists "mountify-ksu: first_boot_pending cleared" "$SPECTER_DIR/.first_boot_pending"
+assert_eq "mountify-ksu: hot-done set" "1" "${_specter_hot_done:-}"
+unset MOUNTIFY_HAS_HOT_INSTALL MODULE_HOT_INSTALL_REQUEST MODULE_HOT_RUN_SCRIPT
+
+# ---- APatch with mountify: request recorded for the metamodule ----
+bootstrap
+source_libs
+_hi_setup
+unset _specter_hot_done
+ROOT_SOL="apatch"
+ROOT_TYPE="APatch"
+MOUNTIFY_HAS_HOT_INSTALL=true
+specter_hot_install
+assert_eq "mountify-apatch: request set" "true" "${MODULE_HOT_INSTALL_REQUEST:-}"
+assert_eq "mountify-apatch: run script" "hotinstall-launcher.sh" "${MODULE_HOT_RUN_SCRIPT:-}"
+assert_file_eq "mountify-apatch: live untouched" "$LIVE/module.prop" "$(printf 'id=specter\nname=OldVersion\nversionCode=1\n')"
+assert_file_exists "mountify-apatch: staging intact" "$STAGE/module.prop"
+assert_file_not_exists "mountify-apatch: executor not run" "$STAGE/hi.ran"
+assert_eq "mountify-apatch: hot-done set" "1" "${_specter_hot_done:-}"
+unset MOUNTIFY_HAS_HOT_INSTALL MODULE_HOT_INSTALL_REQUEST MODULE_HOT_RUN_SCRIPT
+
 # ---- cleanup dance ----
 bootstrap
 source_libs
