@@ -1,3 +1,42 @@
+# v2.0.0
+
+- **A New Component System**  
+  Every page is rebuilt on Specter's own components.  
+  Settings rows and sections, skeletons, tooltips, and a Material snackbar.  
+  The legacy list machinery is deleted.
+- **Material 3 Expressive, Everywhere**  
+  The whole WebUI now follows Material 3 Expressive.  
+  Connected grouped cards, expressive motion, consistent shapes and type.
+- **WebUI Performance**  
+  Pages open instantly on a skeleton; values load after the first paint.  
+  One cached snapshot at startup, pages load on demand.  
+  Heavy work runs in the background, not on the interface thread.
+- **HMA-OSS Scope Manager**  
+  A full page for HMA-OSS, built like App Targeting.  
+  Pick the apps that get the profile, edit the blacklist, apply in place.
+- **Keybox Revocation Watch**  
+  Your installed keybox is watched in the background.  
+  Revoked or expired, it is replaced automatically.
+- **App Targeting, Rebuilt**  
+  Grouped design, mode and status filters, icon search.  
+  Apply runs in the background, not blocking the page.
+- **Keybox Catalog on R2**  
+  Served from R2, with a last known-good fallback.  
+  Sorted by upload date; revoked keyboxes are never installed.
+- **Hot Install**  
+  Updates apply without a reboot, on Magisk, KernelSU, and APatch.
+- **Keybox Checks**: New certificate validity check, read from the keybox itself
+- **Keybox Checks**: Google revocation check fixed; it silently matched nothing before
+- **Keybox Checks**: Selection honors RKP certificate expiry
+- **Keybox Details**: The Home keybox card opens a full details page
+- **Pipeline**: Pipeline and target list generation are much faster now
+- **HMA-OSS**: Config generation no longer freezes the WebUI
+- **HMA-OSS**: Auto-Update regenerates the config in the background
+- **HMA-OSS**: Config refreshes when apps change, retries on failure
+- **Boot Hash**: Dedicated subpage, custom hash spoofing, cache controls
+- **Installer**: Falls back to Tricky Store OSS when no keystore backend is present
+- **Translations**: Complete coverage across all 10 locales
+
 # v1.5.0
 
 ### Highlights:
