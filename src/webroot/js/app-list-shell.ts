@@ -94,12 +94,12 @@ export function buildAppListShell(spec: AppListShellSpec): string {
           <md-icon id="${escapeHtml(spec.ptr.arrowId)}" class="ptr-arrow">refresh</md-icon>
         </div>
       </div>
-      <header class="${escapeHtml(extraClass('ta-header', spec.headerExtraClass))}">
-        <button type="button" class="ta-back-btn" id="${escapeHtml(spec.back.id)}" aria-label="${escapeHtml(translateLabel(spec.back.label))}">
+      <header class="${escapeHtml(extraClass('subpage-header ta-header', spec.headerExtraClass))}">
+        <button type="button" class="subpage-back-btn ta-back-btn" id="${escapeHtml(spec.back.id)}" aria-label="${escapeHtml(translateLabel(spec.back.label))}">
           <md-icon aria-hidden="true">arrow_back</md-icon>
           <md-ripple></md-ripple>
         </button>
-        <h2 class="${escapeHtml(extraClass('ta-title', spec.titleExtraClass))}" id="${escapeHtml(spec.title.id)}">${escapeHtml(translateLabel(spec.title.label))}</h2>
+        <h2 class="${escapeHtml(extraClass('subpage-title ta-title', spec.titleExtraClass))}" id="${escapeHtml(spec.title.id)}">${escapeHtml(translateLabel(spec.title.label))}</h2>
         <div class="${escapeHtml(extraClass('ta-search-container', spec.searchContainerExtraClass))}" hidden>
           <md-outlined-text-field id="${escapeHtml(spec.search.inputId)}" class="ta-search" placeholder="${escapeHtml(translateLabel(spec.search.placeholder))}" aria-label="${escapeHtml(translateLabel(spec.search.placeholder))}">
             <md-icon-button slot="trailing-icon" id="${escapeHtml(spec.search.clearId)}" aria-label="${escapeHtml(translateLabel(spec.search.clearLabel))}" style="display: none;">

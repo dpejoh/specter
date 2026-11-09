@@ -1444,53 +1444,6 @@ sp-snackbar.sp-snackbar--error .sp-snackbar__leading md-icon {
   box-sizing: border-box;
 }
 
-.ta-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 20px;
-  padding-top: calc(8px + var(--sp-safe-top));
-  min-height: 64px;
-  flex-shrink: 0;
-  background: var(--md-sys-color-surface);
-  position: relative;
-  z-index: 50;
-}
-
-.ta-back-btn {
-  flex-shrink: 0;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--md-sys-color-secondary-container);
-  color: var(--md-sys-color-on-secondary-container);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  transition: filter 0.15s;
-}
-
-.ta-back-btn:active {
-  filter: brightness(0.85);
-}
-
-.ta-back-btn md-icon {
-  font-size: 20px;
-  color: var(--md-sys-color-on-secondary-container);
-}
-
-.ta-title {
-  letter-spacing: 0.0125em;
-  color: var(--md-sys-color-on-surface);
-  flex: 1;
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 500;
-}
-
 .ta-search-container {
   flex: 1;
   min-width: 0;
