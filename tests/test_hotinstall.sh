@@ -68,6 +68,22 @@ assert_contains "ksu: announces hot install" "$_ui" "Hot install requested"
 assert_contains "ksu: no reboot promised" "$_ui" "No need to reboot"
 assert_not_contains "ksu: no warning" "$_ui" "WARNING"
 
+# ---- KSU native path: request recorded, nothing swapped by hand ----
+bootstrap
+source_libs
+_hi_setup
+unset _specter_hot_done
+KSU_HAS_HOT_INSTALL=true
+specter_hot_install
+assert_eq "native: request set" "true" "${MODULE_HOT_INSTALL_REQUEST:-}"
+assert_eq "native: run script" "hotinstall-launcher.sh" "${MODULE_HOT_RUN_SCRIPT:-}"
+assert_file_eq "native: live untouched" "$LIVE/module.prop" "$(printf 'id=specter\nname=OldVersion\nversionCode=1\n')"
+assert_file_exists "native: staging intact" "$STAGE/module.prop"
+assert_file_not_exists "native: executor not run" "$STAGE/hi.ran"
+assert_file_not_exists "native: first_boot_pending cleared" "$SPECTER_DIR/.first_boot_pending"
+assert_eq "native: hot-done set" "1" "${_specter_hot_done:-}"
+unset KSU_HAS_HOT_INSTALL MODULE_HOT_INSTALL_REQUEST MODULE_HOT_RUN_SCRIPT
+
 # ---- cleanup dance ----
 bootstrap
 source_libs

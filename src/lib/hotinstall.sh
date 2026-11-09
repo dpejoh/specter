@@ -31,6 +31,23 @@ specter_hot_install() {
     return 0
   fi
 
+  # KernelSU with native hot install: ksud performs the swap itself once
+  # the install script succeeds, so only record the request for its
+  # installer to pick up. The run script is a launcher: ksud bounds it
+  # to 30s, the live-apply does not fit in that window.
+  if [ "$ROOT_SOL" = "kernelsu" ] && [ "${KSU_HAS_HOT_INSTALL:-}" = "true" ]; then
+    # Read by KernelSU's installer.sh in this shell after customize.sh returns.
+    # shellcheck disable=SC2034
+    MODULE_HOT_INSTALL_REQUEST=true
+    # shellcheck disable=SC2034
+    MODULE_HOT_RUN_SCRIPT="hotinstall-launcher.sh"
+    rm -f "$SPECTER_DIR/.first_boot_pending" 2>/dev/null || true
+    _specter_hot_done=1
+    ui_print "- Hot install requested ($ROOT_TYPE)"
+    unset _hi_modid _hi_live _hi_stage
+    return 0
+  fi
+
   case "$ROOT_SOL" in
     kernelsu) ;;
     *) unset _hi_modid _hi_live _hi_stage; return 0 ;;
