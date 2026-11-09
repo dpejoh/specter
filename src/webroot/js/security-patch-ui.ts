@@ -389,7 +389,7 @@ export async function openSecurityPatchPage() {
         ],
       },
     ],
-    fab: (container, page) => {
+    fab: (container) => {
       container.innerHTML = `
         <md-fab variant="primary" class="subpage-fab" id="sp-save-fab" label="${t('dialog_save', 'Save')}">
           <md-icon slot="icon" aria-hidden="true">save</md-icon>
@@ -426,7 +426,6 @@ export async function openSecurityPatchPage() {
           updateToast(loadingToast, t('sp_saved', 'Security patch date saved'), {
             icon: 'check_circle', type: 'success', autoCloseDelay: 2500,
           });
-          page.close();
         } catch {
           updateToast(loadingToast, t('sp_save_error', 'Failed to save'), {
             icon: 'error', type: 'error', autoCloseDelay: 4000,

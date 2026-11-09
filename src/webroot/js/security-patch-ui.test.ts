@@ -571,7 +571,7 @@ describe('security patch subpage', () => {
       t('sp_saved', 'Security patch date saved'),
       expect.objectContaining({ icon: 'check_circle', type: 'success' }),
     );
-    expect(pageState.close).toHaveBeenCalledTimes(1);
+    expect(pageState.close).not.toHaveBeenCalled();
   });
 
   it('validates OMK values with the OMK error message', async () => {
@@ -596,7 +596,7 @@ describe('security patch subpage', () => {
     expect(spawnCommand.mock.calls.some(([command]) => String(command).includes('--set'))).toBe(false);
   });
 
-  it('saves a valid value, refreshes the description, and closes the page', async () => {
+  it('saves a valid value, refreshes the description, and keeps the page open', async () => {
     await openSecurityPatchPage();
     const cfg = config();
     const { host } = mountItem(cfg, 0, 0, true);
@@ -632,7 +632,7 @@ describe('security patch subpage', () => {
       t('sp_saved', 'Security patch date saved'),
       expect.anything(),
     );
-    expect(pageState.close).toHaveBeenCalledTimes(1);
+    expect(pageState.close).not.toHaveBeenCalled();
     expect(saveFab.hasAttribute('disabled')).toBe(false);
   });
 
@@ -737,7 +737,7 @@ describe('security patch subpage', () => {
     await paint();
 
     expect(spawnCommand.mock.calls.some(([command]) => String(command).includes('--set'))).toBe(true);
-    expect(pageState.close).toHaveBeenCalledTimes(1);
+    expect(pageState.close).not.toHaveBeenCalled();
     expect(fab.querySelector('#sp-save-fab')?.hasAttribute('disabled')).toBe(true);
 
     await flushInitialLoad();

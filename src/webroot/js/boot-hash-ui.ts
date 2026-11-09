@@ -326,7 +326,7 @@ export async function openBootHashSubpage() {
         'Fixes ro.boot.vbmeta.digest by syncing with hardware TEE attestation, or applies custom hash when set.'
       ),
     },
-    fab: (container, instance) => {
+    fab: (container) => {
       container.innerHTML = `
         <md-fab variant="primary" class="subpage-fab" id="bh-save-fab" label="${t('dialog_save', 'Save')}">
           <md-icon slot="icon" aria-hidden="true">save</md-icon>
@@ -377,7 +377,6 @@ export async function openBootHashSubpage() {
             type: 'success',
             autoCloseDelay: 2500,
           });
-          instance.close();
         } catch {
           updateToast(loadingToast, t('simple_toast_error', 'Failed'), {
             icon: 'error',

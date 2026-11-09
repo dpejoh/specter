@@ -579,7 +579,7 @@ describe('boot hash subpage', () => {
       t('boot_hash_saved', 'Saved'),
       expect.objectContaining({ icon: 'check_circle', type: 'success' }),
     );
-    expect(close).toHaveBeenCalledTimes(1);
+    expect(close).not.toHaveBeenCalled();
     expect(fab.hasAttribute('disabled')).toBe(false);
   });
 
@@ -627,7 +627,7 @@ describe('boot hash subpage', () => {
       t('boot_hash_saved', 'Saved'),
       expect.objectContaining({ type: 'success' }),
     );
-    expect(close).toHaveBeenCalledTimes(1);
+    expect(close).not.toHaveBeenCalled();
   });
 
   it('awaits the config write before refreshing an empty saved hash', async () => {
@@ -655,7 +655,7 @@ describe('boot hash subpage', () => {
       t('boot_hash_saved', 'Saved'),
       expect.objectContaining({ type: 'success' }),
     );
-    expect(close).toHaveBeenCalledTimes(1);
+    expect(close).not.toHaveBeenCalled();
     expect(fab.hasAttribute('disabled')).toBe(false);
   });
 
@@ -699,7 +699,7 @@ describe('boot hash subpage', () => {
       t('boot_hash_saved', 'Saved'),
       expect.objectContaining({ type: 'success' }),
     );
-    expect(close).toHaveBeenCalledTimes(1);
+    expect(close).not.toHaveBeenCalled();
   });
 
   it('still saves when status reads fail after writing the property', async () => {
@@ -726,7 +726,7 @@ describe('boot hash subpage', () => {
       t('boot_hash_saved', 'Saved'),
       expect.objectContaining({ type: 'success' }),
     );
-    expect(close).toHaveBeenCalledTimes(1);
+    expect(close).not.toHaveBeenCalled();
     expect(fab.hasAttribute('disabled')).toBe(false);
   });
 

@@ -210,7 +210,7 @@ describe('OMK trust page', () => {
     expect(vbInput.disabled).toBe(false)
   })
 
-  it('saves both values and closes the subpage', async () => {
+  it('saves both values and keeps the subpage open', async () => {
     const { config, instance } = await openTrustPage()
     const osInput = document.createElement('input')
     osInput.id = 'omk-os-version'
@@ -238,7 +238,7 @@ describe('OMK trust page', () => {
       t('omk_saved', 'OMK OS & Boot Key saved'),
       expect.objectContaining({ icon: 'check_circle', type: 'success' }),
     )
-    expect(instance.close).toHaveBeenCalled()
+    expect(instance.close).not.toHaveBeenCalled()
     expect(fab.hasAttribute('disabled')).toBe(false)
   })
 

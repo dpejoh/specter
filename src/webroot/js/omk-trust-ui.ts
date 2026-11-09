@@ -243,7 +243,7 @@ export async function openOmkTrustPage(): Promise<void> {
               autoCloseDelay: 5000,
             });
           }
-          page.close();
+          previousVbKey = vbKey;
         } catch {
           updateToast(loadingToast, t('omk_save_error', 'Failed to save'), {
             icon: 'error',
