@@ -104,13 +104,13 @@ specter_hot_install() {
   unset _hiline
 
   # KernelSU's installer copies module.prop out of the staged dir after
-  # customize.sh returns; leave a stub for it. On Magisk and APatch a
-  # leftover staging dir is renamed over the live module at the next
-  # boot and would gut it, so their staging stays empty (the move above
-  # already consumed it). The delayed cleanup removes the stub (if
-  # any), the `update` flag the installers write into the live dir
-  # after customize.sh returns, and the stash.
-  if [ "$ROOT_SOL" = "kernelsu" ]; then
+  # customize.sh returns; leave a stub for it. Only do this for a genuine
+  # KernelSU install: a stale /data/adb/ksu on a Magisk device would leave a
+  # bare module.prop in modules_update, and Magisk renames that stub over the
+  # live module on the next boot. The delayed cleanup removes the stub (if
+  # any), the `update` flag the installers write into the live dir after
+  # customize.sh returns, and the stash.
+  if [ "$ROOT_SOL" = "kernelsu" ] && [ -n "${KSU_VER:-}${KSU_VER_CODE:-}" ]; then
     mkdir -p "$_hi_stage"
     cp "$_hi_live/module.prop" "$_hi_stage/module.prop" 2>/dev/null || true
   fi

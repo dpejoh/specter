@@ -62,6 +62,7 @@ assert_eq "first-install: no hot-done" "" "${_specter_hot_done:-}"
 bootstrap
 source_libs
 _hi_setup
+KSU_VER="1.0"; export KSU_VER
 specter_hot_install
 assert_file_eq "ksu: live updated" "$LIVE/module.prop" "$(printf 'id=specter\nname=NewVersion\nversionCode=2\n')"
 assert_file_exists "ksu: executor ran" "$LIVE/hi.ran"
@@ -71,6 +72,7 @@ _ui="$(cat "$UI_LOG")"
 assert_contains "ksu: announces hot install" "$_ui" "Hot install requested"
 assert_contains "ksu: no reboot promised" "$_ui" "No need to reboot"
 assert_not_contains "ksu: no warning" "$_ui" "WARNING"
+unset KSU_VER
 
 # ---- KSU native path: request recorded, nothing swapped by hand ----
 bootstrap
@@ -125,12 +127,14 @@ unset MOUNTIFY_HAS_HOT_INSTALL MODULE_HOT_INSTALL_REQUEST MODULE_HOT_RUN_SCRIPT
 bootstrap
 source_libs
 _hi_setup
+KSU_VER="1.0"; export KSU_VER
 specter_hot_install
 assert_file_exists "dance: stub module.prop" "${STAGE}/module.prop"
 sleep 1
 assert_file_not_exists "dance: staging removed" "${STAGE}/module.prop"
 assert_file_not_exists "dance: update marker gone" "$LIVE/update"
 assert_file_not_exists "dance: stash removed" "$SPECTER_DIR/hot_trash/specter/module.prop"
+unset KSU_VER
 
 # ---- Magisk happy path: swap, no stub, tail flag cleaned up ----
 bootstrap
@@ -150,6 +154,19 @@ assert_eq "magisk: hot-done set" "1" "${_specter_hot_done:-}"
 sleep 2
 assert_file_not_exists "magisk: tail update flag cleaned" "$LIVE/update"
 assert_file_not_exists "magisk: stash removed" "$SPECTER_DIR/hot_trash/specter/module.prop"
+
+# ---- stale KSU directory on Magisk: never leave a staging stub ----
+bootstrap
+source_libs
+_hi_setup
+unset _specter_hot_done KSU_VER KSU_VER_CODE
+ROOT_SOL="kernelsu"
+ROOT_TYPE="KernelSU"
+specter_hot_install
+assert_file_eq "misdetect: live updated" "$LIVE/module.prop" "$(printf 'id=specter\nname=NewVersion\nversionCode=2\n')"
+assert_file_exists "misdetect: executor ran" "$LIVE/hi.ran"
+assert_file_not_exists "misdetect: no staging stub" "$STAGE/module.prop"
+assert_eq "misdetect: hot-done set" "1" "${_specter_hot_done:-}"
 
 # ---- gate: mounted payload refused ----
 bootstrap

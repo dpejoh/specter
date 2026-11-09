@@ -3,24 +3,34 @@ ROOT_SOL="${ROOT_SOL:-}"
 
 detect_root_solution() {
     ROOT_TYPE="Unknown"; export ROOT_TYPE
-    if [ -d "/data/adb/ap" ]; then
+    # Installers and their runtime shells export version markers. Prefer the
+    # manager that is actually running us: a stale /data/adb/ksu or
+    # /data/adb/magisk directory from another root solution must not decide
+    # which hot-install path we take.
+    if [ -n "${KSU_VER:-}${KSU_VER_CODE:-}" ]; then
+        ROOT_SOL="kernelsu"
+        PATH="/data/adb/ksu/bin:$PATH"
+    elif [ -n "${APATCH:-}${APATCH_VER:-}${APATCH_VER_CODE:-}" ]; then
+        ROOT_SOL="apatch"; ROOT_TYPE="APatch"
+        PATH="/data/adb/ap/bin:$PATH"
+    elif [ -n "${MAGISK_VER:-}${MAGISK_VER_CODE:-}" ]; then
+        ROOT_SOL="magisk"; ROOT_TYPE="Magisk"
+        PATH="/data/adb/magisk:$PATH"
+    elif [ -x "/data/adb/magisk/magisk" ] && "/data/adb/magisk/magisk" -v >/dev/null 2>&1; then
+        # A live Magisk daemon is stronger evidence than any stale directory.
+        ROOT_SOL="magisk"; ROOT_TYPE="Magisk"
+        PATH="/data/adb/magisk:$PATH"
+    elif [ -d "/data/adb/ap" ]; then
         ROOT_SOL="apatch"; ROOT_TYPE="APatch"
         PATH="/data/adb/ap/bin:$PATH"
     elif [ -d "/data/adb/ksu" ]; then
         ROOT_SOL="kernelsu"
         PATH="/data/adb/ksu/bin:$PATH"
-        if [ -f "/data/adb/ksu/.dynamic_sign" ]; then
-            ROOT_TYPE="SukiSU-Ultra"
-        elif [ -f "/sys/module/kernelsu/parameters/expected_manager_size" ]; then
-            ROOT_TYPE="KernelSU-Next"
-        else
-            ROOT_TYPE="KernelSU"
-        fi
     elif [ -f "/data/adb/magisk" ] || [ -f "/data/adb/magisk.db" ]; then
         ROOT_SOL="magisk"; ROOT_TYPE="Magisk"
         PATH="/data/adb/magisk:$PATH"
     elif [ -f "/data/adb/ksud" ]; then
-        ROOT_SOL="kernelsu"; ROOT_TYPE="KernelSU"
+        ROOT_SOL="kernelsu"
         PATH="/data/adb/ksu/bin:$PATH"
     elif [ -f "/data/adb/apd" ]; then
         ROOT_SOL="apatch"; ROOT_TYPE="APatch"
@@ -29,6 +39,16 @@ detect_root_solution() {
         ROOT_SOL="magisk"; ROOT_TYPE="Magisk"
     else
         ROOT_SOL="magisk"; ROOT_TYPE="Unknown"
+    fi
+
+    if [ "$ROOT_SOL" = "kernelsu" ]; then
+        if [ -f "/data/adb/ksu/.dynamic_sign" ]; then
+            ROOT_TYPE="SukiSU-Ultra"
+        elif [ -f "/sys/module/kernelsu/parameters/expected_manager_size" ]; then
+            ROOT_TYPE="KernelSU-Next"
+        else
+            ROOT_TYPE="KernelSU"
+        fi
     fi
     export PATH
 }
