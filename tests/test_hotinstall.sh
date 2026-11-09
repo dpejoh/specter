@@ -77,6 +77,28 @@ assert_file_exists "dance: stub module.prop" "${STAGE}/module.prop"
 sleep 1
 assert_file_not_exists "dance: staging removed" "${STAGE}/module.prop"
 assert_file_not_exists "dance: update marker gone" "$LIVE/update"
+assert_file_not_exists "dance: stash removed" "$SPECTER_DIR/hot_trash/specter/module.prop"
+
+# ---- gate: mounted payload refused ----
+bootstrap
+source_libs
+_hi_setup
+unset _specter_hot_done
+mkdir -p "$STAGE/system/bin"
+specter_hot_install
+assert_file_eq "gate-payload: live unchanged" "$LIVE/module.prop" "$(printf 'id=specter\nname=OldVersion\nversionCode=1\n')"
+assert_eq "gate-payload: no hot-done" "" "${_specter_hot_done:-}"
+assert_file_exists "gate-payload: staging intact" "$STAGE/module.prop"
+
+# ---- gate: disabled module refused ----
+bootstrap
+source_libs
+_hi_setup
+unset _specter_hot_done
+: > "$LIVE/disable"
+specter_hot_install
+assert_file_eq "gate-disabled: live unchanged" "$LIVE/module.prop" "$(printf 'id=specter\nname=OldVersion\nversionCode=1\n')"
+assert_eq "gate-disabled: no hot-done" "" "${_specter_hot_done:-}"
 
 # ---- apply failure ----
 bootstrap

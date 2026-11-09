@@ -102,8 +102,9 @@ unset _arch _src _f
 mkdir -p "$SPECTER_DIR/config"
 cp "$MODPATH/config/conflicts.txt" "$SPECTER_DIR/config/conflicts.txt" 2>/dev/null || true
 
-# Hot install — ksu-only, update-already-present: move staging into the
-# live dir and re-apply without a reboot. no-op on apatch/magisk/first install.
+# Hot install — updates only: apply the staged update live, without a
+# reboot. The per-manager rules live in lib/hotinstall.sh; no-op when
+# its gate refuses (first install, mounted payload, disabled module).
 . "$MODPATH/lib/hotinstall.sh"
 specter_hot_install
 

@@ -1,23 +1,60 @@
 # shellcheck shell=sh
-# Move a staged update into the live dir and re-apply without a reboot.
+# Make a freshly installed update live without a reboot.
+#
+# Every manager resolves a module's scripts, WebUI and config from the
+# live dir by path, at use time; only mounted payload is bound to the
+# boot-time state, so the gate below refuses hot install when the staged
+# tree carries any. The live-apply (src/hotinstall.sh) is shared; what
+# differs per manager is the swap and the install bookkeeping.
+
+# Updates only (both dirs present; the staged dir exists solely for
+# boot-mode installs), module not disabled or pending removal, and a
+# userspace-only payload: no partition dirs, sepolicy, props or zygisk.
+_specter_hot_gate() {
+  [ -d "$1" ] && [ -d "$2" ] || return 1
+  [ ! -e "$1/disable" ] && [ ! -e "$1/remove" ] || return 1
+  for _hg_part in system vendor product system_ext sepolicy.rule system.prop zygisk; do
+    [ ! -e "$2/$_hg_part" ] || return 1
+  done
+  unset _hg_part
+  return 0
+}
 
 specter_hot_install() {
-  # KernelSU family only; the live-move trick relies on ksu mount internals.
-  [ "$ROOT_SOL" = "kernelsu" ] || return 0
-
   _hi_modid="$(basename "${MODPATH:-}")"
   [ -n "$_hi_modid" ] || return 0
   _hi_live="$MODULES_BASE/$_hi_modid"
   _hi_stage="${MODULES_BASE}_update/$_hi_modid"
 
-  # Updates only; first install still needs a reboot.
-  [ -d "$_hi_live" ] || return 0
-  [ -d "$_hi_stage" ] || return 0
+  if ! _specter_hot_gate "$_hi_live" "$_hi_stage"; then
+    unset _hi_modid _hi_live _hi_stage
+    return 0
+  fi
+
+  case "$ROOT_SOL" in
+    kernelsu) ;;
+    *) unset _hi_modid _hi_live _hi_stage; return 0 ;;
+  esac
 
   ui_print "- Hot install requested ($ROOT_TYPE)"
 
-  rm -rf "$_hi_live"
-  mv "$_hi_stage" "$_hi_live"
+  # Stash the old live dir instead of deleting it: running processes may
+  # still reference it. The delayed cleanup removes the stash once the
+  # new code is live; a leftover stash is swept at the top of the next
+  # run. If the swap itself fails, the stash is put back and the staged
+  # update is left for the normal reboot flow.
+  _hi_trash="$SPECTER_DIR/hot_trash"
+  rm -rf "$_hi_trash" 2>/dev/null || true
+  mkdir -p "$_hi_trash" 2>/dev/null || true
+  if ! mv "$_hi_live" "$_hi_trash/$_hi_modid" 2>/dev/null; then
+    unset _hi_modid _hi_live _hi_stage _hi_trash
+    return 0
+  fi
+  if ! mv "$_hi_stage" "$_hi_live" 2>/dev/null; then
+    mv "$_hi_trash/$_hi_modid" "$_hi_live" 2>/dev/null || true
+    unset _hi_modid _hi_live _hi_stage _hi_trash
+    return 0
+  fi
 
   # Clear the token so the next reboot won't re-run first_boot_setup over this.
   rm -f "$SPECTER_DIR/.first_boot_pending" 2>/dev/null || true
@@ -35,11 +72,14 @@ specter_hot_install() {
   fi
   unset _hiline
 
-  # Recreate a stub module.prop so ksu bookkeeping finds it, then clean up later.
-  _hi_delay="${SPECTER_HOT_CLEANUP_DELAY:-3}"
+  # KernelSU's installer copies module.prop out of the staged dir after
+  # customize.sh returns; leave a stub for it. The delayed cleanup then
+  # removes the stub, the `update` flag the installer wrote into the
+  # live dir, and the stash.
   mkdir -p "$_hi_stage"
   cp "$_hi_live/module.prop" "$_hi_stage/module.prop" 2>/dev/null || true
-  ( sleep "$_hi_delay"; rm -rf "$_hi_live/update" 2>/dev/null; rm -rf "$_hi_stage" 2>/dev/null ) &
+  _hi_delay="${SPECTER_HOT_CLEANUP_DELAY:-3}"
+  ( sleep "$_hi_delay"; rm -rf "$_hi_live/update" 2>/dev/null; rm -rf "$_hi_stage" 2>/dev/null; rm -rf "$_hi_trash" 2>/dev/null ) &
 
   ui_print "- Refresh module page after installation"
   if [ "${_hi_apply_failed:-0}" = "1" ]; then
@@ -48,5 +88,5 @@ specter_hot_install() {
     ui_print "- No need to reboot"
   fi
 
-  unset _hi_modid _hi_live _hi_stage _hi_apply_failed _hi_delay
+  unset _hi_modid _hi_live _hi_stage _hi_trash _hi_apply_failed _hi_delay
 }
