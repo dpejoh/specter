@@ -1,11 +1,7 @@
 # Specter
 
 <p align="center">
-  <img src="./screenshots/home.png" width="19%" alt="Home">
-  <img src="./screenshots/tools.png" width="19%" alt="Tools">
-  <img src="./screenshots/target.png" width="19%" alt="App Targeting">
-  <img src="./screenshots/control.png" width="19%" alt="Control">
-  <img src="./screenshots/settings.png" width="19%" alt="Settings">
+  <img src="./screenshots/banner.png" width="100%" alt="Specter">
 </p>
 
 [![latest release](https://img.shields.io/github/v/release/dpejoh/specter?label=Release&logo=github)](https://github.com/dpejoh/specter/releases/latest)
