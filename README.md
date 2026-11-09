@@ -11,13 +11,9 @@
 [![latest release](https://img.shields.io/github/v/release/dpejoh/specter?label=Release&logo=github)](https://github.com/dpejoh/specter/releases/latest)
 [![CI](https://github.com/dpejoh/specter/actions/workflows/build-test.yml/badge.svg)](https://github.com/dpejoh/specter/actions/workflows/build-test.yml)
 
-Getting strong integrity, TEESimulator management, detection solve. Clean, focused, no bloat.
+Strong integrity, TEESimulator management, detection cleanup. Clean, focused, no bloat.
 
 [Download](https://github.com/dpejoh/specter/releases/latest)
-
-## Background
-
-Specter is a complete rewrite of what I originally built as Yurikey.
 
 ## Support
 
@@ -31,7 +27,7 @@ Specter is a complete rewrite of what I originally built as Yurikey.
 1. Install [Tricky Store](https://github.com/5ec1cff/TrickyStore/releases/latest) /
    [TEESimulator](https://github.com/JingMatrix/TEESimulator/releases/latest) /
    [Tricky Store OSS](https://github.com/beakthoven/TrickyStoreOSS/releases/latest)
-   (Specter auto-installs Tricky Store OSS if none found — skip if using OhMyKeymint)
+   (Specter auto-installs Tricky Store OSS if none found; skip if using OhMyKeymint)
 2. Install [Play Integrity Inject](https://github.com/KOWX712/PlayIntegrityFix/releases/latest)
    or [Play Integrity Fork](https://github.com/osm0sis/PlayIntegrityFork/releases/latest)
 3. Install Specter via Magisk / KernelSU / APatch
@@ -40,31 +36,21 @@ Specter is a complete rewrite of what I originally built as Yurikey.
 
 ## Features
 
-- **Keybox**: multi-source catalog, custom keybox, Google revocation, backup/restore
+- **Keybox**: multi-source catalog, revocation watch with auto-replace, custom keybox, backup/restore
 - **Auto Target**: inotify + polling for new apps
-- **App Targeting**: per-app states, suffixes, blacklist
+- **App Targeting**: per-app states, suffixes
 - **Security Patch**: live fetch with offline fallback
 - **ROM Fingerprint**: cleans custom ROM props and prefixes
 - **ADB Disabler**: dev options, USB debugging, OEM unlock
-- **PIF**: auto-detect variant, fetch fingerprint, block spoof engines
+- **PIF**: auto-detect variant, apply a preferred fingerprint or fetch one
 - **GMS Kill**: force-stops DroidGuard/GMS, clears Play Store
-- **Module Configs**: HMA-OSS config generation, Zygisk Next
+- **HMA-OSS**: scope manager page, config generation, auto-update
+- **Zygisk Next**: detection and configuration
 - **Detection Cleanup**: removes detector logs, temp dirs, caches
 - **Widevine L1**: attestation keys via KmInstallKeybox
-- **Conflict Resolution**: 8 modules — aggressive disabled, passive coexists, TEESimulator WebUI feature ownership
-- **Scheduler**: periodic keybox info, auto-target, autopif
+- **Conflict Resolution**: aggressive modules disabled, passive coexists, TEESimulator WebUI feature ownership
+- **Scheduler**: keybox revocation watch, auto-target, HMA auto-update, autopif
 - **First-Boot**: backup originals, run full pipeline once
-
-## Requirements
-
-- Root access (Magisk / KernelSU / APatch)
-- [Tricky Store](https://github.com/5ec1cff/TrickyStore/releases/latest) /
-  [TEESimulator](https://github.com/JingMatrix/TEESimulator/releases/latest) /
-  [Tricky Store OSS](https://github.com/beakthoven/TrickyStoreOSS/releases/latest) /
-  or OhMyKeymint
-  (Specter auto-installs Tricky Store OSS if none detected)
-- [Play Integrity Inject](https://github.com/KOWX712/PlayIntegrityFix/releases/latest)
-  or [Play Integrity Fork](https://github.com/osm0sis/PlayIntegrityFork/releases/latest)
 
 ## Build
 
@@ -75,55 +61,21 @@ npm install
 npm run build
 ```
 
-Output: `Specter-v{version}.zip`
-
-### Testing
-
-```bash
-bash tests/run.sh          # Shell tests. 12 files, 321 assertions.
-npm test                   # TS tests (vitest + happy-dom).
-npm run test:coverage      # TS tests with v8 coverage; src/webroot/js/ui/ is threshold-gated.
-npx tsc --noEmit           # TypeScript strict check
-```
-
-### CI
-
-- TypeScript strict, ShellCheck (warning), shell tests, TS tests
-- Module structure verification
-- No hardcoded `/data/adb/modules/Specter` paths in lib/ or features/
-- No `su -c` in feature scripts
-
-## Legal
-
-```
-FOR EDUCATIONAL PURPOSES ONLY.
-THE DEVELOPER DOES NOT CONDONE ILLEGAL ACTIVITIES INCLUDING BYPASSING DRM, VIOLATING TERMS OF SERVICE, OR COMMITTING FRAUD.
-USERS ARE SOLELY RESPONSIBLE FOR COMPLYING WITH APPLICABLE LAWS.
-```
-
-## Warning
-
-```
-SPECTER IS PROGRAMMED NOT TO CAUSE PROBLEMS, BUT AN UNLOCKED PHONE ALWAYS COMES WITH RISKS.
-NOTHING IS 100% GUARANTEED. USE AT YOUR OWN RISK.
-YOUR WARRANTY MAY BE VOIDED, APPS MAY BREAK, AND ACCOUNT BANS ARE POSSIBLE.
-ALWAYS MAINTAIN BACKUPS OF IMPORTANT DATA.
-```
+Output: `Specter-v{version}-g{hash}.zip`
 
 ## Translations
 
-The WebUI is translated into Arabic, Spanish, French, Hungarian, Indonesian, Polish, Russian, Turkish, and Chinese (mostly AI-generated. Human review welcome).
+The WebUI is translated into Arabic, Spanish, French, Hungarian, Indonesian, Polish, Russian, Turkish, Vietnamese, and Chinese (mostly AI-generated. Human review welcome).
 
 To contribute translations:
-- **Preferred**: Join the [Crowdin project](https://crowdin.com/project/specter-module) — web UI, no git needed
+- **Preferred**: Join the [Crowdin project](https://crowdin.com/project/specter-module) (web UI, no git needed)
 - **Alternative**: Edit the JSON files in `src/webroot/lang/` and submit a PR
 
-Automation:
-- Pushing changes to `src/webroot/lang/source/string.json` on `main` uploads the new keys to Crowdin
-- Every Monday a workflow downloads finished translations and opens a PR (`i18n: translation updates from Crowdin`)
-- Required repo secrets: `CROWDIN_PROJECT_ID`, `CROWDIN_PERSONAL_TOKEN`
+## Disclaimer
 
-Each `*.json` file is validated against `source/string.json` in CI (`npm test`). New keys without translations fall back to English.
+For educational purposes only. The developer does not condone illegal activities, including bypassing DRM, violating terms of service, or committing fraud; users are solely responsible for complying with applicable laws.
+
+Specter is programmed not to cause problems, but an unlocked phone always comes with risks. Nothing is 100% guaranteed: your warranty may be voided, apps may break, and account bans are possible. Use at your own risk, and always maintain backups of important data.
 
 ## Thanks
 
