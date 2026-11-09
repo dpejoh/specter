@@ -64,20 +64,26 @@ async function fetchCatalog(): Promise<CatalogJson | null> {
   if (typeof exec !== 'function') return null;
 
   const commands = [
-    `busybox wget -qO- --no-check-certificate ${shellEscape(url)} 2>/dev/null`,
-    `curl -sfL --connect-timeout 10 ${shellEscape(url)} 2>/dev/null`,
+    `busybox wget -qO- --no-check-certificate ${shellEscape(url)}`,
+    `curl -sfL --connect-timeout 10 ${shellEscape(url)}`,
   ];
+  const failures: string[] = [];
   for (const command of commands) {
     try {
       const res = await exec(command);
       const stdout = (res.stdout || '').trim();
-      if (!stdout) continue;
+      if (!stdout) {
+        failures.push(`${command}: ${(res.stderr || '').trim() || `exit ${res.code}`}`);
+        continue;
+      }
       const parsed = JSON.parse(stdout) as CatalogJson;
       if (parsed?.entries) return parsed;
-    } catch {
-      // Try the next downloader.
+      failures.push(`${command}: response is not a keybox catalog`);
+    } catch (err) {
+      failures.push(`${command}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
+  console.warn('Keybox catalog download failed:', failures.join('\n'));
   return null;
 }
 

@@ -201,7 +201,7 @@ keybox_catalog() {
   _kc_json=""
   for _kc_url in "$CATALOG_URL" "$CATALOG_URL_FALLBACK"; do
     [ -n "$_kc_url" ] || continue
-    _kc_try=$(download "$_kc_url" 2>/dev/null) || _kc_try=""
+    _kc_try=$(download "$_kc_url") || _kc_try=""
     case "$_kc_try" in
       *'"entries"'*) _kc_json="$_kc_try"; break ;;
     esac
@@ -254,7 +254,7 @@ _google_revocation_cache_file() {
     fi
   fi
   if [ -z "$_grc_file" ]; then
-    _grc_resp=$(download "$GOOGLE_REVOCATION_URL" 2>/dev/null) || _grc_resp=""
+    _grc_resp=$(download "$GOOGLE_REVOCATION_URL") || _grc_resp=""
     if [ -n "$_grc_resp" ]; then
       ensure_dir "$SPECTER_DIR/cache"
       cat > "$_grc_cache" <<EOF
