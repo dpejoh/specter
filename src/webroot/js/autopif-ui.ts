@@ -6,6 +6,19 @@ import { openSubPage } from './subpage.js';
 
 const HOURS_TO_SECONDS = 3600;
 const DEFAULT_HOURS = 24;
+const MIN_HOURS = 1;
+
+function storedSecondsToHours(raw: string | null | undefined): number {
+  const seconds = parseInt(raw || '', 10);
+  if (!Number.isFinite(seconds)) return DEFAULT_HOURS;
+  const hours = Math.round(seconds / HOURS_TO_SECONDS);
+  return hours > 0 ? hours : DEFAULT_HOURS;
+}
+
+function inputHours(value: string): number {
+  const hours = parseInt(value, 10);
+  return Number.isFinite(hours) ? Math.max(MIN_HOURS, hours) : DEFAULT_HOURS;
+}
 
 export function openAutopifDialog() {
   openSubPage({
@@ -30,12 +43,15 @@ export function openAutopifDialog() {
             min: 1,
             unit: 'hrs',
             getValue: async () => {
-              const raw = await cfgGet('autopif_interval', String(DEFAULT_HOURS * HOURS_TO_SECONDS));
-              return String(Math.round(parseInt(raw || String(DEFAULT_HOURS * HOURS_TO_SECONDS), 10) / HOURS_TO_SECONDS) || DEFAULT_HOURS);
+              try {
+                const raw = await cfgGet('autopif_interval', String(DEFAULT_HOURS * HOURS_TO_SECONDS));
+                return String(storedSecondsToHours(raw));
+              } catch {
+                return String(DEFAULT_HOURS);
+              }
             },
             onChange: (val) => {
-              const num = parseInt(val || String(DEFAULT_HOURS), 10);
-              cfgSet('autopif_interval', String(Math.max(1, num) * HOURS_TO_SECONDS));
+              cfgSet('autopif_interval', String(inputHours(val) * HOURS_TO_SECONDS));
             },
           },
         ],

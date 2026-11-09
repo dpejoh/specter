@@ -109,7 +109,16 @@ export function wireSwipeNavigation(options: SwipeControllerOptions): void {
     }
   }, { passive: false });
 
-  function onTouchEndOrCancel(e: TouchEvent) {
+  /** Restore the track and indicator to the current page without activating. */
+  function snapBack() {
+    dragPagesVisible = false;
+    const currentIndex = getCurrentIndex();
+    updatePageSuppression(currentIndex, false);
+    setTrackPosition(currentIndex, true);
+    setIndicatorProgress(currentIndex, currentIndex, 0);
+  }
+
+  function onTouchEnd(e: TouchEvent) {
     track.classList.remove('is-swiping');
     if (touchIntent !== 'drag') {
       touchIntent = 'none';
@@ -142,6 +151,18 @@ export function wireSwipeNavigation(options: SwipeControllerOptions): void {
     activateIndex(nextIdx, true);
   }
 
-  document.addEventListener('touchend', onTouchEndOrCancel, { passive: true });
-  document.addEventListener('touchcancel', onTouchEndOrCancel, { passive: true });
+  function onTouchCancel() {
+    track.classList.remove('is-swiping');
+    if (touchIntent !== 'drag') {
+      touchIntent = 'none';
+      return;
+    }
+
+    // The OS interrupted the gesture, so never commit based on a partial drag.
+    touchIntent = 'none';
+    snapBack();
+  }
+
+  document.addEventListener('touchend', onTouchEnd, { passive: true });
+  document.addEventListener('touchcancel', onTouchCancel, { passive: true });
 }

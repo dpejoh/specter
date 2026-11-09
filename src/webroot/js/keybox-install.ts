@@ -40,7 +40,9 @@ export async function installKeybox(options: InstallKeyboxOptions = {}): Promise
 
   await exec(`sh ${shellEscape(moddir + '/features/keybox_info.sh')}`).catch(() => {});
   await exec(`sh ${shellEscape(moddir + '/refresh_desc.sh')}`).catch(() => {});
-  await refreshKeyboxStatus();
+  // A failed status refresh must not reject an otherwise successful install:
+  // the caller still needs onInstalled to re-render its catalog/hero state.
+  await refreshKeyboxStatus().catch(() => {});
   options.onInstalled?.();
   return true;
 }

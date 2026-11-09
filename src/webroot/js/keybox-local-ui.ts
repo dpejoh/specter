@@ -59,10 +59,7 @@ export async function mountLocalKeyboxForm(
   const fileSubtitle = document.createElement('span');
   fileSubtitle.id = 'kb-file-subtitle';
   fileSubtitle.setAttribute('slot', 'supporting');
-  fileSubtitle.className = `kb-file-subtitle${selectedFilePath ? ' kb-file-subtitle--active' : ''}`;
-  fileSubtitle.textContent = selectedFilePath
-    ? (selectedFilePath.split('/').pop() || '')
-    : t('custom_kb_file_desc', 'Select a keybox XML file from your device');
+  fileSubtitle.className = 'kb-file-subtitle';
   fileRow.append(fileSubtitle);
 
   const urlRow = document.createElement('sp-settings-row');
@@ -116,6 +113,7 @@ export async function mountLocalKeyboxForm(
   fileSubtitleEl = fileSubtitle;
   fileIconEl = fileIcon;
   urlInputEl = urlInput;
+  updateFileUI(selectedFilePath);
   const hasValue = () => Boolean(urlInputEl?.value.trim() || selectedFilePath.trim());
 
   const onPick = () => {
@@ -141,10 +139,10 @@ export async function mountLocalKeyboxForm(
 
   pasteBtn?.addEventListener('click', async () => {
     try {
-      const text = await navigator.clipboard.readText();
+      const text = (await navigator.clipboard.readText()).trim();
       if (text && urlInputEl) {
-        urlInputEl.value = text.trim();
-        selectedFilePath = text.trim();
+        urlInputEl.value = text;
+        selectedFilePath = text;
         updateFileUI(selectedFilePath);
         options.onValueChange?.(hasValue());
       }

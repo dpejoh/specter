@@ -18,6 +18,11 @@ export function renderControlToggles() {
   const action = document.getElementById('control-action-container');
   if (!boot || !background || !action) return;
 
+  // Re-rendering must replace rows rather than append a second copy.
+  for (const container of [boot, background, action]) {
+    container.querySelectorAll('[data-control-toggle]').forEach(row => row.remove());
+  }
+
   for (const toggle of CONTROL_TOGGLES) {
     const container = toggle.section === 'boot' ? boot : toggle.section === 'background' ? background : action;
     const labelKey = i18nLabelKey(toggle.key);
@@ -26,6 +31,7 @@ export function renderControlToggles() {
     const row = document.createElement('sp-settings-row');
     row.id = `${toggle.id}-row`;
     row.setAttribute('variant', 'toggle');
+    row.dataset.controlToggle = '1';
 
     const icon = document.createElement('md-icon');
     icon.setAttribute('slot', 'icon');
@@ -99,7 +105,8 @@ export function wireRowDialog(rowId: string, open: () => void) {
 export function wireControlToggles() {
   for (const { id, key, default: def } of CONTROL_TOGGLES) {
     const sw = document.getElementById(id) as MdSwitch | null;
-    if (!sw) continue;
+    if (!sw || sw.dataset.spControlWired === '1') continue;
+    sw.dataset.spControlWired = '1';
     cfgGet(key, def || '1').then(val => { sw.selected = val !== '0'; });
     sw.addEventListener('change', () => {
       cfgSet(key, sw.selected ? '1' : '0');

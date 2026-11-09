@@ -73,15 +73,7 @@ export async function initTheme(savedMode: string) {
   }
 
   wireThemeControls();
-
-  // When user returns to the tab, consume a fresh monet.json (written by the
-  // background watcher). If it is missing, re-run the extractor once instead
-  // of silently keeping a stale localStorage seed forever.
-  document.addEventListener('visibilitychange', async () => {
-    if (document.hidden || currentPreset !== 'monet') return;
-    const data = await loadMonetData(false, true);
-    if (data) applyMonetData(data, document.documentElement.getAttribute('data-theme') || 'dark');
-  });
+  wireVisibilityRefresh();
 }
 
 function resolveMode(mode: string): string {
@@ -326,8 +318,18 @@ function applyNamedPreset(name: string, isDark: boolean) {
   notifyThemeApplied(isDark);
 }
 
+let themeModeQuery: MediaQueryList | null = null;
+let themeModeListener: ((e: MediaQueryListEvent) => void) | null = null;
+let visibilityListener: (() => Promise<void>) | null = null;
+
 function wireThemeControls() {
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e: MediaQueryListEvent) => {
+  // Re-wiring replaces the previous listener so repeated initTheme() calls
+  // cannot stack system-preference handlers.
+  if (themeModeQuery && themeModeListener) {
+    themeModeQuery.removeEventListener('change', themeModeListener);
+  }
+  themeModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  themeModeListener = (e: MediaQueryListEvent) => {
     const mode = document.documentElement.getAttribute('data-theme');
     if (mode === 'auto') {
       const resolved = e.matches ? 'dark' : 'light';
@@ -335,5 +337,21 @@ function wireThemeControls() {
       document.documentElement.style.colorScheme = resolved;
       applyMode('auto');
     }
-  });
+  };
+  themeModeQuery.addEventListener('change', themeModeListener);
+}
+
+// When user returns to the tab, consume a fresh monet.json (written by the
+// background watcher). If it is missing, re-run the extractor once instead
+// of silently keeping a stale localStorage seed forever.
+function wireVisibilityRefresh() {
+  if (visibilityListener) {
+    document.removeEventListener('visibilitychange', visibilityListener);
+  }
+  visibilityListener = async () => {
+    if (document.hidden || currentPreset !== 'monet') return;
+    const data = await loadMonetData(false, true);
+    if (data) applyMonetData(data, document.documentElement.getAttribute('data-theme') || 'dark');
+  };
+  document.addEventListener('visibilitychange', visibilityListener);
 }

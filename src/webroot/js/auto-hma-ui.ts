@@ -4,6 +4,25 @@ import { wireRowDialog } from './toggles.js';
 import { openSubPage } from './subpage.js';
 
 
+const HOURS_TO_SECONDS = 3600;
+const DEFAULT_HOURS = 6;
+const MIN_HOURS = 1;
+const MAX_HOURS = 168;
+
+function clampHours(hours: number): number {
+  return Math.min(MAX_HOURS, Math.max(MIN_HOURS, Math.round(hours)));
+}
+
+function storedSecondsToHours(raw: string | null | undefined): number {
+  const seconds = parseInt(raw || '', 10);
+  return Number.isFinite(seconds) ? clampHours(seconds / HOURS_TO_SECONDS) : DEFAULT_HOURS;
+}
+
+function inputHours(value: string): number {
+  const hours = parseInt(value, 10);
+  return Number.isFinite(hours) ? clampHours(hours) : DEFAULT_HOURS;
+}
+
 export function openAutoHmaDialog() {
   openSubPage({
     id: 'auto-hma',
@@ -34,12 +53,15 @@ export function openAutoHmaDialog() {
             unit: 'h',
             ariaLabel: t('auto_hma_interval_aria', 'HMA update interval in hours'),
             getValue: async () => {
-              const raw = await cfgGet('hma_interval', '21600');
-              return String(Math.max(1, Math.round(parseInt(raw || '21600', 10) / 3600)));
+              try {
+                const raw = await cfgGet('hma_interval', String(DEFAULT_HOURS * HOURS_TO_SECONDS));
+                return String(storedSecondsToHours(raw));
+              } catch {
+                return String(DEFAULT_HOURS);
+              }
             },
             onChange: (value: string) => {
-              const hours = Math.min(168, Math.max(1, parseInt(value || '6', 10)));
-              cfgSet('hma_interval', String(hours * 3600));
+              cfgSet('hma_interval', String(inputHours(value) * HOURS_TO_SECONDS));
             },
           },
         ],

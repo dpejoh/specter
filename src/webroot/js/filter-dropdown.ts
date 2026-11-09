@@ -57,8 +57,17 @@ export function createFilterDropdown(config: FilterDropdownConfig): FilterDropdo
 
   root.append(trigger, menu);
 
-  const selectedOption = () => options.find(option => option.value === value) ?? options[0];
+  const selectedOption = () => options.find(option => option.value === value);
   const optionButtons = () => [...menu.querySelectorAll<HTMLButtonElement>('.filter-option')];
+
+  // Keep the stored value and the visible label in agreement: an absent value
+  // would otherwise display the first option's label while getValue() kept
+  // returning the stale value.
+  const normalizeValue = () => {
+    if (options.length > 0 && !options.some(option => option.value === value)) {
+      value = options[0]!.value;
+    }
+  };
 
   const syncTrigger = () => {
     const label = selectedOption()?.label ?? '';
@@ -214,15 +223,15 @@ export function createFilterDropdown(config: FilterDropdownConfig): FilterDropdo
 
   const setOptions = (next: FilterOption[]) => {
     options = [...next];
-    if (!options.some(option => option.value === value)) {
-      value = options[0]?.value ?? '';
-    }
+    if (options.length === 0) value = '';
+    else normalizeValue();
     syncTrigger();
     renderMenu();
   };
 
   const setValue = (next: string) => {
     value = next;
+    normalizeValue();
     syncTrigger();
     renderMenu();
   };
@@ -232,6 +241,7 @@ export function createFilterDropdown(config: FilterDropdownConfig): FilterDropdo
   };
   document.addEventListener(OPEN_EVENT, onOtherOpen);
 
+  normalizeValue();
   syncTrigger();
   renderMenu();
 
