@@ -27,4 +27,19 @@ assert_not_contains "HTTPS: never uses busybox wget" "$(cat "$TEST_ROOT/transpor
 MOCK_HTTP_ERROR=1; export MOCK_HTTP_ERROR
 download 'https://example.com/missing' "$TEST_ROOT/result" ''
 assert_exit_code "HTTP error: reports failure" 1 "$?"
+# Android images do not ship curl: BusyBox wget is the HTTPS fallback.
+rm -f "$BIN_DIR/curl"
+cat > "$BIN_DIR/busybox" <<'MOCK'
+#!/bin/sh
+printf '%s\n' "$*" >> "$TEST_ROOT/transport.log"
+while [ "$#" -gt 0 ]; do
+  case "$1" in -O|-qO) shift; out=$1 ;; esac
+  shift
+done
+printf 'busybox content' > "$out"
+MOCK
+chmod +x "$BIN_DIR/busybox"
+download 'https://example.com/keybox' "$TEST_ROOT/result" ''
+assert_eq "HTTPS without curl: busybox fallback content" 'busybox content' "$(cat "$TEST_ROOT/result")"
+assert_not_contains "HTTPS without curl: certificate validation not bypassed" "$(tail -1 "$TEST_ROOT/transport.log")" '--no-check-certificate'
 done_testing
