@@ -29,6 +29,12 @@ interface HmaConfig {
   id: string;
   title: string;
   description: string;
+  masterToggle?: {
+    key: string;
+    defaultVal: string;
+    title: string;
+    syncSwitchId: string;
+  };
   groups: { items: Record<string, unknown>[] }[];
 }
 
@@ -51,6 +57,12 @@ describe('HMA-OSS config subpage', () => {
     expect(config.id).toBe('hma-config');
     expect(config.title).toBe('HMA-OSS Configs');
     expect(config.description).toContain('custom HMA-OSS hiding profile');
+    expect(config.masterToggle).toMatchObject({
+      key: 'toggle_action_hma',
+      defaultVal: '0',
+      title: 'Use HMA-OSS Config Generation',
+      syncSwitchId: 'toggle-action_hma',
+    });
     expect(config.groups).toHaveLength(1);
     expect(config.groups[0]!.items[0]).toMatchObject({
       id: 'hma-force-regen',

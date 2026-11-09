@@ -33,6 +33,12 @@ export async function openHmaDialog() {
       'hma_dialog_desc',
       'Generates a custom HMA-OSS hiding profile from installed packages and merges it into the service configuration.'
     ),
+    masterToggle: {
+      key: 'toggle_action_hma',
+      defaultVal: '0',
+      title: t('control_toggle_action_hma_master', 'Use HMA-OSS Config Generation'),
+      syncSwitchId: 'toggle-action_hma',
+    },
     groups: [
       {
         items: [
