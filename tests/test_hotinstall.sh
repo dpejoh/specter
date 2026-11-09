@@ -95,6 +95,25 @@ assert_file_not_exists "dance: staging removed" "${STAGE}/module.prop"
 assert_file_not_exists "dance: update marker gone" "$LIVE/update"
 assert_file_not_exists "dance: stash removed" "$SPECTER_DIR/hot_trash/specter/module.prop"
 
+# ---- Magisk happy path: swap, no stub, tail flag cleaned up ----
+bootstrap
+source_libs
+_hi_setup
+unset _specter_hot_done
+ROOT_SOL="magisk"
+ROOT_TYPE="Magisk"
+SPECTER_HOT_CLEANUP_DELAY=1
+export SPECTER_HOT_CLEANUP_DELAY
+specter_hot_install
+assert_file_eq "magisk: live updated" "$LIVE/module.prop" "$(printf 'id=specter\nname=NewVersion\nversionCode=2\n')"
+assert_file_exists "magisk: executor ran" "$LIVE/hi.ran"
+assert_file_not_exists "magisk: no stub in staging" "$STAGE/module.prop"
+assert_eq "magisk: hot-done set" "1" "${_specter_hot_done:-}"
+: > "$LIVE/update"
+sleep 2
+assert_file_not_exists "magisk: tail update flag cleaned" "$LIVE/update"
+assert_file_not_exists "magisk: stash removed" "$SPECTER_DIR/hot_trash/specter/module.prop"
+
 # ---- gate: mounted payload refused ----
 bootstrap
 source_libs

@@ -49,7 +49,7 @@ specter_hot_install() {
   fi
 
   case "$ROOT_SOL" in
-    kernelsu) ;;
+    kernelsu|magisk) ;;
     *) unset _hi_modid _hi_live _hi_stage; return 0 ;;
   esac
 
@@ -90,11 +90,16 @@ specter_hot_install() {
   unset _hiline
 
   # KernelSU's installer copies module.prop out of the staged dir after
-  # customize.sh returns; leave a stub for it. The delayed cleanup then
-  # removes the stub, the `update` flag the installer wrote into the
-  # live dir, and the stash.
-  mkdir -p "$_hi_stage"
-  cp "$_hi_live/module.prop" "$_hi_stage/module.prop" 2>/dev/null || true
+  # customize.sh returns; leave a stub for it. On Magisk and APatch a
+  # leftover staging dir is renamed over the live module at the next
+  # boot and would gut it, so their staging stays empty (the move above
+  # already consumed it). The delayed cleanup removes the stub (if
+  # any), the `update` flag the installers write into the live dir
+  # after customize.sh returns, and the stash.
+  if [ "$ROOT_SOL" = "kernelsu" ]; then
+    mkdir -p "$_hi_stage"
+    cp "$_hi_live/module.prop" "$_hi_stage/module.prop" 2>/dev/null || true
+  fi
   _hi_delay="${SPECTER_HOT_CLEANUP_DELAY:-3}"
   ( sleep "$_hi_delay"; rm -rf "$_hi_live/update" 2>/dev/null; rm -rf "$_hi_stage" 2>/dev/null; rm -rf "$_hi_trash" 2>/dev/null ) &
 
