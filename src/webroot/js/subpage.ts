@@ -418,6 +418,12 @@ async function openSubPageInternal(config: SubPageConfig): Promise<SubPageInstan
     closeOverlay();
   }
 
+  function requestBack() {
+    if (closed) return;
+    if (history.state && history.state.subpage === config.id) history.back();
+    else closeOverlay();
+  }
+
   cleanupA11y = setupOverlayA11y(overlay, {
     titleId: `subpage-title-${config.id}`,
     onClose: closeOverlay,
@@ -430,7 +436,7 @@ async function openSubPageInternal(config: SubPageConfig): Promise<SubPageInstan
   history.pushState({ subpage: config.id }, '');
   window.addEventListener('popstate', onPopState);
 
-  overlay.querySelector('#subpage-back')?.addEventListener('click', () => history.back());
+  overlay.querySelector('#subpage-back')?.addEventListener('click', requestBack);
 
   // Master switch interaction
   const masterSwitch = overlay.querySelector('#subpage-master-switch') as MdSwitch | null;
@@ -527,11 +533,7 @@ async function openSubPageInternal(config: SubPageConfig): Promise<SubPageInstan
 
   const instance: SubPageInstance = {
     overlay,
-    close: () => {
-      if (closed) return;
-      if (history.state && history.state.subpage === config.id) history.back();
-      else closeOverlay();
-    },
+    close: requestBack,
     isMasterEnabled: () => masterEnabled,
   };
 

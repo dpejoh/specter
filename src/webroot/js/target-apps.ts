@@ -1,60 +1,64 @@
-import { exec, spawnCommand, getModuleDir, getDataDir } from './bridge.js';
+import { exec, spawnCommand, getModuleDir } from './bridge.js';
 import { cfgGet } from './cfg.js';
-import { shellEscape, fetchJson, escapeHtml, afterPaint } from './utils.js';
-import { showToast, showLoadingToast, updateToast } from './toast.js';
-import { getTranslation } from './i18n.js';
-import { appendToOutput } from './terminal.js';
+import { shellEscape, fetchJson } from './utils.js';
 import { API_URLS } from './constants.js';
 import type { KeystoreManagerJson } from './types.js';
-import { AppIconManager, ksuGlobal } from './target-apps-icons.js';
 import { openTeesimModeDialog, openModeSubpage, openRegenerateDialog } from './target-apps-dialogs.js';
 import type { TargetDialogsContext } from './target-apps-dialogs.js';
-import { setupOverlayA11y } from './overlay-a11y.js';
-import { closeMenu, wireMenuTrigger } from './menu-utils.js';
-import { overlayHeader } from './ui-overlay.js';
-import { createFilterDropdown, type FilterDropdownHandle, type FilterOption } from './filter-dropdown.js';
-import './ui/sp-settings-row.js';
-import './ui/sp-settings-section.js';
-import './ui/sp-skeleton.js';
+import {
+  importDenylistAction,
+  openAppListPage,
+  refreshAction,
+  selectAllAction,
+  deselectAllAction,
+  toggleModeAction,
+  toggleSystemAction,
+  type AppListPageAdapter,
+  type AppListPageContext,
+} from './app-list-page.js';
+import {
+  nextCyclic,
+  parseSuffixedList,
+  serializeSuffixedSelection,
+  type AppListEntry,
+  type StateVisual,
+  type TargetAppState,
+  type TargetState,
+} from './app-list-model.js';
+import { specterDir, stageContent } from './app-list-io.js';
+import type { AppListShellSpec } from './app-list-shell.js';
 
-export type TargetState = 'unchecked' | 'bare' | 'conditional' | 'force';
-type BlacklistState = 'unchecked' | 'blacklisted';
-export type AppState = TargetState | BlacklistState;
-type Mode = 'target' | 'blacklist';
+export type { TargetState };
 export type KsmFormat = 'txt' | 'ini' | 'toml' | 'json' | '';
+export type AppState = TargetAppState;
+export type TargetApp = AppListEntry<TargetAppState>;
 
-export interface TargetApp {
-  packageName: string;
-  appName: string;
-  state: AppState;
-}
-
-
-const TARGET_MODE_ORDER: TargetState[] = ['bare', 'conditional', 'force'];
-const BLACKLIST_STATE_ORDER: BlacklistState[] = ['unchecked', 'blacklisted'];
-
-const TARGET_ICONS: Record<string, string> = {
-  unchecked: '', bare: 'done', conditional: '', force: '',
+const TARGET_VISUALS: Record<string, StateVisual> = {
+  unchecked: {
+    icon: '',
+    text: '',
+    labelKey: 'ta_state_unchecked',
+    labelFallback: 'Not in target list',
+  },
+  bare: {
+    icon: 'done',
+    text: '',
+    labelKey: 'ta_state_bare',
+    labelFallback: 'In target list',
+  },
+  conditional: {
+    icon: '',
+    text: '?',
+    labelKey: 'ta_state_conditional',
+    labelFallback: 'Conditional (?)',
+  },
+  force: {
+    icon: '',
+    text: '!',
+    labelKey: 'ta_state_force',
+    labelFallback: 'Force (!)',
+  },
 };
-const TARGET_TEXT: Record<string, string> = {
-  unchecked: '', bare: '', conditional: '?', force: '!',
-};
-const TARGET_LABEL_KEYS: Record<string, string> = {
-  unchecked: 'ta_state_unchecked', bare: 'ta_state_bare',
-  conditional: 'ta_state_conditional', force: 'ta_state_force',
-};
-
-const BLACKLIST_ICONS: Record<string, string> = {
-  unchecked: '', blacklisted: 'block',
-};
-const BLACKLIST_TEXT: Record<string, string> = {
-  unchecked: '', blacklisted: '',
-};
-const BLACKLIST_LABEL_KEYS: Record<string, string> = {
-  unchecked: 'bl_state_not_blacklisted', blacklisted: 'bl_state_blacklisted',
-};
-
-const specterDir = () => getDataDir() || '/data/adb/specter';
 
 // target.txt (Tricky Store) / injector.toml (OhMyKeymint) — both via target.sh.
 function targetScript(): string {
@@ -71,1123 +75,207 @@ async function readTargetList(): Promise<string> {
 
 async function writeTargetList(content: string): Promise<void> {
   const staging = `${specterDir()}/.target_staging`;
-  const b64 = btoa(unescape(encodeURIComponent(content)));
-  const written = await spawnCommand(
-    `mkdir -p ${specterDir()} && printf '%s' ${shellEscape(b64)} | base64 -d > ${shellEscape(staging)}`
-  );
-  if (written.code !== 0) throw new Error(written.stderr || 'failed to stage target list');
+  await stageContent(staging, content, 'target list');
   const committed = await spawnCommand(`sh ${targetScript()} --set ${shellEscape(staging)}`);
   if (committed.code !== 0) throw new Error(committed.stderr || 'failed to commit target list');
   await spawnCommand(`rm -f ${shellEscape(staging)}`);
 }
 
-function t(key: string, fallback: string): string {
-  return getTranslation(key) || fallback;
-}
-
-function nextState(current: AppState): AppState {
-  const idx = BLACKLIST_STATE_ORDER.indexOf(current as BlacklistState);
-  return BLACKLIST_STATE_ORDER[(idx + 1) % BLACKLIST_STATE_ORDER.length]!;
-}
-
-function stateIcons(state: AppState, mode: Mode): string {
-  return mode === 'blacklist' ? BLACKLIST_ICONS[state] || '' : TARGET_ICONS[state] || '';
-}
-
-function stateText(state: AppState, mode: Mode): string {
-  return mode === 'blacklist' ? BLACKLIST_TEXT[state] || '' : TARGET_TEXT[state] || '';
-}
-
-function stateLabelKey(state: AppState, mode: Mode): string {
-  if (mode === 'blacklist') return BLACKLIST_LABEL_KEYS[state] || 'unchecked';
-  return TARGET_LABEL_KEYS[state] || 'unchecked';
-}
-
-async function shellExec(cmd: string): Promise<{ stdout: string }> {
-  try { return await exec(cmd); } catch { return { stdout: '' }; }
-}
-
-async function fetchUserPackages(): Promise<string[]> {
-  const pkgSet = new Set<string>();
-  const ksu = ksuGlobal();
-  if (typeof ksu?.listUserPackages === 'function') {
-    try {
-      const list = JSON.parse(ksu.listUserPackages()) as string[];
-      for (const p of list) pkgSet.add(p);
-    } catch {}
-  } else if (typeof ksu?.listPackages === 'function') {
-    try {
-      const list = JSON.parse(ksu.listPackages('user')) as string[];
-      for (const p of list) pkgSet.add(p);
-    } catch {}
-  }
-  if (pkgSet.size > 0) return [...pkgSet];
-  // Both cmd and pm emit "package:<name>"; strip the prefix here so the
-  // fallback works regardless of which one answered.
-  const r = await shellExec('cmd package list packages -3 2>/dev/null || pm list packages -3 2>/dev/null');
-  for (const raw of r.stdout.split('\n')) {
-    const pkg = raw.trim().replace(/^package:/, '');
-    if (pkg) pkgSet.add(pkg);
-  }
-  return [...pkgSet];
-}
-
-async function resolvePackageNames(packages: string[]): Promise<Map<string, string>> {
-  const map = new Map<string, string>();
-  const ksu = ksuGlobal();
-  if (typeof ksu?.getPackagesInfo === 'function') {
-    try {
-      const raw = ksu.getPackagesInfo(JSON.stringify(packages));
-      const list = JSON.parse(raw) as Array<{ packageName: string; appLabel?: string }>;
-      for (let i = 0; i < packages.length && i < list.length; i++) {
-        const label = list[i]?.appLabel;
-        map.set(packages[i]!, label && label !== packages[i] ? label : packages[i]!);
-      }
-      for (let i = list.length; i < packages.length; i++) {
-        map.set(packages[i]!, packages[i]!);
-      }
-      return map;
-    } catch {}
-  }
-  for (const pkg of packages) map.set(pkg, pkg);
-  return map;
-}
-
-function buildOverlayHTML(): string {
-  // Same skeleton pattern as the keybox catalog: rows inside a section so
-  // the loading state has the loaded list's grouped shape. The aria-hidden
-  // goes on the section, never the rows (see keybox-catalog-ui.ts).
-  const skeletonRow = `
-        <sp-settings-row variant="custom" class="ta-skeleton-row">
-          <sp-skeleton slot="leading" variant="rounded" class="ta-skeleton-icon"></sp-skeleton>
-          <span slot="headline"><sp-skeleton variant="text" class="ta-skeleton-title"></sp-skeleton></span>
-          <span slot="supporting"><sp-skeleton variant="text" class="ta-skeleton-desc"></sp-skeleton></span>
-          <sp-skeleton slot="trailing" variant="circular" class="ta-skeleton-state"></sp-skeleton>
-        </sp-settings-row>`;
-  return `
-    <div class="ta-inner">
-      <div class="ptr-indicator" id="ptr-indicator">
-        <div class="ptr-progress-wrap">
-          <md-icon id="ptr-arrow" class="ptr-arrow">refresh</md-icon>
-        </div>
-      </div>
-      ${overlayHeader({
-        className: 'ta-header',
-        back: { id: 'ta-back', className: 'ta-back-btn', label: t('common_back', 'Back') },
-        title: t('ta_title', 'App Targeting'),
-        titleTag: 'h2',
-        titleClass: 'ta-title',
-        titleId: 'ta-title',
-        actions: `<div class="ta-search-container" hidden>
-          <md-outlined-text-field id="ta-search" class="ta-search" placeholder="${t('ta_search_placeholder', 'Search apps')}" aria-label="${escapeHtml(t('ta_search_placeholder', 'Search apps'))}">
-            <md-icon-button slot="trailing-icon" id="ta-search-clear" aria-label="${escapeHtml(t('ta_search_clear', 'Clear search'))}" style="display: none;">
-              <md-icon aria-hidden="true">close</md-icon>
-            </md-icon-button>
-          </md-outlined-text-field>
-        </div>
-        <button id="ta-search-btn" class="ta-menu-btn" aria-label="${escapeHtml(t('ta_search_placeholder', 'Search apps'))}" aria-expanded="false">
-          <md-icon aria-hidden="true">search</md-icon>
-        </button>
-        <button id="ta-menu-btn" class="ta-menu-btn" aria-label="${escapeHtml(t('ta_menu_more', 'More options'))}">
-          <md-icon aria-hidden="true">more_vert</md-icon>
-        </button>
-        <md-menu id="ta-menu" class="ta-menu" anchor="ta-menu-btn" positioning="fixed">
-          <md-menu-item id="ta-refresh" class="first">
-            <div slot="headline">${escapeHtml(t('ta_refresh', 'Refresh'))}</div>
-          </md-menu-item>
-          <md-menu-item id="ta-select-all">
-            <div slot="headline">${escapeHtml(t('ta_select_all', 'Select All'))}</div>
-          </md-menu-item>
-          <md-menu-item id="ta-deselect-all">
-            <div slot="headline">${escapeHtml(t('ta_deselect_all', 'Deselect All'))}</div>
-          </md-menu-item>
-          <md-menu-item id="ta-mode">
-            <div slot="headline">${escapeHtml(t('ta_mode_menu', 'Default Mode'))}</div>
-          </md-menu-item>
-          <md-menu-item id="ta-regenerate">
-            <div slot="headline">${escapeHtml(t('ta_regenerate', 'Regenerate'))}</div>
-          </md-menu-item>
-          <md-menu-item id="ta-toggle-system">
-            <div slot="headline">${escapeHtml(t('ta_show_system', 'Show system apps'))}</div>
-          </md-menu-item>
-          <md-menu-item id="ta-toggle-mode">
-            <div slot="headline">${escapeHtml(t('ta_edit_blacklist', 'Edit blacklist'))}</div>
-          </md-menu-item>
-          <md-menu-item id="ta-import-denylist" class="last">
-            <div slot="headline">${escapeHtml(t('ta_import_denylist', 'Import from DenyList'))}</div>
-          </md-menu-item>
-        </md-menu>`,
-      })}
-
-      <div class="ta-filters" id="ta-filters"></div>
-
-      <div class="ta-list" id="ta-list" style="display: none"></div>
-
-      <div class="ta-loading" id="ta-loading" role="status">
-        <sp-settings-section aria-hidden="true">${skeletonRow.repeat(8)}</sp-settings-section>
-        <p>${t('ta_loading', 'Loading apps...')}</p>
-      </div>
-    </div>
-
-    <md-fab id="ta-apply" class="ta-fab" label="${t('ta_apply', 'Apply')}">
-      <md-icon slot="icon">check</md-icon>
-    </md-fab>
-  `;
-}
-
-
-export async function openTargetAppsManager() {
-  if (document.querySelector('.ta-overlay')) return;
-  await import('./material-subpages.js');
-  const overlay = document.createElement('div');
-  overlay.className = 'ta-overlay';
-  overlay.innerHTML = buildOverlayHTML();
-
-  let apps: TargetApp[] = [];
-  let filteredApps: TargetApp[] = [];
-  let currentFilter: 'all' | 'selected' | 'not_selected' = 'all';
-  let currentModeFilter: 'all' | 'bare' | 'conditional' | 'force' = 'all';
-  let currentSearch = '';
-  let showSystemApps = false;
-  let sysPkgs: string[] = [];
-  let mode: Mode = 'target';
-  let defaultMode = 'bare';
-  let ksmFormat: KsmFormat = 'txt';
-  let supportsPerAppMode = true;
-
-  const iconMgr = new AppIconManager();
-
-  document.body.appendChild(overlay);
-
-  requestAnimationFrame(() => overlay.classList.add('ta-overlay--open'));
-  document.documentElement.style.overflow = 'hidden';
-  window.isOverlayOpen = true;
-  history.pushState({ overlay: 'target-apps' }, '');
-  appendToOutput('[TARGET] Opened App Targeting overlay');
-
-  const list = overlay.querySelector('#ta-list') as HTMLElement;
-  const loading = overlay.querySelector('#ta-loading') as HTMLElement;
-  const searchInput = overlay.querySelector('#ta-search') as MdOutlinedTextField;
-  const titleEl = overlay.querySelector('.ta-title') as HTMLElement;
-  const headerEl = overlay.querySelector('.ta-header') as HTMLElement;
-  const searchContainer = overlay.querySelector('.ta-search-container') as HTMLElement;
-  const searchBtn = overlay.querySelector('#ta-search-btn') as HTMLButtonElement;
-  const searchClearBtn = overlay.querySelector('#ta-search-clear') as HTMLElement;
-  let searchOpen = false;
-
-  const filterOptions = (): FilterOption[] => [
-    { value: 'all', label: t('ta_filter_all', 'All') },
-    {
-      value: 'selected',
-      label: mode === 'blacklist' ? t('bl_filter_blacklisted', 'Blacklisted') : t('ta_filter_selected', 'Selected'),
+function targetShellSpec(): AppListShellSpec {
+  return {
+    title: { id: 'ta-title', label: { key: 'ta_title', fallback: 'App Targeting' } },
+    back: { id: 'ta-back', label: { key: 'common_back', fallback: 'Back' } },
+    search: {
+      inputId: 'ta-search',
+      clearId: 'ta-search-clear',
+      buttonId: 'ta-search-btn',
+      placeholder: { key: 'ta_search_placeholder', fallback: 'Search apps' },
+      clearLabel: { key: 'ta_search_clear', fallback: 'Clear search' },
     },
-    {
-      value: 'not_selected',
-      label: mode === 'blacklist' ? t('bl_filter_not_blacklisted', 'Not Blacklisted') : t('ta_filter_not_selected', 'Not Selected'),
+    menu: {
+      buttonId: 'ta-menu-btn',
+      id: 'ta-menu',
+      buttonLabel: { key: 'ta_menu_more', fallback: 'More options' },
+      items: [
+        { id: 'ta-refresh', label: { key: 'ta_refresh', fallback: 'Refresh' }, slotClass: 'first' },
+        { id: 'ta-select-all', label: { key: 'ta_select_all', fallback: 'Select All' } },
+        { id: 'ta-deselect-all', label: { key: 'ta_deselect_all', fallback: 'Deselect All' } },
+        { id: 'ta-mode', label: { key: 'ta_mode_menu', fallback: 'Default Mode' } },
+        { id: 'ta-regenerate', label: { key: 'ta_regenerate', fallback: 'Regenerate' } },
+        { id: 'ta-toggle-system', label: { key: 'ta_show_system', fallback: 'Show system apps' } },
+        { id: 'ta-toggle-mode', label: { key: 'ta_edit_blacklist', fallback: 'Edit blacklist' } },
+        { id: 'ta-import-denylist', label: { key: 'ta_import_denylist', fallback: 'Import from DenyList' }, slotClass: 'last' },
+      ],
     },
-  ];
-
-  const modeFilterOptions = (): FilterOption[] => [
-    { value: 'all', label: t('ta_filter_all_modes', 'All Modes') },
-    { value: 'bare', label: t('ta_mode_bare', 'Auto') },
-    { value: 'conditional', label: `? ${t('ta_mode_conditional', 'Leaf')}` },
-    { value: 'force', label: `! ${t('ta_mode_force', 'Gen')}` },
-  ];
-
-  const filterDropdown: FilterDropdownHandle = createFilterDropdown({
-    id: 'ta-state-filter',
-    ariaLabel: t('ta_filter_aria', 'Filter apps by selection'),
-    value: currentFilter,
-    options: filterOptions(),
-    onChange: (value) => {
-      currentFilter = value as typeof currentFilter;
-      if (currentFilter === 'not_selected' && currentModeFilter !== 'all') {
-        currentModeFilter = 'all';
-        modeFilterDropdown.setValue('all');
-      }
-      applyFilters();
-    },
-  });
-
-  const modeFilterDropdown: FilterDropdownHandle = createFilterDropdown({
-    id: 'ta-mode-filter',
-    ariaLabel: t('ta_filter_mode_aria', 'Filter apps by mode'),
-    value: currentModeFilter,
-    options: modeFilterOptions(),
-    onChange: (value) => {
-      currentModeFilter = value as typeof currentModeFilter;
-      if (currentModeFilter !== 'all' && currentFilter === 'not_selected') {
-        currentFilter = 'all';
-        filterDropdown.setValue('all');
-      }
-      applyFilters();
-    },
-  });
-
-  function syncModeFilterVisibility() {
-    modeFilterDropdown.element.hidden = mode === 'blacklist' || !supportsPerAppMode;
-  }
-
-  const filtersEl = overlay.querySelector('#ta-filters')!;
-  filtersEl.appendChild(filterDropdown.element);
-  filtersEl.appendChild(modeFilterDropdown.element);
-  syncModeFilterVisibility();
-  list.addEventListener('scroll', maybeAppendMore, { passive: true });
-  const targetMap = new Map<string, AppState>();
-  let blPkgs = new Set<string>();
-
-  let cleanupA11y = () => {};
-  let closed = false;
-  function closeOverlay() {
-    if (closed) return;
-    closed = true;
-    cleanupA11y();
-    filterDropdown.dispose();
-    modeFilterDropdown.dispose();
-    chunkObserver?.disconnect();
-    iconMgr.destroy();
-    window.isOverlayOpen = false;
-    searchOpen = false;
-    window.removeEventListener('popstate', onPopState);
-    overlay.classList.remove('ta-overlay--open');
-    document.documentElement.style.overflow = '';
-    setTimeout(() => {
-      if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-    }, 300);
-  }
-
-  // Back (hardware or the header button, both go through history) first
-  // collapses an open search; only a second Back closes the overlay.
-  function onPopState(e: PopStateEvent) {
-    if (searchOpen) {
-      exitSearch();
-    } else if (mode === 'blacklist' && (!e.state || e.state.mode !== 'blacklist')) {
-      switchToTargetMode();
-    } else if (e.state && (e.state.overlay === 'target-apps' || e.state.subpage)) {
-      return;
-    } else {
-      closeOverlay();
-    }
-  }
-
-  cleanupA11y = setupOverlayA11y(overlay, {
-    titleId: 'ta-title',
-    onClose: closeOverlay,
-    initialFocus: overlay.querySelector('#ta-back'),
-  });
-
-  overlay.querySelector('#ta-back')!.addEventListener('click', () => {
-    if (mode === 'blacklist') {
-      switchToTargetMode();
-      if (history.state?.mode === 'blacklist') {
-        history.back();
-      }
-    } else {
-      history.back();
-    }
-  });
-
-  wireMenuTrigger(
-    overlay.querySelector('#ta-menu-btn'),
-    overlay.querySelector('#ta-menu') as MdMenu | null,
-  );
-
-  function closeTapMenu() {
-    const menu = overlay.querySelector('#ta-menu') as MdMenu | null;
-    closeMenu(menu);
-  }
-
-  function setMode(newMode: Mode) {
-    mode = newMode;
-    appendToOutput(`[TARGET] Switched to ${newMode === 'blacklist' ? 'blacklist' : 'target'} mode`);
-    const toggleItem = overlay.querySelector('#ta-toggle-system') as HTMLElement;
-    const toggleHeadline = toggleItem?.querySelector('[slot="headline"]');
-    const modeItem = overlay.querySelector('#ta-toggle-mode') as HTMLElement;
-    const modeHeadline = modeItem?.querySelector('[slot="headline"]');
-
-    if (mode === 'blacklist') {
-      titleEl.textContent = t('bl_title', 'Blacklist');
-      if (modeHeadline) modeHeadline.textContent = t('ta_edit_target', 'Back to targeting');
-      if (showSystemApps && toggleHeadline) {
-        toggleHeadline.textContent = t('ta_hide_system', 'Hide system apps');
-      }
-    } else {
-      titleEl.textContent = t('ta_title', 'App Targeting');
-      if (modeHeadline) modeHeadline.textContent = t('ta_edit_blacklist', 'Edit blacklist');
-    }
-    currentFilter = 'all';
-    currentModeFilter = 'all';
-    filterDropdown.setOptions(filterOptions());
-    filterDropdown.setValue('all');
-    modeFilterDropdown.setValue('all');
-    syncModeFilterVisibility();
-    applyFilters();
-  }
-
-  overlay.querySelector('#ta-refresh')!.addEventListener('click', () => {
-    closeTapMenu();
-    void refreshApps();
-  });
-
-  overlay.querySelector('#ta-select-all')!.addEventListener('click', () => {
-    const on = mode === 'blacklist' ? 'blacklisted' : (supportsPerAppMode ? (defaultMode as AppState) : 'bare');
-    for (const app of apps) {
-      app.state = on;
-      if (mode === 'blacklist') targetMap.delete(app.packageName);
-    }
-    appendToOutput(`[TARGET] Selected all apps`);
-    applyFilters();
-    closeTapMenu();
-  });
-
-  overlay.querySelector('#ta-deselect-all')!.addEventListener('click', () => {
-    for (const app of apps) app.state = 'unchecked';
-    appendToOutput(`[TARGET] Deselected all apps`);
-    applyFilters();
-    closeTapMenu();
-  });
-
-  function switchToBlacklistMode() {
-    appendToOutput('[TARGET] Loading blacklist...');
-    exec(`cat ${specterDir()}/blacklist.txt 2>/dev/null || echo ""`).then(({ stdout }) => {
-      blPkgs = new Set(stdout.split('\n').map(s => s.trim()).filter(Boolean));
-      appendToOutput(`[TARGET] Loaded ${blPkgs.size} blacklisted entries`);
-      for (const app of apps) {
-        app.state = blPkgs.has(app.packageName) ? 'blacklisted' : 'unchecked';
-      }
-      setMode('blacklist');
-    });
-  }
-
-  function switchToTargetMode() {
-    setMode('target');
-    appendToOutput('[TARGET] Reloading target states...');
-    readTargetList().then(async (stdout) => {
-      const currentBl = new Set<string>();
-      for (const app of apps) {
-        if (app.state === 'blacklisted') currentBl.add(app.packageName);
-      }
-      try {
-        const { stdout: blStdout } = await exec(`cat ${specterDir()}/blacklist.txt 2>/dev/null || echo ""`);
-        for (const pkg of blStdout.split('\n').map(s => s.trim()).filter(Boolean)) {
-          currentBl.add(pkg);
-        }
-      } catch {}
-
-      const lines = stdout.split('\n').map(s => s.trim()).filter(Boolean);
-      targetMap.clear();
-      for (const line of lines) {
-        const pkg = line.replace(/[!?]$/, '');
-        if (currentBl.has(pkg)) continue;
-        if (line.endsWith('!')) targetMap.set(pkg, 'force');
-        else if (line.endsWith('?')) targetMap.set(pkg, 'conditional');
-        else targetMap.set(pkg, 'bare');
-      }
-      for (const app of apps) {
-        app.state = targetMap.get(app.packageName) || 'unchecked';
-      }
-      applyFilters();
-    }).catch((e) => {
-      appendToOutput(`[TARGET] Failed to reload target states: ${e}`, true);
-    });
-  }
-
-  overlay.querySelector('#ta-toggle-mode')!.addEventListener('click', () => {
-    closeTapMenu();
-    if (mode === 'target') {
-      history.pushState({ overlay: 'target-apps', mode: 'blacklist' }, '');
-      switchToBlacklistMode();
-    } else {
-      switchToTargetMode();
-      if (history.state?.mode === 'blacklist') {
-        history.back();
-      }
-    }
-  });
-
-  overlay.querySelector('#ta-import-denylist')!.addEventListener('click', async () => {
-    const { stdout } = await shellExec('magisk --denylist ls 2>/dev/null | awk -F\'|\' \'{print $1}\' | grep -v "isolated" | sort -u || echo ""');
-    const pkgs = stdout.split('\n').map(s => s.trim()).filter(Boolean);
-    if (pkgs.length === 0) {
-      showToast(t('ta_prompt_denylist_failed', 'Failed to read DenyList'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
-      appendToOutput('[TARGET] DenyList: failed to read', true);
-    } else {
-      let count = 0;
-      for (const app of apps) {
-        if (pkgs.includes(app.packageName)) {
-          app.state = mode === 'blacklist' ? 'blacklisted' : 'bare';
-          if (mode === 'blacklist') targetMap.delete(app.packageName);
-          count++;
-        }
-      }
-      appendToOutput(`[TARGET] Imported ${count} apps from DenyList`);
-      applyFilters();
-      showToast(t('ta_prompt_denylist_imported', 'DenyList apps selected'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2000 });
-    }
-    closeTapMenu();
-  });
-
-  const dialogsCtx: TargetDialogsContext = {
-    apps,
-    getDefaultMode: () => defaultMode,
-    setDefaultMode: (m: string) => { defaultMode = m; },
-    applyFilters,
-    refreshApps,
-    loading,
-    list,
+    filtersId: 'ta-filters',
+    listId: 'ta-list',
+    loading: { id: 'ta-loading', label: { key: 'ta_loading', fallback: 'Loading apps...' } },
+    apply: { id: 'ta-apply', label: { key: 'ta_apply', fallback: 'Apply' } },
+    ptr: { indicatorId: 'ptr-indicator', arrowId: 'ptr-arrow' },
   };
+}
 
-  overlay.querySelector('#ta-regenerate')!.addEventListener('click', () => {
-    closeTapMenu();
-    openRegenerateDialog(dialogsCtx);
-  });
+function dialogsContext(ctx: AppListPageContext): TargetDialogsContext {
+  return {
+    apps: ctx.apps,
+    getDefaultMode: () => ctx.defaultPrimaryState,
+    setDefaultMode: (m: string) => { ctx.defaultPrimaryState = m; },
+    applyFilters: () => ctx.applyFilters(),
+    refreshApps: () => ctx.refresh(),
+    loading: ctx.elements.loading,
+    list: ctx.elements.list,
+  };
+}
 
-  overlay.querySelector('#ta-mode')!.addEventListener('click', () => {
-    closeTapMenu();
-    if (ksmFormat === 'json') openTeesimModeDialog();
-    else if (supportsPerAppMode) openModeSubpage(dialogsCtx);
-  });
-
-  overlay.querySelector('#ta-toggle-system')!.addEventListener('click', async () => {
-    showSystemApps = !showSystemApps;
-    appendToOutput(`[TARGET] ${showSystemApps ? 'Showing' : 'Hiding'} system apps`);
-    const menuItem = overlay.querySelector('#ta-toggle-system') as HTMLElement;
-    const headline = menuItem.querySelector('[slot="headline"]')!;
-    if (showSystemApps) {
-      if (sysPkgs.length === 0) {
-        const { stdout } = await shellExec('pm list packages -s 2>/dev/null | cut -d: -f2');
-        sysPkgs = stdout.split('\n').map(s => s.trim()).filter(Boolean);
-      }
-      const existingPkgs = new Set(apps.map(a => a.packageName));
-      const labelMap = await resolvePackageNames(sysPkgs);
-
-      let blSet = new Set<string>();
-      if (mode === 'blacklist') {
-        const { stdout } = await shellExec(`cat ${specterDir()}/blacklist.txt 2>/dev/null || echo ""`);
-        blSet = new Set(stdout.split('\n').map(s => s.trim()).filter(Boolean));
-      }
-
-      for (const pkg of sysPkgs) {
-        if (!existingPkgs.has(pkg)) {
-          let state: AppState = 'unchecked';
-          if (mode === 'target') state = targetMap.get(pkg) || 'unchecked';
-          else state = blSet.has(pkg) ? 'blacklisted' : 'unchecked';
-          apps.push({ packageName: pkg, appName: labelMap.get(pkg) || pkg, state });
+export function createTargetAdapter(): AppListPageAdapter {
+  return {
+    overlay: {
+      className: 'ta-overlay',
+      guardSelector: '.ta-overlay',
+      historyKey: 'target-apps',
+      primaryModeName: 'target',
+      idPrefix: 'ta',
+    },
+    primaryFilterId: 'ta-state-filter',
+    shell: targetShellSpec(),
+    labels: {
+      primaryTitle: { key: 'ta_title', fallback: 'App Targeting' },
+      blacklistTitle: { key: 'bl_title', fallback: 'Blacklist' },
+      editBlacklist: { key: 'ta_edit_blacklist', fallback: 'Edit blacklist' },
+      backToPrimary: { key: 'ta_edit_target', fallback: 'Back to targeting' },
+      showSystem: { key: 'ta_show_system', fallback: 'Show system apps' },
+      hideSystem: { key: 'ta_hide_system', fallback: 'Hide system apps' },
+      filterAll: { key: 'ta_filter_all', fallback: 'All' },
+      filterSelected: { key: 'ta_filter_selected', fallback: 'Selected' },
+      filterNotSelected: { key: 'ta_filter_not_selected', fallback: 'Not Selected' },
+      filterSelectedBlacklist: { key: 'bl_filter_blacklisted', fallback: 'Blacklisted' },
+      filterNotSelectedBlacklist: { key: 'bl_filter_not_blacklisted', fallback: 'Not Blacklisted' },
+      filterAria: { key: 'ta_filter_aria', fallback: 'Filter apps by selection' },
+      apply: { key: 'ta_apply', fallback: 'Apply' },
+      applying: { key: 'ta_applying', fallback: 'Applying…' },
+      applied: { key: 'ta_applied', fallback: 'Applied' },
+      loadError: { key: 'ta_load_error', fallback: 'Failed to load apps' },
+      noResults: { key: 'ta_no_results', fallback: 'No apps match your filter' },
+    },
+    visuals: TARGET_VISUALS,
+    terms: {
+      logPrefix: '[TARGET]',
+      overlayName: 'App Targeting',
+      primaryMode: 'target',
+      primaryScope: 'target list',
+      failedPrimarySave: 'Failed to save target list',
+    },
+    state: {
+      defaultPrimaryState: ctx => ctx.supportsPerAppMode ? ctx.defaultPrimaryState : 'bare',
+      rowNext: (app, ctx) => {
+        if (ctx.mode === 'blacklist') {
+          return app.state === 'unchecked' ? 'blacklisted' : 'unchecked';
         }
-      }
-      apps.sort((a, b) => a.packageName.localeCompare(b.packageName));
-      headline.textContent = t('ta_hide_system', 'Hide system apps');
-    } else {
-      headline.textContent = t('ta_show_system', 'Show system apps');
-    }
-    applyFilters();
-    closeTapMenu();
-  });
-
-  function ingestTargetList(raw: string) {
-    targetMap.clear();
-    for (const line of raw.split('\n').map(s => s.trim()).filter(Boolean)) {
-      if (supportsPerAppMode && line.endsWith('!')) targetMap.set(line.slice(0, -1), 'force');
-      else if (supportsPerAppMode && line.endsWith('?')) targetMap.set(line.slice(0, -1), 'conditional');
-      else targetMap.set(line.replace(/[!?]$/, ''), 'bare');
-    }
-  }
-
-  async function replaceApps(pkgs: string[]) {
-    const have = new Set(pkgs);
-    const extra = [...targetMap.keys()].filter(p => !have.has(p));
-    const all = pkgs.concat(extra);
-    const labelMap = await resolvePackageNames(all);
-    apps.length = 0;
-    for (const pkg of all) {
-      apps.push({
-        packageName: pkg,
-        appName: labelMap.get(pkg) || pkg,
-        state: targetMap.get(pkg) || 'unchecked',
-      });
-    }
-  }
-
-  async function loadData() {
-    try {
-      const ksu = ksuGlobal();
-      if (typeof ksu?.cacheAllPackageIcons === 'function') {
-        try { ksu.cacheAllPackageIcons(48); } catch {}
-      }
-
-      // Fetch Keystore config, default mode, target list, and user packages concurrently
-      const [km, defaultModeVal, targetResult, pkgs] = await Promise.all([
-        fetchJson<KeystoreManagerJson>(API_URLS.KEYSTORE_MANAGER!, 0).catch(() => null),
-        cfgGet('target_default_mode', 'bare').catch(() => 'bare'),
-        readTargetList(),
-        fetchUserPackages(),
-      ]);
-
-      const fmt = km?.format || '';
-      ksmFormat = fmt === 'json' || fmt === 'toml' || fmt === 'txt' || fmt === 'ini' ? fmt : 'txt';
-      const perAppModes = km?.perAppModes;
-      supportsPerAppMode = perAppModes ?? (ksmFormat === 'txt' || ksmFormat === 'ini');
-      defaultMode = supportsPerAppMode ? (defaultModeVal || 'bare') : 'bare';
-      syncModeFilterVisibility();
-
-      const modeItem = overlay.querySelector('#ta-mode') as HTMLElement | null;
-      if (modeItem) {
-        modeItem.hidden = ksmFormat === 'toml';
-        const headline = modeItem.querySelector('[slot="headline"]');
-        if (headline) {
-          headline.textContent = ksmFormat === 'json'
-            ? t('ta_teesim_mode_title', 'Operation Mode')
-            : t('ta_mode_menu', 'Default Mode');
+        if (app.state === 'unchecked') {
+          return ctx.supportsPerAppMode ? ctx.defaultPrimaryState : 'bare';
         }
-        if (!modeItem.hidden && ksmFormat === 'json') {
-          exec(`sh ${shellEscape(getModuleDir() + '/webroot/common/conflicts.sh')} status 2>/dev/null || echo '[]'`).then(({ stdout }) => {
-            try {
-              const entries = JSON.parse(stdout) as Array<{ key: string; prioritySpecter: boolean }>;
-              const te = entries.find(e => e.key === 'teesim');
-              if (te && !te.prioritySpecter) modeItem.hidden = true;
-            } catch {}
-          }).catch(() => {});
+        return 'unchecked';
+      },
+      circleNext: (app, ctx) => {
+        if (ctx.mode === 'blacklist') {
+          return app.state === 'unchecked' ? 'blacklisted' : 'unchecked';
         }
-      }
-
-      ingestTargetList(targetResult);
-      await replaceApps(pkgs);
-
-      appendToOutput(`[TARGET] Loaded ${apps.length} user apps, ${targetMap.size} in target list`);
-      loading.style.display = 'none';
-      list.style.display = '';
-      applyFilters();
-    } catch (e) {
-      appendToOutput(`[TARGET] Failed to load app data: ${e}`, true);
-      loading.innerHTML = `<p class="ta-loading-error">${t('ta_load_error', 'Failed to load apps')}</p>`;
-    }
-  }
-
-  async function refreshApps() {
-    try {
-      const [defaultModeVal, targetResult, pkgs] = await Promise.all([
-        cfgGet('target_default_mode', 'bare').catch(() => 'bare'),
-        readTargetList(),
-        fetchUserPackages(),
-      ]);
-      defaultMode = supportsPerAppMode ? (defaultModeVal || 'bare') : 'bare';
-
-      ingestTargetList(targetResult);
-      await replaceApps(pkgs);
-
-      appendToOutput(`[TARGET] Refreshed ${apps.length} user apps, ${targetMap.size} in target list`);
-      applyFilters();
-    } catch (e) {
-      appendToOutput(`[TARGET] Refresh failed: ${e}`, true);
-    }
-  }
-
-  function setupPullToRefresh() {
-    const THRESHOLD = 80;
-    const MAX_PULL = 200;
-    const RESISTANCE = 0.5;
-
-    const ptrList = overlay.querySelector('#ta-list') as HTMLElement;
-    const indicator = overlay.querySelector('#ptr-indicator') as HTMLElement;
-    const arrow = overlay.querySelector('#ptr-arrow') as HTMLElement;
-
-    let startY = 0;
-    let pulling = false;
-    let triggered = false;
-
-    function setIndicatorPull(pull: number) {
-      indicator.style.transform = `translateY(${-80 + pull}px)`;
-    }
-
-    function resetIndicator() {
-      indicator.style.transform = '';
-      indicator.style.opacity = '0';
-    }
-
-    function doEnd() {
-      pulling = false;
-      indicator.classList.remove('ptr-dragging');
-
-      const m = (indicator.style.transform || '').match(/translateY\(([-\d.]+)px\)/);
-      const currentY = m ? parseFloat(m[1] ?? '') : -80;
-      const pull = currentY + 80;
-
-      if (pull >= THRESHOLD && !triggered) {
-        triggered = true;
-        arrow.style.display = 'none';
-        indicator.style.transform = 'translateY(0px)';
-        indicator.style.opacity = '1';
-        refreshApps().then(() => {
-          arrow.style.display = '';
-          resetIndicator();
-          triggered = false;
-        });
-      } else {
-        resetIndicator();
-        arrow.style.transform = '';
-      }
-    }
-
-    function doCancel() {
-      pulling = false;
-      indicator.classList.remove('ptr-dragging');
-      resetIndicator();
-      arrow.style.transform = '';
-    }
-
-    const isTouch = 'ontouchstart' in window;
-
-    // Touch events (mobile)
-    const onTouchStart = (e: TouchEvent) => {
-      if (ptrList.scrollTop > 0 || triggered || e.touches.length !== 1) return;
-      startY = e.touches[0]!.clientY;
-    };
-    const onTouchMove = (e: TouchEvent) => {
-      if (e.touches.length !== 1) return;
-      const dy = e.touches[0]!.clientY - startY;
-      if (!pulling) {
-        if (dy > 0 && ptrList.scrollTop === 0) {
-          pulling = true;
-          indicator.classList.add('ptr-dragging');
-          e.preventDefault();
-        }
-        return;
-      }
-      if (dy < 0) {
-        doCancel();
-        return;
-      }
-      e.preventDefault();
-      const pull = Math.min(dy * RESISTANCE, MAX_PULL);
-      const pct = Math.min(pull / THRESHOLD, 1);
-
-      indicator.style.opacity = String(pct);
-      setIndicatorPull(pull);
-      arrow.style.transform = `rotate(${pct * 360}deg)`;
-    };
-    const onTouchEnd = () => { doEnd(); };
-
-    // Pointer events (desktop fallback)
-    const onPointerDown = (e: PointerEvent) => {
-      if (isTouch) return;
-      if (ptrList.scrollTop > 0 || triggered) return;
-      startY = e.clientY;
-      pulling = true;
-      indicator.classList.add('ptr-dragging');
-      ptrList.setPointerCapture(e.pointerId);
-    };
-    const onPointerMove = (e: PointerEvent) => {
-      if (!pulling || isTouch) return;
-      const dy = e.clientY - startY;
-      if (dy < 0) {
-        doCancel();
-        return;
-      }
-      const pull = Math.min(dy * RESISTANCE, MAX_PULL);
-      const pct = Math.min(pull / THRESHOLD, 1);
-
-      indicator.style.opacity = String(pct);
-      setIndicatorPull(pull);
-      arrow.style.transform = `rotate(${pct * 360}deg)`;
-    };
-    const onPointerEnd = () => { if (!isTouch) doEnd(); };
-    const onPointerCancel = () => { if (!isTouch) doCancel(); };
-
-    if (isTouch) {
-      ptrList.addEventListener('touchstart', onTouchStart, { passive: false });
-      ptrList.addEventListener('touchmove', onTouchMove, { passive: false });
-      ptrList.addEventListener('touchend', onTouchEnd);
-      ptrList.addEventListener('touchcancel', doCancel);
-    } else {
-      ptrList.addEventListener('pointerdown', onPointerDown);
-      ptrList.addEventListener('pointermove', onPointerMove);
-      ptrList.addEventListener('pointerup', onPointerEnd);
-      ptrList.addEventListener('pointercancel', onPointerCancel);
-    }
-  }
-
-  // The list renders in chunks: the first chunk paints immediately and a
-  // sentinel near the bottom pulls in the next chunk as it approaches the
-  // viewport, so opening a few hundred apps never builds every row at once.
-  const CHUNK_SIZE = 48;
-  let renderedCount = 0;
-  let listSection: HTMLElement | null = null;
-  let sentinelEl: HTMLElement | null = null;
-  let chunkObserver: IntersectionObserver | null = null;
-
-  function renderList() {
-    chunkObserver?.disconnect();
-    chunkObserver = null;
-    sentinelEl = null;
-    list.innerHTML = '';
-    renderedCount = 0;
-    listSection = document.createElement('sp-settings-section');
-    list.appendChild(listSection);
-    appendChunk();
-
-    if (filteredApps.length === 0) {
-      const empty = document.createElement('div');
-      empty.className = 'ta-empty';
-      empty.textContent = t('ta_no_results', 'No apps match your filter');
-      list.appendChild(empty);
-    }
-  }
-
-  function appendChunk() {
-    if (!listSection) return;
-    const next = filteredApps.slice(renderedCount, renderedCount + CHUNK_SIZE);
-    if (next.length > 0) {
-      const fragment = document.createDocumentFragment();
-      for (const app of next) fragment.appendChild(buildRow(app));
-      listSection.appendChild(fragment);
-      renderedCount += next.length;
-      iconMgr.watchAll();
-    }
-    syncSentinel();
-  }
-
-  function syncSentinel() {
-    if (renderedCount >= filteredApps.length) {
-      sentinelEl?.remove();
-      sentinelEl = null;
-      chunkObserver?.disconnect();
-      return;
-    }
-    if (!sentinelEl) {
-      sentinelEl = document.createElement('div');
-      sentinelEl.className = 'ta-sentinel';
-      sentinelEl.setAttribute('aria-hidden', 'true');
-      list.appendChild(sentinelEl);
-    }
-    if (typeof IntersectionObserver === 'function') {
-      if (!chunkObserver) {
-        chunkObserver = new IntersectionObserver((entries) => {
-          if (entries.some(entry => entry.isIntersecting)) appendChunk();
-        }, { root: list, rootMargin: '600px' });
-      }
-      chunkObserver.observe(sentinelEl);
-    }
-  }
-
-  function maybeAppendMore() {
-    if (!sentinelEl || renderedCount >= filteredApps.length) return;
-    const rect = sentinelEl.getBoundingClientRect();
-    if (rect.top < list.getBoundingClientRect().bottom + 600) appendChunk();
-  }
-
-  function buildRow(app: TargetApp): HTMLElement {
-    const item = document.createElement('sp-settings-row');
-    item.setAttribute('variant', 'custom');
-    item.className = 'ta-item';
-    item.dataset.package = app.packageName;
-    item.dataset.state = app.state;
-    item.setAttribute('role', 'button');
-    item.tabIndex = 0;
-
-    const { wrap: iconContainer } = iconMgr.createElements(app.packageName);
-    iconContainer.setAttribute('slot', 'leading');
-
-    const nameEl = document.createElement('span');
-    nameEl.setAttribute('slot', 'headline');
-    nameEl.className = 'ta-item-name';
-    nameEl.textContent = app.appName;
-
-    const pkgEl = document.createElement('span');
-    pkgEl.setAttribute('slot', 'supporting');
-    pkgEl.className = 'ta-item-pkg';
-    pkgEl.textContent = app.packageName;
-
-    const circle = document.createElement('div');
-    circle.setAttribute('slot', 'trailing');
-    circle.className = 'ta-state-circle';
-    circle.setAttribute('data-state', app.state);
-    circle.setAttribute('aria-hidden', 'true');
-
-    const stateIcon = stateIcons(app.state, mode);
-    const stateTextVal = stateText(app.state, mode);
-    item.setAttribute('aria-label', `${app.appName}, ${t(stateLabelKey(app.state, mode), stateTextVal || app.state)}`);
-    circle.innerHTML = stateIcon
-      ? `<md-icon class="ta-state-icon">${stateIcon}</md-icon>`
-      : stateTextVal
-        ? `<span class="ta-state-icon ta-state-text">${stateTextVal}</span>`
-        : '';
-
-    function applyAppState(newState: AppState) {
-      app.state = newState;
-      if (mode === 'blacklist' && newState === 'blacklisted') {
-        targetMap.delete(app.packageName);
-      }
-      circle.setAttribute('data-state', newState);
-      item.setAttribute('aria-label', `${app.appName}, ${t(stateLabelKey(newState, mode), stateText(newState, mode) || newState)}`);
-      const iconEl = circle.querySelector('.ta-state-icon');
-      const ni = stateIcons(newState, mode);
-      const nt = stateText(newState, mode);
-      if (iconEl) {
-        if (ni) {
-          iconEl.outerHTML = `<md-icon class="ta-state-icon">${ni}</md-icon>`;
-        } else if (nt) {
-          iconEl.outerHTML = `<span class="ta-state-icon ta-state-text">${nt}</span>`;
-        } else {
-          iconEl.remove();
-        }
-      } else if (ni) {
-        circle.insertAdjacentHTML('beforeend', `<md-icon class="ta-state-icon">${ni}</md-icon>`);
-      } else if (nt) {
-        circle.insertAdjacentHTML('beforeend', `<span class="ta-state-icon ta-state-text">${nt}</span>`);
-      }
-      item.dataset.state = newState;
-      circle.classList.remove('ta-state-circle--anim');
-      void circle.offsetWidth;
-      circle.classList.add('ta-state-circle--anim');
-    }
-
-    circle.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (mode === 'blacklist') {
-        applyAppState(nextState(app.state));
-      } else if (app.state === 'unchecked') {
-        applyAppState('bare');
-      } else if (!supportsPerAppMode) {
-        applyAppState('unchecked');
-      } else {
-        const idx = TARGET_MODE_ORDER.indexOf(app.state as TargetState);
-        const next = TARGET_MODE_ORDER[(idx + 1) % TARGET_MODE_ORDER.length];
-        if (next) applyAppState(next);
-      }
-    });
-
-    item.addEventListener('click', () => {
-      if (mode === 'blacklist') {
-        applyAppState(app.state === 'unchecked' ? 'blacklisted' : 'unchecked');
-      } else {
-        const on = supportsPerAppMode ? (defaultMode as AppState) : 'bare';
-        applyAppState(app.state === 'unchecked' ? on : 'unchecked');
-      }
-    });
-    item.addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter' && e.key !== ' ') return;
-      e.preventDefault();
-      item.click();
-    });
-
-    item.appendChild(iconContainer);
-    item.appendChild(nameEl);
-    item.appendChild(pkgEl);
-    item.appendChild(circle);
-    return item;
-  }
-
-  function applyFilters() {
-    let result = apps;
-
-    if (currentSearch) {
-      const q = currentSearch.toLowerCase();
-      result = result.filter(a =>
-        a.packageName.toLowerCase().includes(q) || a.appName.toLowerCase().includes(q)
-      );
-    }
-
-    if (!showSystemApps && sysPkgs.length) {
-      const sysSet = new Set(sysPkgs);
-      result = result.filter(a => !sysSet.has(a.packageName) || a.state !== 'unchecked');
-    }
-
-    if (mode === 'blacklist') {
-      if (currentFilter === 'selected') {
-        result = result.filter(a => a.state === 'blacklisted');
-      } else if (currentFilter === 'not_selected') {
-        result = result.filter(a => a.state === 'unchecked');
-      }
-    } else {
-      if (currentFilter === 'selected') {
-        result = result.filter(a => a.state !== 'unchecked');
-      } else if (currentFilter === 'not_selected') {
-        result = result.filter(a => a.state === 'unchecked');
-      }
-
-      if (supportsPerAppMode && currentModeFilter !== 'all') {
-        result = result.filter(a => a.state === currentModeFilter);
-      }
-    }
-
-    result.sort((a, b) => {
-      const aSelected = a.state !== 'unchecked' ? 0 : 1;
-      const bSelected = b.state !== 'unchecked' ? 0 : 1;
-      if (aSelected !== bSelected) return aSelected - bSelected;
-      return a.appName.localeCompare(b.appName);
-    });
-
-    filteredApps = result;
-    renderList();
-  }
-
-  searchInput.addEventListener('input', () => {
-    currentSearch = (searchInput.value || '').trim();
-    syncSearchClear();
-    applyFilters();
-  });
-
-  function syncSearchClear() {
-    searchClearBtn.style.display = searchInput.value ? '' : 'none';
-  }
-
-  // The search field lives in the header, collapsed behind its icon like
-  // the Settings app: opening it swaps the title and actions for the
-  // field and pushes a history state, so Back collapses it again.
-  function openSearch() {
-    if (searchOpen) return;
-    searchOpen = true;
-    history.pushState({ overlay: 'target-apps', mode, search: true }, '');
-    headerEl.classList.add('ta-header--searching');
-    searchContainer.hidden = false;
-    searchBtn.setAttribute('aria-expanded', 'true');
-    searchInput.focus();
-  }
-
-  function exitSearch() {
-    if (!searchOpen) return;
-    searchOpen = false;
-    headerEl.classList.remove('ta-header--searching');
-    searchContainer.hidden = true;
-    searchBtn.setAttribute('aria-expanded', 'false');
-    if (currentSearch) {
-      searchInput.value = '';
-      currentSearch = '';
-      syncSearchClear();
-      applyFilters();
-    }
-  }
-
-  searchBtn.addEventListener('click', openSearch);
-
-  searchClearBtn.addEventListener('click', () => {
-    searchInput.value = '';
-    currentSearch = '';
-    syncSearchClear();
-    applyFilters();
-    searchInput.focus();
-  });
-
-  searchInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && searchOpen) {
-      e.preventDefault();
-      e.stopPropagation();
-      history.back();
-    }
-  });
-
-  const applyBtn = overlay.querySelector('#ta-apply') as (HTMLElement & { disabled: boolean; label?: string });
-  applyBtn.addEventListener('click', async () => {
-    if (applyBtn.disabled) return;
-    applyBtn.disabled = true;
-
-    const originalLabel = t('ta_apply', 'Apply');
-    applyBtn.label = t('ta_applying', 'Applying…');
-    applyBtn.setAttribute('label', t('ta_applying', 'Applying…'));
-
-    const loadingToast = showLoadingToast(t('ta_applying', 'Applying…'));
-
-    // Yield so WebView can paint the loading toast and busy state before bridge exec calls
-    await new Promise<void>(resolve => setTimeout(resolve, 0));
-
-    if (mode === 'blacklist') {
-      const bl = apps.filter(a => a.state === 'blacklisted').map(a => a.packageName).sort();
-      const blSet = new Set(bl);
-      for (const pkg of blSet) {
-        targetMap.delete(pkg);
-      }
-
-      try {
-        const content = bl.join('\n');
-        const result = await spawnCommand(`printf '%s' ${shellEscape(content)} | base64 -w0`);
-        const b64 = result.stdout || '';
-        await spawnCommand(`mkdir -p ${specterDir()} && printf '%s' "${b64}" | base64 -d > ${specterDir()}/blacklist.txt`);
-        await spawnCommand(`mkdir -p ${specterDir()} && touch ${specterDir()}/blacklist_enabled`);
-        appendToOutput(`[TARGET] Wrote ${bl.length} entries to blacklist.txt`);
-
-        try {
-          const rawTargets = await readTargetList();
-          const targetLines = rawTargets.split('\n').map(s => s.trim()).filter(Boolean);
-          const prunedLines = targetLines.filter(line => !blSet.has(line.replace(/[!?]$/, '')));
-          if (prunedLines.length !== targetLines.length) {
-            await writeTargetList(prunedLines.join('\n'));
-            appendToOutput(`[TARGET] Pruned ${targetLines.length - prunedLines.length} blacklisted entries from target list`);
-          }
-        } catch (te) {
-          appendToOutput(`[TARGET] Warning: could not prune target list: ${te}`, true);
-        }
-
-        updateToast(loadingToast, t('toast_blacklist_saved', 'Blacklist saved'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
-        applyBtn.label = t('ta_applied', 'Applied');
-        applyBtn.setAttribute('label', t('ta_applied', 'Applied'));
-        setTimeout(() => {
-          applyBtn.label = originalLabel;
-          applyBtn.setAttribute('label', originalLabel);
-          applyBtn.disabled = false;
-        }, 1500);
-      } catch (e) {
-        appendToOutput(`[TARGET] Failed to save blacklist: ${e}`, true);
-        updateToast(loadingToast, t('simple_toast_error', 'Failed') + ': ' + e, { icon: 'error', type: 'error', autoCloseDelay: 3000 });
-        applyBtn.label = originalLabel;
-        applyBtn.setAttribute('label', originalLabel);
-        applyBtn.disabled = false;
-      }
-      return;
-    }
-
-    const lines = apps
-      .filter(a => a.state !== 'unchecked')
-      .map(a => {
-        if (supportsPerAppMode && a.state === 'force') return a.packageName + '!';
-        if (supportsPerAppMode && a.state === 'conditional') return a.packageName + '?';
-        return a.packageName;
-      })
-      .sort();
-
-    try {
-      const content = lines.join('\n');
-      await writeTargetList(content);
-      appendToOutput(`[TARGET] Wrote target list (${lines.length} selected + FIXED_TARGETS)`);
-      updateToast(loadingToast, t('ta_prompt_saved', 'Target list saved'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
-      applyBtn.label = t('ta_applied', 'Applied');
-      applyBtn.setAttribute('label', t('ta_applied', 'Applied'));
-      setTimeout(() => {
-        applyBtn.label = originalLabel;
-        applyBtn.setAttribute('label', originalLabel);
-        applyBtn.disabled = false;
-      }, 1500);
-
-      const moddir = getModuleDir();
-      if (moddir) {
+        if (app.state === 'unchecked') return 'bare';
+        if (!ctx.supportsPerAppMode) return 'unchecked';
+        return nextCyclic(['bare', 'conditional', 'force'], app.state) ?? 'bare';
+      },
+      selectAllState: ctx => {
+        if (ctx.mode === 'blacklist') return 'blacklisted';
+        return ctx.supportsPerAppMode ? ctx.defaultPrimaryState : 'bare';
+      },
+      importState: ctx => ctx.mode === 'blacklist' ? 'blacklisted' : 'bare',
+    },
+    source: {
+      read: readTargetList,
+      writeMain: writeTargetList,
+      parse: (raw, ctx) => parseSuffixedList(raw, ctx.supportsPerAppMode),
+      serializeMain: (apps, ctx) => serializeSuffixedSelection(apps, ctx.supportsPerAppMode),
+      linePackage: line => line.replace(/[!?]$/, ''),
+      mainListName: 'target list',
+      primarySavedLog: count => `Wrote target list (${count} selected + FIXED_TARGETS)`,
+      primarySavedToast: { key: 'ta_prompt_saved', fallback: 'Target list saved' },
+      afterPrimarySave: () => {
+        const moddir = getModuleDir();
+        if (!moddir) return;
         // Refresh module description in the background without blocking the WebUI
         setTimeout(() => {
           spawnCommand(`sh ${shellEscape(moddir + '/refresh_desc.sh')}`).catch(() => {});
         }, 500);
+      },
+    },
+    secondaryFilter: {
+      id: 'ta-mode-filter',
+      ariaLabel: { key: 'ta_filter_mode_aria', fallback: 'Filter apps by mode' },
+      options: ctx => [
+        { value: 'all', label: ctx.t({ key: 'ta_filter_all_modes', fallback: 'All Modes' }) },
+        { value: 'bare', label: ctx.t({ key: 'ta_mode_bare', fallback: 'Auto' }) },
+        { value: 'conditional', label: `? ${ctx.t({ key: 'ta_mode_conditional', fallback: 'Leaf' })}` },
+        { value: 'force', label: `! ${ctx.t({ key: 'ta_mode_force', fallback: 'Gen' })}` },
+      ],
+      visible: ctx => ctx.mode === 'primary' && ctx.supportsPerAppMode,
+    },
+    prepareLoad: async ctx => {
+      // Fetch Keystore config and default mode concurrently with the list.
+      const [km, defaultModeVal] = await Promise.all([
+        fetchJson<KeystoreManagerJson>(API_URLS.KEYSTORE_MANAGER!, 0).catch(() => null),
+        cfgGet('target_default_mode', 'bare').catch(() => 'bare'),
+      ]);
+
+      const fmt = km?.format || '';
+      ctx.ksmFormat = fmt === 'json' || fmt === 'toml' || fmt === 'txt' || fmt === 'ini' ? fmt : 'txt';
+      const perAppModes = km?.perAppModes;
+      ctx.supportsPerAppMode = perAppModes ?? (ctx.ksmFormat === 'txt' || ctx.ksmFormat === 'ini');
+      ctx.defaultPrimaryState = ctx.supportsPerAppMode ? (defaultModeVal || 'bare') : 'bare';
+    },
+    refreshConfig: async ctx => {
+      const defaultModeVal = await cfgGet('target_default_mode', 'bare').catch(() => 'bare');
+      ctx.defaultPrimaryState = ctx.supportsPerAppMode ? (defaultModeVal || 'bare') : 'bare';
+    },
+    onLoaded: ctx => {
+      const modeItem = ctx.overlay.querySelector('#ta-mode') as HTMLElement | null;
+      if (!modeItem) return;
+      modeItem.hidden = ctx.ksmFormat === 'toml';
+      const headline = modeItem.querySelector('[slot="headline"]');
+      if (headline) {
+        headline.textContent = ctx.ksmFormat === 'json'
+          ? ctx.t({ key: 'ta_teesim_mode_title', fallback: 'Operation Mode' })
+          : ctx.t({ key: 'ta_mode_menu', fallback: 'Default Mode' });
       }
-    } catch (e) {
-      appendToOutput(`[TARGET] Failed to save target list: ${e}`, true);
-      updateToast(loadingToast, t('simple_toast_error', 'Failed') + ': ' + e, { icon: 'error', type: 'error', autoCloseDelay: 3000 });
-      applyBtn.label = originalLabel;
-      applyBtn.setAttribute('label', originalLabel);
-      applyBtn.disabled = false;
-    }
-  });
+      if (!modeItem.hidden && ctx.ksmFormat === 'json') {
+        exec(`sh ${shellEscape(getModuleDir() + '/webroot/common/conflicts.sh')} status 2>/dev/null || echo '[]'`).then(({ stdout }) => {
+          try {
+            const entries = JSON.parse(stdout) as Array<{ key: string; prioritySpecter: boolean }>;
+            const te = entries.find(e => e.key === 'teesim');
+            if (te && !te.prioritySpecter) modeItem.hidden = true;
+          } catch {}
+        }).catch(() => {});
+      }
+    },
+    menuActions: {
+      'ta-refresh': refreshAction,
+      'ta-select-all': selectAllAction,
+      'ta-deselect-all': deselectAllAction,
+      'ta-mode': ctx => {
+        ctx.closeMenu();
+        if (ctx.ksmFormat === 'json') openTeesimModeDialog();
+        else if (ctx.supportsPerAppMode) void openModeSubpage(dialogsContext(ctx));
+      },
+      'ta-regenerate': ctx => {
+        ctx.closeMenu();
+        openRegenerateDialog(dialogsContext(ctx));
+      },
+      'ta-toggle-system': toggleSystemAction,
+      'ta-toggle-mode': toggleModeAction,
+      'ta-import-denylist': importDenylistAction,
+    },
+  };
+}
 
-  overlay.addEventListener('click', (e) => {
-    if (e.target !== overlay) return;
-    // Close through history so the pushed state is consumed; calling
-    // closeOverlay() directly leaves a stale entry for the next Back press.
-    if (history.state && history.state.overlay === 'target-apps') history.back();
-    else closeOverlay();
-  });
-
-  window.addEventListener('popstate', onPopState);
-
-  setupPullToRefresh();
-  // Let the overlay and its skeleton paint before the list work starts:
-  // the package bridge calls in loadData (icon caching, getPackagesInfo)
-  // are synchronous, and running them in the same breath as the opening
-  // used to freeze the page before it ever appeared.
-  await new Promise<void>(resolve => afterPaint(resolve, 300));
-  await loadData();
+export async function openTargetAppsManager(): Promise<void> {
+  await openAppListPage(createTargetAdapter());
 }
