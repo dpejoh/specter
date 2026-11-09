@@ -10,16 +10,24 @@ const state = vi.hoisted(() => ({
 }));
 
 const {
-  exec, showToast, appendToOutput, showDialog,
-} = vi.hoisted(() => ({
-  exec: vi.fn(),
-  showToast: vi.fn(),
-  appendToOutput: vi.fn(),
-  showDialog: vi.fn(),
-}));
+  exec, showToast, showLoadingToast, updateToast, appendToOutput, showDialog,
+} = vi.hoisted(() => {
+  const showToast = vi.fn();
+  return {
+    exec: vi.fn(),
+    showToast,
+    showLoadingToast: vi.fn(() => document.createElement('div')),
+    updateToast: vi.fn((_toast: HTMLElement, msg: string, opts?: unknown) => {
+      showToast(msg, opts as any);
+    }),
+    appendToOutput: vi.fn(),
+    showDialog: vi.fn(),
+  };
+});
 
 vi.mock('./bridge.js', () => ({
   exec,
+  spawnCommand: exec,
   getModuleDir: () => '/data/adb/modules/specter',
   getDataDir: () => '/data/adb/specter',
 }));
@@ -31,7 +39,7 @@ vi.mock('./utils.js', () => ({
     fn();
   },
 }));
-vi.mock('./toast.js', () => ({ showToast }));
+vi.mock('./toast.js', () => ({ showToast, showLoadingToast, updateToast }));
 vi.mock('./terminal.js', () => ({ appendToOutput }));
 vi.mock('./dialog.js', () => ({
   showDialog: (...args: unknown[]) => {
@@ -188,7 +196,30 @@ describe('HMA-OSS apps manager', () => {
     // Switch back to scope
     click(document.getElementById('ha-toggle-mode')!);
     await tick();
-    expect(itemByPkg('com.a.app').el.dataset.state).toBe('targeted');
+    expect(itemByPkg('com.a.app').el.dataset.state).toBe('unchecked');
+  });
+
+  it('navigates back to scope from blacklist on popstate without closing overlay', async () => {
+    await openHmaAppsManager();
+    const overlay = document.querySelector('.ta-overlay') as HTMLElement;
+    await vi.waitFor(() => {
+      expect(overlay.classList.contains('ta-overlay--open')).toBe(true);
+    });
+
+    // Switch to blacklist mode
+    click(document.getElementById('ha-toggle-mode')!);
+    await tick();
+    expect(document.querySelector('.ta-title')?.textContent).toBe('Blacklist');
+
+    // Pop state back from blacklist mode (simulating phone back button)
+    window.dispatchEvent(new PopStateEvent('popstate', { state: { overlay: 'hma-apps' } }));
+    await tick();
+    expect(document.querySelector('.ta-title')?.textContent).toBe('HMA-OSS Scope');
+    expect(overlay.classList.contains('ta-overlay--open')).toBe(true);
+
+    // Pop state from scope (leaving whole page)
+    window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
+    expect(overlay.classList.contains('ta-overlay--open')).toBe(false);
   });
 
   it('shows and hides system apps from the menu', async () => {

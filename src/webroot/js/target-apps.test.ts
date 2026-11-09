@@ -11,21 +11,29 @@ const state = vi.hoisted(() => ({
 }));
 
 const {
-  exec, cfgGet, fetchJson, showToast, appendToOutput,
+  exec, cfgGet, fetchJson, showToast, showLoadingToast, updateToast, appendToOutput,
   openModeDialog, openRegenerateDialog, openTeesimModeDialog,
-} = vi.hoisted(() => ({
-  exec: vi.fn(),
-  cfgGet: vi.fn(async (_key: string, def = '') => def),
-  fetchJson: vi.fn(async () => state.km),
-  showToast: vi.fn(),
-  appendToOutput: vi.fn(),
-  openModeDialog: vi.fn(),
-  openRegenerateDialog: vi.fn(),
-  openTeesimModeDialog: vi.fn(),
-}));
+} = vi.hoisted(() => {
+  const showToast = vi.fn();
+  return {
+    exec: vi.fn(),
+    cfgGet: vi.fn(async (_key: string, def = '') => def),
+    fetchJson: vi.fn(async () => state.km),
+    showToast,
+    showLoadingToast: vi.fn(() => document.createElement('div')),
+    updateToast: vi.fn((_toast: HTMLElement, msg: string, opts?: unknown) => {
+      showToast(msg, opts as any);
+    }),
+    appendToOutput: vi.fn(),
+    openModeDialog: vi.fn(),
+    openRegenerateDialog: vi.fn(),
+    openTeesimModeDialog: vi.fn(),
+  };
+});
 
 vi.mock('./bridge.js', () => ({
   exec,
+  spawnCommand: exec,
   getModuleDir: () => '/data/adb/modules/specter',
   getDataDir: () => '/data/adb/specter',
 }));
@@ -39,7 +47,7 @@ vi.mock('./utils.js', () => ({
     fn();
   },
 }));
-vi.mock('./toast.js', () => ({ showToast }));
+vi.mock('./toast.js', () => ({ showToast, showLoadingToast, updateToast }));
 vi.mock('./terminal.js', () => ({ appendToOutput }));
 vi.mock('./i18n.js', () => ({ getTranslation: () => '', t: (_key: string, fallback = '') => fallback }));
 vi.mock('./constants.js', () => ({ API_URLS: { KEYSTORE_MANAGER: '/json/keystore_manager.json' } }));
@@ -376,9 +384,38 @@ describe('target apps manager', () => {
     click(document.querySelector('#ta-toggle-mode')!);
     await vi.waitFor(() => {
       expect(document.querySelector('.ta-title')?.textContent).toBe('App Targeting');
-      expect(itemByPkg('com.a.app').state).toBe('force');
+      expect(itemByPkg('com.a.app').state).toBe('unchecked');
     });
-    expect(itemByPkg('com.b.app').state).toBe('conditional');
+    expect(itemByPkg('com.b.app').state).toBe('unchecked');
+  });
+
+  it('navigates back to apps page from blacklist and subpages on popstate without closing overlay', async () => {
+    await openTargetAppsManager();
+    const overlay = document.querySelector('.ta-overlay') as HTMLElement;
+    await vi.waitFor(() => {
+      expect(overlay.classList.contains('ta-overlay--open')).toBe(true);
+    });
+
+    // Switch to blacklist mode
+    click(document.querySelector('#ta-toggle-mode')!);
+    await vi.waitFor(() => {
+      expect(document.querySelector('.ta-title')?.textContent).toBe('Blacklist');
+    });
+
+    // Pop state back from blacklist mode (simulating phone back button)
+    window.dispatchEvent(new PopStateEvent('popstate', { state: { overlay: 'target-apps' } }));
+    await vi.waitFor(() => {
+      expect(document.querySelector('.ta-title')?.textContent).toBe('App Targeting');
+    });
+    expect(overlay.classList.contains('ta-overlay--open')).toBe(true);
+
+    // Subpage popstate (simulating phone back from Default Mode subpage)
+    window.dispatchEvent(new PopStateEvent('popstate', { state: { overlay: 'target-apps' } }));
+    expect(overlay.classList.contains('ta-overlay--open')).toBe(true);
+
+    // Pop state from App Targeting (leaving whole page)
+    window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
+    expect(overlay.classList.contains('ta-overlay--open')).toBe(false);
   });
 
   it('shows and hides system apps from the menu', async () => {

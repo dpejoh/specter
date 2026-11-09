@@ -477,4 +477,50 @@ describe('spawnScript', () => {
   })
 })
 
+describe('spawnCommand', () => {
+  async function freshBridge() {
+    vi.resetModules()
+    return import('./bridge.js')
+  }
+
+  it('uses ksu.spawn with command directly and collects stdout on exit', async () => {
+    const b = await freshBridge()
+    const ksu = mockKsu()
+    mockFetchJson({ MODDIR: '/data/adb/modules/specter' })
+    await b.initBridge()
+
+    const promise = b.spawnCommand('echo hello')
+    expect(ksu.spawn).toHaveBeenCalledWith(
+      'echo hello',
+      '[]',
+      '{}',
+      expect.stringMatching(/^__sp_/)
+    )
+    const globalName = (ksu.spawn as any).mock.calls[0][3] as string
+    const child = (window as any)[globalName]
+    expect(child).toBeDefined()
+
+    child.stdout.emit('data', 'hello')
+    child.emit('exit', 0)
+
+    const res = await promise
+    expect(res).toEqual({ code: 0, stdout: 'hello', stderr: '' })
+    expect((window as any)[globalName]).toBeUndefined()
+  })
+
+  it('falls back to exec when ksu.spawn is not available', async () => {
+    const b = await freshBridge()
+    mockKsu({
+      spawn: undefined as any,
+      exec(_cmd: string, _opts: string, cbName: string) {
+        ;(window as any)[cbName]?.(0, 'fallback out', '')
+      },
+    })
+    mockFetchJson({ MODDIR: '/data/adb/modules/specter' })
+    await b.initBridge()
+
+    const res = await b.spawnCommand('echo fallback')
+    expect(res).toEqual({ code: 0, stdout: 'fallback out', stderr: '' })
+  })
+})
 

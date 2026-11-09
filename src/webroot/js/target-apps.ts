@@ -1,7 +1,7 @@
-import { exec, getModuleDir, getDataDir } from './bridge.js';
+import { exec, spawnCommand, getModuleDir, getDataDir } from './bridge.js';
 import { cfgGet } from './cfg.js';
 import { shellEscape, fetchJson, escapeHtml, afterPaint } from './utils.js';
-import { showToast } from './toast.js';
+import { showToast, showLoadingToast, updateToast } from './toast.js';
 import { getTranslation } from './i18n.js';
 import { appendToOutput } from './terminal.js';
 import { API_URLS } from './constants.js';
@@ -64,7 +64,7 @@ function targetScript(): string {
 }
 
 async function readTargetList(): Promise<string> {
-  const { stdout, code, stderr } = await exec(`sh ${targetScript()} --list-raw`);
+  const { stdout, code, stderr } = await spawnCommand(`sh ${targetScript()} --list-raw`);
   if (code !== 0) throw new Error(stderr || 'failed to read target list');
   return stdout || '';
 }
@@ -72,13 +72,13 @@ async function readTargetList(): Promise<string> {
 async function writeTargetList(content: string): Promise<void> {
   const staging = `${specterDir()}/.target_staging`;
   const b64 = btoa(unescape(encodeURIComponent(content)));
-  const written = await exec(
+  const written = await spawnCommand(
     `mkdir -p ${specterDir()} && printf '%s' ${shellEscape(b64)} | base64 -d > ${shellEscape(staging)}`
   );
   if (written.code !== 0) throw new Error(written.stderr || 'failed to stage target list');
-  const committed = await exec(`sh ${targetScript()} --set ${shellEscape(staging)}`);
+  const committed = await spawnCommand(`sh ${targetScript()} --set ${shellEscape(staging)}`);
   if (committed.code !== 0) throw new Error(committed.stderr || 'failed to commit target list');
-  await exec(`rm -f ${shellEscape(staging)}`);
+  await spawnCommand(`rm -f ${shellEscape(staging)}`);
 }
 
 function t(key: string, fallback: string): string {
@@ -102,8 +102,6 @@ function stateLabelKey(state: AppState, mode: Mode): string {
   if (mode === 'blacklist') return BLACKLIST_LABEL_KEYS[state] || 'unchecked';
   return TARGET_LABEL_KEYS[state] || 'unchecked';
 }
-
-
 
 async function shellExec(cmd: string): Promise<{ stdout: string }> {
   try { return await exec(cmd); } catch { return { stdout: '' }; }
@@ -361,9 +359,15 @@ export async function openTargetAppsManager() {
   // Back (hardware or the header button, both go through history) first
   // collapses an open search; only a second Back closes the overlay.
   function onPopState(e: PopStateEvent) {
-    if (searchOpen) exitSearch();
-    else if (e.state && (e.state.targetApps || e.state.subpage)) return;
-    else closeOverlay();
+    if (searchOpen) {
+      exitSearch();
+    } else if (mode === 'blacklist' && (!e.state || e.state.mode !== 'blacklist')) {
+      switchToTargetMode();
+    } else if (e.state && (e.state.overlay === 'target-apps' || e.state.subpage)) {
+      return;
+    } else {
+      closeOverlay();
+    }
   }
 
   cleanupA11y = setupOverlayA11y(overlay, {
@@ -372,7 +376,16 @@ export async function openTargetAppsManager() {
     initialFocus: overlay.querySelector('#ta-back'),
   });
 
-  overlay.querySelector('#ta-back')!.addEventListener('click', () => history.back());
+  overlay.querySelector('#ta-back')!.addEventListener('click', () => {
+    if (mode === 'blacklist') {
+      switchToTargetMode();
+      if (history.state?.mode === 'blacklist') {
+        history.back();
+      }
+    } else {
+      history.back();
+    }
+  });
 
   wireMenuTrigger(
     overlay.querySelector('#ta-menu-btn'),
@@ -418,7 +431,10 @@ export async function openTargetAppsManager() {
 
   overlay.querySelector('#ta-select-all')!.addEventListener('click', () => {
     const on = mode === 'blacklist' ? 'blacklisted' : (supportsPerAppMode ? (defaultMode as AppState) : 'bare');
-    for (const app of apps) app.state = on;
+    for (const app of apps) {
+      app.state = on;
+      if (mode === 'blacklist') targetMap.delete(app.packageName);
+    }
     appendToOutput(`[TARGET] Selected all apps`);
     applyFilters();
     closeTapMenu();
@@ -431,36 +447,61 @@ export async function openTargetAppsManager() {
     closeTapMenu();
   });
 
+  function switchToBlacklistMode() {
+    appendToOutput('[TARGET] Loading blacklist...');
+    exec(`cat ${specterDir()}/blacklist.txt 2>/dev/null || echo ""`).then(({ stdout }) => {
+      blPkgs = new Set(stdout.split('\n').map(s => s.trim()).filter(Boolean));
+      appendToOutput(`[TARGET] Loaded ${blPkgs.size} blacklisted entries`);
+      for (const app of apps) {
+        app.state = blPkgs.has(app.packageName) ? 'blacklisted' : 'unchecked';
+      }
+      setMode('blacklist');
+    });
+  }
+
+  function switchToTargetMode() {
+    setMode('target');
+    appendToOutput('[TARGET] Reloading target states...');
+    readTargetList().then(async (stdout) => {
+      const currentBl = new Set<string>();
+      for (const app of apps) {
+        if (app.state === 'blacklisted') currentBl.add(app.packageName);
+      }
+      try {
+        const { stdout: blStdout } = await exec(`cat ${specterDir()}/blacklist.txt 2>/dev/null || echo ""`);
+        for (const pkg of blStdout.split('\n').map(s => s.trim()).filter(Boolean)) {
+          currentBl.add(pkg);
+        }
+      } catch {}
+
+      const lines = stdout.split('\n').map(s => s.trim()).filter(Boolean);
+      targetMap.clear();
+      for (const line of lines) {
+        const pkg = line.replace(/[!?]$/, '');
+        if (currentBl.has(pkg)) continue;
+        if (line.endsWith('!')) targetMap.set(pkg, 'force');
+        else if (line.endsWith('?')) targetMap.set(pkg, 'conditional');
+        else targetMap.set(pkg, 'bare');
+      }
+      for (const app of apps) {
+        app.state = targetMap.get(app.packageName) || 'unchecked';
+      }
+      applyFilters();
+    }).catch((e) => {
+      appendToOutput(`[TARGET] Failed to reload target states: ${e}`, true);
+    });
+  }
+
   overlay.querySelector('#ta-toggle-mode')!.addEventListener('click', () => {
     closeTapMenu();
     if (mode === 'target') {
-      appendToOutput('[TARGET] Loading blacklist...');
-      exec(`cat ${specterDir()}/blacklist.txt 2>/dev/null || echo ""`).then(({ stdout }) => {
-        blPkgs = new Set(stdout.split('\n').map(s => s.trim()).filter(Boolean));
-        appendToOutput(`[TARGET] Loaded ${blPkgs.size} blacklisted entries`);
-        for (const app of apps) {
-          app.state = blPkgs.has(app.packageName) ? 'blacklisted' : 'unchecked';
-        }
-        setMode('blacklist');
-      });
+      history.pushState({ overlay: 'target-apps', mode: 'blacklist' }, '');
+      switchToBlacklistMode();
     } else {
-      setMode('target');
-      appendToOutput('[TARGET] Reloading target states...');
-      readTargetList().then((stdout) => {
-        const lines = stdout.split('\n').map(s => s.trim()).filter(Boolean);
-        targetMap.clear();
-        for (const line of lines) {
-          if (line.endsWith('!')) targetMap.set(line.slice(0, -1), 'force');
-          else if (line.endsWith('?')) targetMap.set(line.slice(0, -1), 'conditional');
-          else targetMap.set(line, 'bare');
-        }
-        for (const app of apps) {
-          app.state = targetMap.get(app.packageName) || 'unchecked';
-        }
-        applyFilters();
-      }).catch((e) => {
-        appendToOutput(`[TARGET] Failed to reload target states: ${e}`, true);
-      });
+      switchToTargetMode();
+      if (history.state?.mode === 'blacklist') {
+        history.back();
+      }
     }
   });
 
@@ -475,6 +516,7 @@ export async function openTargetAppsManager() {
       for (const app of apps) {
         if (pkgs.includes(app.packageName)) {
           app.state = mode === 'blacklist' ? 'blacklisted' : 'bare';
+          if (mode === 'blacklist') targetMap.delete(app.packageName);
           count++;
         }
       }
@@ -505,10 +547,6 @@ export async function openTargetAppsManager() {
     if (ksmFormat === 'json') openTeesimModeDialog();
     else if (supportsPerAppMode) openModeSubpage(dialogsCtx);
   });
-
-
-
-
 
   overlay.querySelector('#ta-toggle-system')!.addEventListener('click', async () => {
     showSystemApps = !showSystemApps;
@@ -876,6 +914,9 @@ export async function openTargetAppsManager() {
 
     function applyAppState(newState: AppState) {
       app.state = newState;
+      if (mode === 'blacklist' && newState === 'blacklisted') {
+        targetMap.delete(app.packageName);
+      }
       circle.setAttribute('data-state', newState);
       item.setAttribute('aria-label', `${app.appName}, ${t(stateLabelKey(newState, mode), stateText(newState, mode) || newState)}`);
       const iconEl = circle.querySelector('.ta-state-icon');
@@ -996,7 +1037,7 @@ export async function openTargetAppsManager() {
   function openSearch() {
     if (searchOpen) return;
     searchOpen = true;
-    history.pushState({ overlay: 'target-apps', search: true }, '');
+    history.pushState({ overlay: 'target-apps', mode, search: true }, '');
     headerEl.classList.add('ta-header--searching');
     searchContainer.hidden = false;
     searchBtn.setAttribute('aria-expanded', 'true');
@@ -1035,53 +1076,99 @@ export async function openTargetAppsManager() {
     }
   });
 
-  const applyBtn = overlay.querySelector('#ta-apply') as HTMLButtonElement;
+  const applyBtn = overlay.querySelector('#ta-apply') as (HTMLElement & { disabled: boolean; label?: string });
   applyBtn.addEventListener('click', async () => {
     if (applyBtn.disabled) return;
     applyBtn.disabled = true;
-    try {
-      if (mode === 'blacklist') {
-        const bl = apps.filter(a => a.state === 'blacklisted').map(a => a.packageName).sort();
-        const content = bl.join('\n');
-        try {
-          const result = await exec(`printf '%s' ${shellEscape(content)} | base64 -w0`);
-          const b64 = result.stdout || '';
-          await exec(`mkdir -p ${specterDir()} && printf '%s' "${b64}" | base64 -d > ${specterDir()}/blacklist.txt`);
-          await exec(`mkdir -p ${specterDir()} && touch ${specterDir()}/blacklist_enabled`);
-          appendToOutput(`[TARGET] Wrote ${bl.length} entries to blacklist.txt`);
-          showToast(t('toast_blacklist_saved', 'Blacklist saved'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
-        } catch (e) {
-          appendToOutput(`[TARGET] Failed to save blacklist: ${e}`, true);
-        }
-        return;
+
+    const originalLabel = t('ta_apply', 'Apply');
+    applyBtn.label = t('ta_applying', 'Applying…');
+    applyBtn.setAttribute('label', t('ta_applying', 'Applying…'));
+
+    const loadingToast = showLoadingToast(t('ta_applying', 'Applying…'));
+
+    // Yield so WebView can paint the loading toast and busy state before bridge exec calls
+    await new Promise<void>(resolve => setTimeout(resolve, 0));
+
+    if (mode === 'blacklist') {
+      const bl = apps.filter(a => a.state === 'blacklisted').map(a => a.packageName).sort();
+      const blSet = new Set(bl);
+      for (const pkg of blSet) {
+        targetMap.delete(pkg);
       }
 
-      const lines = apps
-        .filter(a => a.state !== 'unchecked')
-        .map(a => {
-          if (supportsPerAppMode && a.state === 'force') return a.packageName + '!';
-          if (supportsPerAppMode && a.state === 'conditional') return a.packageName + '?';
-          return a.packageName;
-        })
-        .sort();
-
-      // FIXED_TARGETS are re-added by target.sh --set (pm -3 never lists them).
-      const content = lines.join('\n');
       try {
-        await writeTargetList(content);
-        appendToOutput(`[TARGET] Wrote target list (${lines.length} selected + FIXED_TARGETS)`);
-        showToast(t('ta_prompt_saved', 'Target list saved'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
-        const moddir = getModuleDir();
-        if (moddir) {
-          // Refresh module description in the background without blocking the WebUI
-          setTimeout(() => {
-            exec(`sh ${shellEscape(moddir + '/refresh_desc.sh')}`).catch(() => {});
-          }, 500);
+        const content = bl.join('\n');
+        const result = await spawnCommand(`printf '%s' ${shellEscape(content)} | base64 -w0`);
+        const b64 = result.stdout || '';
+        await spawnCommand(`mkdir -p ${specterDir()} && printf '%s' "${b64}" | base64 -d > ${specterDir()}/blacklist.txt`);
+        await spawnCommand(`mkdir -p ${specterDir()} && touch ${specterDir()}/blacklist_enabled`);
+        appendToOutput(`[TARGET] Wrote ${bl.length} entries to blacklist.txt`);
+
+        try {
+          const rawTargets = await readTargetList();
+          const targetLines = rawTargets.split('\n').map(s => s.trim()).filter(Boolean);
+          const prunedLines = targetLines.filter(line => !blSet.has(line.replace(/[!?]$/, '')));
+          if (prunedLines.length !== targetLines.length) {
+            await writeTargetList(prunedLines.join('\n'));
+            appendToOutput(`[TARGET] Pruned ${targetLines.length - prunedLines.length} blacklisted entries from target list`);
+          }
+        } catch (te) {
+          appendToOutput(`[TARGET] Warning: could not prune target list: ${te}`, true);
         }
+
+        updateToast(loadingToast, t('toast_blacklist_saved', 'Blacklist saved'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
+        applyBtn.label = t('ta_applied', 'Applied');
+        applyBtn.setAttribute('label', t('ta_applied', 'Applied'));
+        setTimeout(() => {
+          applyBtn.label = originalLabel;
+          applyBtn.setAttribute('label', originalLabel);
+          applyBtn.disabled = false;
+        }, 1500);
       } catch (e) {
-        appendToOutput(`[TARGET] Failed to save target list: ${e}`, true);
+        appendToOutput(`[TARGET] Failed to save blacklist: ${e}`, true);
+        updateToast(loadingToast, t('simple_toast_error', 'Failed') + ': ' + e, { icon: 'error', type: 'error', autoCloseDelay: 3000 });
+        applyBtn.label = originalLabel;
+        applyBtn.setAttribute('label', originalLabel);
+        applyBtn.disabled = false;
       }
-    } finally {
+      return;
+    }
+
+    const lines = apps
+      .filter(a => a.state !== 'unchecked')
+      .map(a => {
+        if (supportsPerAppMode && a.state === 'force') return a.packageName + '!';
+        if (supportsPerAppMode && a.state === 'conditional') return a.packageName + '?';
+        return a.packageName;
+      })
+      .sort();
+
+    try {
+      const content = lines.join('\n');
+      await writeTargetList(content);
+      appendToOutput(`[TARGET] Wrote target list (${lines.length} selected + FIXED_TARGETS)`);
+      updateToast(loadingToast, t('ta_prompt_saved', 'Target list saved'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
+      applyBtn.label = t('ta_applied', 'Applied');
+      applyBtn.setAttribute('label', t('ta_applied', 'Applied'));
+      setTimeout(() => {
+        applyBtn.label = originalLabel;
+        applyBtn.setAttribute('label', originalLabel);
+        applyBtn.disabled = false;
+      }, 1500);
+
+      const moddir = getModuleDir();
+      if (moddir) {
+        // Refresh module description in the background without blocking the WebUI
+        setTimeout(() => {
+          spawnCommand(`sh ${shellEscape(moddir + '/refresh_desc.sh')}`).catch(() => {});
+        }, 500);
+      }
+    } catch (e) {
+      appendToOutput(`[TARGET] Failed to save target list: ${e}`, true);
+      updateToast(loadingToast, t('simple_toast_error', 'Failed') + ': ' + e, { icon: 'error', type: 'error', autoCloseDelay: 3000 });
+      applyBtn.label = originalLabel;
+      applyBtn.setAttribute('label', originalLabel);
       applyBtn.disabled = false;
     }
   });

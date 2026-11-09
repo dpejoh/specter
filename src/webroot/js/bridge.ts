@@ -160,3 +160,51 @@ export function spawnScript(scriptName: string, type = 'feature', args: string[]
   }
   return child;
 }
+
+export function spawnCommand(command: string): Promise<ExecResult> {
+  const spawn = window.ksu?.spawn;
+  if (typeof spawn !== 'function') {
+    return exec(command);
+  }
+
+  return new Promise((resolve, reject) => {
+    const child = createChildProcess();
+    const globalName = genCallbackName();
+    setGlobal(globalName, child);
+    const stdoutParts: string[] = [];
+    const stderrParts: string[] = [];
+
+    child.stdout.on('data', (data: string) => stdoutParts.push(data));
+    child.stderr.on('data', (data: string) => stderrParts.push(data));
+
+    const cleanup = () => deleteGlobal(globalName);
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new TimeoutError());
+    }, EXEC_TIMEOUT_MS);
+
+    child.on('exit', (code: number) => {
+      clearTimeout(timer);
+      cleanup();
+      resolve({
+        code: typeof code === 'number' ? code : 0,
+        stdout: stdoutParts.join('\n'),
+        stderr: stderrParts.join('\n'),
+      });
+    });
+
+    child.on('error', (e: unknown) => {
+      clearTimeout(timer);
+      cleanup();
+      reject(e);
+    });
+
+    try {
+      spawn.call(window.ksu, command, '[]', '{}', globalName);
+    } catch (e) {
+      clearTimeout(timer);
+      cleanup();
+      reject(e);
+    }
+  });
+}

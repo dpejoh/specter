@@ -1,6 +1,6 @@
-import { exec, getModuleDir, getDataDir } from './bridge.js';
+import { exec, spawnCommand, getModuleDir, getDataDir } from './bridge.js';
 import { shellEscape, escapeHtml, afterPaint } from './utils.js';
-import { showToast } from './toast.js';
+import { showToast, showLoadingToast, updateToast } from './toast.js';
 import { getTranslation } from './i18n.js';
 import { appendToOutput } from './terminal.js';
 import { showDialog } from './dialog.js';
@@ -53,7 +53,7 @@ function hmaScript(): string {
 }
 
 async function readScopeList(): Promise<string> {
-  const { stdout, code, stderr } = await exec(`sh ${hmaScript()} --list-raw`);
+  const { stdout, code, stderr } = await spawnCommand(`sh ${hmaScript()} --list-raw`);
   if (code !== 0) throw new Error(stderr || 'failed to read HMA scope list');
   return stdout || '';
 }
@@ -61,13 +61,13 @@ async function readScopeList(): Promise<string> {
 async function writeScopeList(content: string): Promise<void> {
   const staging = `${specterDir()}/.hma_scope_staging`;
   const b64 = btoa(unescape(encodeURIComponent(content)));
-  const written = await exec(
+  const written = await spawnCommand(
     `mkdir -p ${specterDir()} && printf '%s' ${shellEscape(b64)} | base64 -d > ${shellEscape(staging)}`
   );
   if (written.code !== 0) throw new Error(written.stderr || 'failed to stage HMA scope list');
-  const committed = await exec(`sh ${hmaScript()} --set ${shellEscape(staging)}`);
+  const committed = await spawnCommand(`sh ${hmaScript()} --set ${shellEscape(staging)}`);
   if (committed.code !== 0) throw new Error(committed.stderr || 'failed to commit HMA scope list');
-  await exec(`rm -f ${shellEscape(staging)}`);
+  await spawnCommand(`rm -f ${shellEscape(staging)}`);
 }
 
 function t(key: string, fallback: string): string {
@@ -325,9 +325,15 @@ export async function openHmaAppsManager() {
   }
 
   function onPopState(e: PopStateEvent) {
-    if (searchOpen) exitSearch();
-    else if (e.state && (e.state.hmaApps || e.state.subpage)) return;
-    else closeOverlay();
+    if (searchOpen) {
+      exitSearch();
+    } else if (mode === 'blacklist' && (!e.state || e.state.mode !== 'blacklist')) {
+      switchToScopeMode();
+    } else if (e.state && (e.state.overlay === 'hma-apps' || e.state.subpage)) {
+      return;
+    } else {
+      closeOverlay();
+    }
   }
 
   cleanupA11y = setupOverlayA11y(overlay, {
@@ -336,7 +342,16 @@ export async function openHmaAppsManager() {
     initialFocus: overlay.querySelector('#ha-back'),
   });
 
-  overlay.querySelector('#ha-back')!.addEventListener('click', () => history.back());
+  overlay.querySelector('#ha-back')!.addEventListener('click', () => {
+    if (mode === 'blacklist') {
+      switchToScopeMode();
+      if (history.state?.mode === 'blacklist') {
+        history.back();
+      }
+    } else {
+      history.back();
+    }
+  });
 
   wireMenuTrigger(
     overlay.querySelector('#ha-menu-btn'),
@@ -379,7 +394,10 @@ export async function openHmaAppsManager() {
 
   overlay.querySelector('#ha-select-all')!.addEventListener('click', () => {
     const on: AppState = mode === 'blacklist' ? 'blacklisted' : 'targeted';
-    for (const app of apps) app.state = on;
+    for (const app of apps) {
+      app.state = on;
+      if (mode === 'blacklist') scopeMap.delete(app.packageName);
+    }
     appendToOutput('[HMA] Selected all apps');
     applyFilters();
     closeTapMenu();
@@ -397,32 +415,57 @@ export async function openHmaAppsManager() {
     openHmaRegenerateDialog(refreshApps, loading, list);
   });
 
+  function switchToBlacklistMode() {
+    appendToOutput('[HMA] Loading blacklist...');
+    exec(`cat ${specterDir()}/blacklist.txt 2>/dev/null || echo ""`).then(({ stdout }) => {
+      blPkgs = new Set(stdout.split('\n').map(s => s.trim()).filter(Boolean));
+      appendToOutput(`[HMA] Loaded ${blPkgs.size} blacklisted entries`);
+      for (const app of apps) {
+        app.state = blPkgs.has(app.packageName) ? 'blacklisted' : 'unchecked';
+      }
+      setMode('blacklist');
+    });
+  }
+
+  function switchToScopeMode() {
+    setMode('scope');
+    appendToOutput('[HMA] Reloading scope states...');
+    readScopeList().then(async (stdout) => {
+      const currentBl = new Set<string>();
+      for (const app of apps) {
+        if (app.state === 'blacklisted') currentBl.add(app.packageName);
+      }
+      try {
+        const { stdout: blStdout } = await exec(`cat ${specterDir()}/blacklist.txt 2>/dev/null || echo ""`);
+        for (const pkg of blStdout.split('\n').map(s => s.trim()).filter(Boolean)) {
+          currentBl.add(pkg);
+        }
+      } catch {}
+
+      const lines = stdout.split('\n').map(s => s.trim()).filter(Boolean);
+      scopeMap.clear();
+      for (const pkg of lines) {
+        if (!currentBl.has(pkg)) scopeMap.set(pkg, 'targeted');
+      }
+      for (const app of apps) {
+        app.state = scopeMap.has(app.packageName) ? 'targeted' : 'unchecked';
+      }
+      applyFilters();
+    }).catch((e) => {
+      appendToOutput(`[HMA] Failed to reload scope states: ${e}`, true);
+    });
+  }
+
   overlay.querySelector('#ha-toggle-mode')!.addEventListener('click', () => {
     closeTapMenu();
     if (mode === 'scope') {
-      appendToOutput('[HMA] Loading blacklist...');
-      exec(`cat ${specterDir()}/blacklist.txt 2>/dev/null || echo ""`).then(({ stdout }) => {
-        blPkgs = new Set(stdout.split('\n').map(s => s.trim()).filter(Boolean));
-        appendToOutput(`[HMA] Loaded ${blPkgs.size} blacklisted entries`);
-        for (const app of apps) {
-          app.state = blPkgs.has(app.packageName) ? 'blacklisted' : 'unchecked';
-        }
-        setMode('blacklist');
-      });
+      history.pushState({ overlay: 'hma-apps', mode: 'blacklist' }, '');
+      switchToBlacklistMode();
     } else {
-      setMode('scope');
-      appendToOutput('[HMA] Reloading scope states...');
-      readScopeList().then((stdout) => {
-        const lines = stdout.split('\n').map(s => s.trim()).filter(Boolean);
-        scopeMap.clear();
-        for (const line of lines) scopeMap.set(line, 'targeted');
-        for (const app of apps) {
-          app.state = scopeMap.has(app.packageName) ? 'targeted' : 'unchecked';
-        }
-        applyFilters();
-      }).catch((e) => {
-        appendToOutput(`[HMA] Failed to reload scope states: ${e}`, true);
-      });
+      switchToScopeMode();
+      if (history.state?.mode === 'blacklist') {
+        history.back();
+      }
     }
   });
 
@@ -437,6 +480,7 @@ export async function openHmaAppsManager() {
       for (const app of apps) {
         if (pkgs.includes(app.packageName)) {
           app.state = mode === 'blacklist' ? 'blacklisted' : 'targeted';
+          if (mode === 'blacklist') scopeMap.delete(app.packageName);
           count++;
         }
       }
@@ -771,6 +815,9 @@ export async function openHmaAppsManager() {
 
     function applyAppState(newState: AppState) {
       app.state = newState;
+      if (mode === 'blacklist' && newState === 'blacklisted') {
+        scopeMap.delete(app.packageName);
+      }
       circle.setAttribute('data-state', newState);
       item.setAttribute('aria-label', `${app.appName}, ${t(stateLabelKey(newState, mode), newState)}`);
       const iconEl = circle.querySelector('.ta-state-icon');
@@ -864,7 +911,7 @@ export async function openHmaAppsManager() {
   function openSearch() {
     if (searchOpen) return;
     searchOpen = true;
-    history.pushState({ overlay: 'hma-apps', search: true }, '');
+    history.pushState({ overlay: 'hma-apps', mode, search: true }, '');
     headerEl.classList.add('ta-header--searching');
     searchContainer.hidden = false;
     searchBtn.setAttribute('aria-expanded', 'true');
@@ -903,41 +950,87 @@ export async function openHmaAppsManager() {
     }
   });
 
-  const applyBtn = overlay.querySelector('#ha-apply') as HTMLButtonElement;
+  const applyBtn = overlay.querySelector('#ha-apply') as (HTMLElement & { disabled: boolean; label?: string });
   applyBtn.addEventListener('click', async () => {
     if (applyBtn.disabled) return;
     applyBtn.disabled = true;
-    try {
-      if (mode === 'blacklist') {
-        const bl = apps.filter(a => a.state === 'blacklisted').map(a => a.packageName).sort();
-        const content = bl.join('\n');
-        try {
-          const result = await exec(`printf '%s' ${shellEscape(content)} | base64 -w0`);
-          const b64 = result.stdout || '';
-          await exec(`mkdir -p ${specterDir()} && printf '%s' "${b64}" | base64 -d > ${specterDir()}/blacklist.txt`);
-          await exec(`mkdir -p ${specterDir()} && touch ${specterDir()}/blacklist_enabled`);
-          appendToOutput(`[HMA] Wrote ${bl.length} entries to blacklist.txt`);
-          showToast(t('toast_blacklist_saved', 'Blacklist saved'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
-        } catch (e) {
-          appendToOutput(`[HMA] Failed to save blacklist: ${e}`, true);
-        }
-        return;
+
+    const originalLabel = t('ta_apply', 'Apply');
+    applyBtn.label = t('ta_applying', 'Applying…');
+    applyBtn.setAttribute('label', t('ta_applying', 'Applying…'));
+
+    const loadingToast = showLoadingToast(t('ta_applying', 'Applying…'));
+
+    // Yield so WebView can paint the loading toast and busy state before bridge exec calls
+    await new Promise<void>(resolve => setTimeout(resolve, 0));
+
+    if (mode === 'blacklist') {
+      const bl = apps.filter(a => a.state === 'blacklisted').map(a => a.packageName).sort();
+      const blSet = new Set(bl);
+      for (const pkg of blSet) {
+        scopeMap.delete(pkg);
       }
 
-      const lines = apps
-        .filter(a => a.state === 'targeted')
-        .map(a => a.packageName)
-        .sort();
-
-      const content = lines.join('\n');
       try {
-        await writeScopeList(content);
-        appendToOutput(`[HMA] Wrote HMA-OSS scope (${lines.length} targets)`);
-        showToast(t('ha_prompt_saved', 'HMA-OSS scope saved'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
+        const content = bl.join('\n');
+        const result = await spawnCommand(`printf '%s' ${shellEscape(content)} | base64 -w0`);
+        const b64 = result.stdout || '';
+        await spawnCommand(`mkdir -p ${specterDir()} && printf '%s' "${b64}" | base64 -d > ${specterDir()}/blacklist.txt`);
+        await spawnCommand(`mkdir -p ${specterDir()} && touch ${specterDir()}/blacklist_enabled`);
+        appendToOutput(`[HMA] Wrote ${bl.length} entries to blacklist.txt`);
+
+        try {
+          const rawScope = await readScopeList();
+          const scopeLines = rawScope.split('\n').map(s => s.trim()).filter(Boolean);
+          const prunedLines = scopeLines.filter(pkg => !blSet.has(pkg));
+          if (prunedLines.length !== scopeLines.length) {
+            await writeScopeList(prunedLines.join('\n'));
+            appendToOutput(`[HMA] Pruned ${scopeLines.length - prunedLines.length} blacklisted entries from scope list`);
+          }
+        } catch (te) {
+          appendToOutput(`[HMA] Warning: could not prune scope list: ${te}`, true);
+        }
+
+        updateToast(loadingToast, t('toast_blacklist_saved', 'Blacklist saved'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
+        applyBtn.label = t('ta_applied', 'Applied');
+        applyBtn.setAttribute('label', t('ta_applied', 'Applied'));
+        setTimeout(() => {
+          applyBtn.label = originalLabel;
+          applyBtn.setAttribute('label', originalLabel);
+          applyBtn.disabled = false;
+        }, 1500);
       } catch (e) {
-        appendToOutput(`[HMA] Failed to save HMA scope list: ${e}`, true);
+        appendToOutput(`[HMA] Failed to save blacklist: ${e}`, true);
+        updateToast(loadingToast, t('simple_toast_error', 'Failed') + ': ' + e, { icon: 'error', type: 'error', autoCloseDelay: 3000 });
+        applyBtn.label = originalLabel;
+        applyBtn.setAttribute('label', originalLabel);
+        applyBtn.disabled = false;
       }
-    } finally {
+      return;
+    }
+
+    const lines = apps
+      .filter(a => a.state === 'targeted')
+      .map(a => a.packageName)
+      .sort();
+
+    try {
+      const content = lines.join('\n');
+      await writeScopeList(content);
+      appendToOutput(`[HMA] Wrote HMA-OSS scope (${lines.length} targets)`);
+      updateToast(loadingToast, t('ha_prompt_saved', 'HMA-OSS scope saved'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
+      applyBtn.label = t('ta_applied', 'Applied');
+      applyBtn.setAttribute('label', t('ta_applied', 'Applied'));
+      setTimeout(() => {
+        applyBtn.label = originalLabel;
+        applyBtn.setAttribute('label', originalLabel);
+        applyBtn.disabled = false;
+      }, 1500);
+    } catch (e) {
+      appendToOutput(`[HMA] Failed to save HMA scope list: ${e}`, true);
+      updateToast(loadingToast, t('simple_toast_error', 'Failed') + ': ' + e, { icon: 'error', type: 'error', autoCloseDelay: 3000 });
+      applyBtn.label = originalLabel;
+      applyBtn.setAttribute('label', originalLabel);
       applyBtn.disabled = false;
     }
   });
