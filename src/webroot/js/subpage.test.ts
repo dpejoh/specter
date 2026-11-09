@@ -270,4 +270,243 @@ describe('subpage framework', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(window.isOverlayOpen).toBe(false);
   });
+
+  it('dedupes concurrent opens before the page has mounted', async () => {
+    const first = openSubPage(baseConfig({ id: 'pending-page' }));
+    const second = openSubPage(baseConfig({ id: 'pending-page' }));
+    expect(second).toBe(first);
+
+    const [a, b] = await Promise.all([first, second]);
+    expect(b).toBe(a);
+    expect(document.querySelectorAll('#subpage-pending-page')).toHaveLength(1);
+  });
+
+  it('renders input variants with attributes, descriptions, units and both value sources', async () => {
+    const getValue = vi.fn(async () => 'from-getter');
+    const onChange = vi.fn();
+    const instance = await openSubPage({
+      id: 'inputs-page',
+      title: 'Inputs',
+      groups: [{
+        title: 'Inputs',
+        description: 'Input group description',
+        items: [
+          {
+            type: 'input', id: 'block-input', getValue, title: 'Block input',
+            description: 'Block description', icon: 'timer', layout: 'block',
+            inputType: 'text', mono: true, min: 1, max: 9, step: 2,
+            placeholder: 'type here', maxLength: 12, autocapitalize: 'none',
+            autocomplete: 'off', spellcheck: false, ariaLabel: 'Block aria label',
+            unit: 'ms', onChange,
+          },
+          {
+            type: 'input', id: 'value-input', value: '42', title: 'Value only', onChange,
+          },
+        ],
+      }],
+    });
+
+    expect(instance.overlay.querySelector('.subpage-top-desc')).toBeNull();
+    expect(instance.overlay.querySelector('.subpage-group-desc')?.textContent)
+      .toBe('Input group description');
+
+    const blockRow = instance.overlay.querySelector('#block-input-row')!;
+    expect(blockRow.getAttribute('variant')).toBe('custom');
+    expect(blockRow.classList.contains('subpage-input-row--block')).toBe(true);
+    expect(blockRow.hasAttribute('stacked')).toBe(true);
+    expect(blockRow.querySelector('md-icon[slot="icon"]')?.textContent).toBe('timer');
+
+    const blockInput = instance.overlay.querySelector('#block-input') as HTMLInputElement;
+    expect(blockInput.value).toBe('from-getter');
+    expect(blockInput.type).toBe('text');
+    expect(blockInput.classList.contains('subpage-inline-input--block')).toBe(true);
+    expect(blockInput.classList.contains('subpage-inline-input--mono')).toBe(true);
+    expect(blockInput.min).toBe('1');
+    expect(blockInput.max).toBe('9');
+    expect(blockInput.step).toBe('2');
+    expect(blockInput.placeholder).toBe('type here');
+    expect(blockInput.maxLength).toBe(12);
+    expect(blockInput.getAttribute('autocapitalize')).toBe('none');
+    expect(blockInput.getAttribute('autocomplete')).toBe('off');
+    expect(blockInput.spellcheck).toBe(false);
+    expect(blockInput.getAttribute('aria-label')).toBe('Block aria label');
+    expect(blockInput.getAttribute('aria-describedby')).toBe('block-input-desc');
+    expect(instance.overlay.querySelector('#block-input-desc')?.textContent)
+      .toBe('Block description');
+    expect(instance.overlay.querySelector('#block-input-wrapper')).toBeNull();
+    expect(blockRow.querySelector('.subpage-input-wrapper--block .subpage-input-unit')?.textContent)
+      .toBe('ms');
+
+    const valueInput = instance.overlay.querySelector('#value-input') as HTMLInputElement;
+    expect(valueInput.value).toBe('42');
+    expect(valueInput.type).toBe('number');
+    valueInput.value = '43';
+    valueInput.dispatchEvent(new Event('change'));
+    expect(onChange).toHaveBeenCalledWith('43');
+    expect(cfgSet).not.toHaveBeenCalled();
+  });
+
+  it('renders switch icons and radio badges, and handles radio change events', async () => {
+    const onSelect = vi.fn();
+    const instance = await openSubPage(baseConfig({
+      id: 'decor-page',
+      groups: [{
+        items: [
+          { id: 'icon-sw', key: 'icon_sw', title: 'Icon switch', description: '', icon: 'bolt' },
+          {
+            type: 'radio', id: 'badge-radio', name: 'decor_mode', value: 'x',
+            title: 'Badge radio', description: 'Radio description', badge: 'NEW', icon: 'star', onSelect,
+          },
+        ],
+      }],
+    }));
+
+    const switchRow = instance.overlay.querySelector('#icon-sw-row')!;
+    expect(switchRow.querySelector('md-icon[slot="icon"]')?.textContent).toBe('bolt');
+    expect(switchRow.querySelector('#icon-sw')).not.toBeNull();
+
+    const radio = instance.overlay.querySelector('#badge-radio') as RadioEl;
+    expect(radio.getAttribute('aria-label')).toBe('Badge radio, NEW');
+    expect(instance.overlay.querySelector('.subpage-radio-badge')?.textContent).toBe('NEW');
+    expect(instance.overlay.querySelector('#badge-radio-row .supporting-text')?.textContent)
+      .toBe('Radio description');
+
+    instance.overlay.querySelector('#badge-radio-row')!.dispatchEvent(new Event('click', { bubbles: true }));
+    expect(radio.checked).toBe(true);
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledWith('x');
+
+    // Clicking the radio control itself is ignored by the row handler.
+    radio.dispatchEvent(new Event('click', { bubbles: true }));
+    expect(onSelect).toHaveBeenCalledTimes(1);
+
+    radio.checked = false;
+    radio.dispatchEvent(new Event('change'));
+    expect(onSelect).toHaveBeenCalledTimes(1);
+
+    radio.checked = true;
+    radio.dispatchEvent(new Event('change'));
+    expect(onSelect).toHaveBeenCalledTimes(2);
+  });
+
+  it('defaults an on/off master toggle on and writes the off state', async () => {
+    const onChange = vi.fn();
+    const instance = await openSubPage(baseConfig({
+      id: 'master-on-page',
+      masterToggle: {
+        key: 'master_on', title: 'Master on', onChange, syncSwitchId: 'missing-parent',
+      },
+    }));
+
+    expect(instance.isMasterEnabled()).toBe(true);
+    expect(instance.overlay.querySelector('#subpage-master-card')!
+      .classList.contains('subpage-master-item--active')).toBe(true);
+    expect(instance.overlay.querySelector('#subpage-options-wrapper')!
+      .classList.contains('subpage-options--disabled')).toBe(false);
+
+    const masterSwitch = instance.overlay.querySelector('#subpage-master-switch') as SwitchEl;
+    expect(masterSwitch.selected).toBe(true);
+    masterSwitch.selected = false;
+    masterSwitch.dispatchEvent(new Event('change'));
+
+    await vi.waitFor(() => expect(cfgSet).toHaveBeenCalledWith('master_on', '0'));
+    expect(instance.isMasterEnabled()).toBe(false);
+    expect(onChange).toHaveBeenCalledWith(false);
+    expect(instance.overlay.querySelector('#subpage-master-card')!
+      .classList.contains('subpage-master-item--active')).toBe(false);
+    expect(instance.overlay.querySelector('#subpage-options-wrapper')!
+      .classList.contains('subpage-options--disabled')).toBe(true);
+  });
+
+  it('supports a master toggle with a getter but no storage key', async () => {
+    const instance = await openSubPage(baseConfig({
+      id: 'master-local-page',
+      masterToggle: { title: 'Local master', getValue: () => true },
+    }));
+
+    expect(instance.isMasterEnabled()).toBe(true);
+    const masterSwitch = instance.overlay.querySelector('#subpage-master-switch') as SwitchEl;
+    masterSwitch.selected = false;
+    masterSwitch.dispatchEvent(new Event('change'));
+    await vi.waitFor(() => expect(instance.isMasterEnabled()).toBe(false));
+    expect(cfgSet).not.toHaveBeenCalled();
+  });
+
+  it('renders info card fallbacks without a title or custom icon', async () => {
+    const instance = await openSubPage({
+      id: 'info-default-page',
+      title: 'Info defaults',
+      groups: [{ items: [] }],
+      infoCard: { text: 'A plain note' },
+    });
+
+    expect(instance.overlay.querySelector('.subpage-info-note md-icon')?.textContent).toBe('info');
+    expect(instance.overlay.querySelector('.subpage-info-title')).toBeNull();
+    expect(instance.overlay.querySelector('.subpage-info-note p')?.textContent).toBe('A plain note');
+    expect(instance.overlay.querySelector('.subpage-top-desc')).toBeNull();
+  });
+
+  it('back button delegates to history and popstate closes only for foreign entries', async () => {
+    const back = vi.spyOn(window.history, 'back').mockImplementation(() => {});
+    const onClose = vi.fn();
+    const instance = await openSubPage(baseConfig({ id: 'back-page', onClose }));
+
+    instance.overlay.querySelector('#subpage-back')!
+      .dispatchEvent(new Event('click', { bubbles: true }));
+    expect(back).toHaveBeenCalledTimes(1);
+
+    window.dispatchEvent(new PopStateEvent('popstate', { state: { subpage: 'back-page' } }));
+    window.dispatchEvent(new PopStateEvent('popstate', { state: { subpage: 'file-browser' } }));
+    expect(onClose).not.toHaveBeenCalled();
+
+    window.dispatchEvent(new PopStateEvent('popstate', { state: { subpage: 'other' } }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    // Already closed: a second popstate is ignored.
+    window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    await vi.waitFor(() => {
+      expect(document.getElementById('subpage-back-page')).toBeNull();
+    }, { timeout: 2000 });
+    back.mockRestore();
+  });
+
+  it('close() is idempotent and closes directly when history moved on', async () => {
+    const onClose = vi.fn();
+    const instance = await openSubPage(baseConfig({ id: 'close-twice-page', onClose }));
+
+    history.replaceState({}, '');
+    instance.close();
+    instance.close();
+
+    await vi.waitFor(() => {
+      expect(document.getElementById('subpage-close-twice-page')).toBeNull();
+    }, { timeout: 2000 });
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(window.isOverlayOpen).toBe(false);
+  });
+
+  it('keeps the page locked until the last subpage closes', async () => {
+    const first = await openSubPage(baseConfig({ id: 'stack-a' }));
+    await openSubPage(baseConfig({ id: 'stack-b' }));
+    await vi.waitFor(() => {
+      expect(document.querySelectorAll('.subpage-overlay--open')).toHaveLength(2);
+    });
+
+    first.close();
+    expect(window.isOverlayOpen).toBe(true);
+    expect(document.documentElement.style.overflow).toBe('hidden');
+
+    const second = document.getElementById('subpage-stack-b') as HTMLElement & {
+      __spInstance?: { close: () => void };
+    };
+    second.__spInstance!.close();
+    await vi.waitFor(() => {
+      expect(document.getElementById('subpage-stack-a')).toBeNull();
+      expect(document.getElementById('subpage-stack-b')).toBeNull();
+    }, { timeout: 2000 });
+    expect(window.isOverlayOpen).toBe(false);
+    expect(document.documentElement.style.overflow).toBe('');
+  });
 });
