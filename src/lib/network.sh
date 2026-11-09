@@ -12,14 +12,17 @@ download() {
     _dl_url="$1" _dl_output="$2" _dl_sha256="$3" _dl_oldpath="$PATH"
     PATH="/data/adb/ap/bin:/data/adb/ksu/bin:/data/adb/magisk:/data/data/com.termux/files/usr/bin:$PATH"
     _dl_tmp="" _dl_code=1 _dl_try=0 _dl_ua="Specter/1.0"
-    _dl_err="${SPECTER_DIR:-/data/adb/specter}/.dl_err_$$"
+    _dl_tmp_dir="${SPECTER_DIR:-/data/adb/specter}/tmp"
+    mkdir -p "$_dl_tmp_dir" 2>/dev/null || true
+    chmod 700 "$_dl_tmp_dir" 2>/dev/null || true
+    _dl_err="$_dl_tmp_dir/.dl_err_$$"
     _dl_https=0 _dl_nocurl=0
     case "$_dl_url" in https://*) _dl_https=1 ;; esac
 
     log_d "NET" "Downloading $_dl_url"
 
     if [ -z "$_dl_output" ]; then
-        _dl_tmp=$(mktemp 2>/dev/null || echo "${SPECTER_DIR:-/data/local/tmp}/.specter_dl_${$}_$(date +%s 2>/dev/null || busybox date +%s)")
+        _dl_tmp=$(mktemp "$_dl_tmp_dir/.specter_dl.XXXXXX" 2>/dev/null || echo "$_dl_tmp_dir/.specter_dl_${$}_$(date +%s 2>/dev/null || busybox date +%s)")
         _dl_output="$_dl_tmp"
     fi
 
@@ -54,7 +57,7 @@ download() {
                 log_e "NET" "SHA256 mismatch for $_dl_url"
                 rm -f "$_dl_output" "$_dl_err"
                 PATH="$_dl_oldpath"
-                unset _dl_url _dl_output _dl_sha256 _dl_oldpath _dl_tmp _dl_code _dl_try _dl_sum _dl_ua _dl_err _dl_https _dl_nocurl
+                unset _dl_url _dl_output _dl_sha256 _dl_oldpath _dl_tmp _dl_code _dl_try _dl_sum _dl_ua _dl_err _dl_https _dl_nocurl _dl_tmp_dir
                 return 1
             fi
             log_d "NET" "SHA256 verified"
@@ -71,7 +74,7 @@ download() {
     rm -f "$_dl_err"
     PATH="$_dl_oldpath"
     _dl_rc=$_dl_code
-    unset _dl_url _dl_output _dl_sha256 _dl_oldpath _dl_tmp _dl_code _dl_try _dl_sum _dl_ua _dl_proto _dl_err _dl_https _dl_nocurl
+    unset _dl_url _dl_output _dl_sha256 _dl_oldpath _dl_tmp _dl_code _dl_try _dl_sum _dl_ua _dl_proto _dl_err _dl_https _dl_nocurl _dl_tmp_dir
     return $_dl_rc
 }
 

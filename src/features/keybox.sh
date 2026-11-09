@@ -15,8 +15,10 @@ case "${1:-}" in --if-needed) _if_needed=1 ;; esac
 detect_keystore_manager
 ksm_available || die "No keystore manager (Tricky Store / TEESimulator / OhMyKeymint) data directory found"
 
-DECODE_FILE="/data/local/tmp/keybox_decode.$$"
-TEMP_FILE="/data/local/tmp/keybox.tmp.$$"
+ensure_dir "$SPECTER_DIR/tmp"
+chmod 700 "$SPECTER_DIR/tmp" 2>/dev/null || true
+DECODE_FILE="$SPECTER_DIR/tmp/keybox_decode.$$"
+TEMP_FILE="$SPECTER_DIR/tmp/keybox.tmp.$$"
 trap 'rm -f "$DECODE_FILE" "$TEMP_FILE" 2>/dev/null' EXIT
 
 

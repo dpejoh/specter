@@ -8,7 +8,10 @@
 # on their dates, so an expired root does not condemn the chain.
 keybox_cert_validity() {
   (
-    _kv_dir=$(mktemp -d "${TMPDIR:-/data/local/tmp}/specter-cert.XXXXXX") || { echo unknown; exit; }
+    _kv_tmp="${SPECTER_DIR:-/data/adb/specter}/tmp"
+    mkdir -p "$_kv_tmp" 2>/dev/null || { echo unknown; exit; }
+    chmod 700 "$_kv_tmp" 2>/dev/null || true
+    _kv_dir=$(mktemp -d "$_kv_tmp/specter-cert.XXXXXX") || { echo unknown; exit; }
     trap 'rm -rf "$_kv_dir"; rm -f "$_kv_dir.der" "$_kv_dir.res"' EXIT
     # Keybox XML may be minified, with PEM markers sharing a line with tags
     # or with each other; isolate every marker on its own line first.
@@ -98,11 +101,14 @@ keybox_cert_validity() {
 
 decode_keybox_blob() {
   _dkb_in="$1" _dkb_out="$2"
-  _dkb_tmp="/data/local/tmp/_dkb_$$.tmp"
+  _dkb_tmp_dir="${SPECTER_DIR:-/data/adb/specter}/tmp"
+  mkdir -p "$_dkb_tmp_dir" 2>/dev/null || return 1
+  chmod 700 "$_dkb_tmp_dir" 2>/dev/null || true
+  _dkb_tmp="$_dkb_tmp_dir/_dkb_$$.tmp"
   decode_substitution "$_dkb_in" "$_dkb_tmp" 2>/dev/null || { rm -f "$_dkb_tmp"; return 1; }
   base64 -d < "$_dkb_tmp" > "$_dkb_out" 2>/dev/null || { rm -f "$_dkb_tmp"; return 1; }
   rm -f "$_dkb_tmp"
-  unset _dkb_in _dkb_out _dkb_tmp
+  unset _dkb_in _dkb_out _dkb_tmp _dkb_tmp_dir
 }
 
 # shellcheck disable=SC3057,SC3052

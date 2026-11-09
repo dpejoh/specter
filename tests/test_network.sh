@@ -24,6 +24,7 @@ MOCK_HTTP_ERROR=0; export MOCK_HTTP_ERROR
 download 'https://example.com/keybox' "$TEST_ROOT/result" ''
 assert_eq "HTTPS: verified curl content" 'verified content' "$(cat "$TEST_ROOT/result")"
 assert_not_contains "HTTPS: never uses busybox wget" "$(cat "$TEST_ROOT/transport.log")" 'busybox called'
+assert_eq "HTTPS: temp files under SPECTER_DIR" "yes" "$([ -d "$SPECTER_DIR/tmp" ] && echo yes)"
 MOCK_HTTP_ERROR=1; export MOCK_HTTP_ERROR
 download 'https://example.com/missing' "$TEST_ROOT/result" ''
 assert_exit_code "HTTP error: reports failure" 1 "$?"
