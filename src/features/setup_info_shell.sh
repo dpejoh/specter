@@ -257,7 +257,7 @@ fi
 _feature "Auto Target" "$(_onoff "$(cfg_get toggle_auto_target 1)") · $(_fmt_interval "$(cfg_get auto_target_interval 300)")"
 _feature "Keybox refresh" "$(_onoff "$(cfg_get toggle_keybox_info 1)") · $(_fmt_interval "$(cfg_get keybox_watch_interval 3600)") · replace $([ "$(cfg_get toggle_keybox_auto_replace 1)" = "1" ] && echo "on" || echo "off")"
 if [ "$_hma_present" = "1" ]; then
-  _feature "Auto HMA config" "$(_onoff "$(cfg_get toggle_auto_hma 1)") · $(_fmt_interval "$(cfg_get hma_interval 21600)")"
+  _feature "Auto HMA config" "$(_onoff "$(cfg_get toggle_auto_hma 0)") · $(_fmt_interval "$(cfg_get hma_interval 21600)")"
 fi
 if [ "$_pif_present" = "1" ]; then
   _feature "Auto PIF" "$(_onoff "$(cfg_get toggle_autopif 0)")"

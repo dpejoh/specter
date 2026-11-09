@@ -102,14 +102,14 @@ _force_keybox=$(cfg_get toggle_action_force_keybox 0)
     fi
   fi
 
-  if _feature_should_run "hma"; then
+  if _feature_should_run "hma" 0; then
     log_u "ACTION" ""
     log_u "ACTION" "-> HMA-OSS Config:"
     _hma_config_ok=0
     for _hma_config in "$HMAOSS_BASE"/hide_my_applist*/config.json; do
       [ -s "$_hma_config" ] && { _hma_config_ok=1; break; }
     done
-    if [ "$_first_boot" = "1" ] || [ "$_force_hma" = "1" ] || [ "$_hma_config_ok" != "1" ] || [ "$(cfg_get toggle_auto_hma 1)" != "1" ]; then
+    if [ "$_first_boot" = "1" ] || [ "$_force_hma" = "1" ] || [ "$_hma_config_ok" != "1" ] || [ "$(cfg_get toggle_auto_hma 0)" != "1" ]; then
       [ "$_hma_config_ok" != "1" ] && log_w "ACTION" "HMA config missing, regenerating"
       sh "$MODDIR/features/hma.sh" || true
       log_u "ACTION" "HMA-OSS configuration complete"

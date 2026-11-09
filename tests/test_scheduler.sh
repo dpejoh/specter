@@ -6,7 +6,7 @@ assert_contains "watch minimum interval" "$_scheduler" '[ "$_name" = "keybox_wat
 assert_contains "hma task present" "$_scheduler" "hma:hma.sh:21600:toggle_auto_hma"
 assert_contains "hma watcher present" "$_scheduler" "features/hma.sh --watch"
 assert_contains "hma watcher gated" "$_scheduler" '_hma_val'
-assert_contains "hma watcher runs without auto-target" "$_scheduler" '|| [ "$(cfg_get toggle_auto_hma 1)" = "1" ]'
+assert_contains "hma watcher runs without auto-target" "$_scheduler" '|| [ "$(cfg_get toggle_auto_hma 0)" = "1" ]'
 assert_contains "target watcher respects polling" "$_scheduler" '_at_method:-instant'
 assert_contains "hma retry on failure" "$_scheduler" '[ "$_name" = "hma" ] && [ "$_task_rc" -ne 0 ]'
 assert_contains "hma failure retry delay" "$_scheduler" "retrying in 5m"

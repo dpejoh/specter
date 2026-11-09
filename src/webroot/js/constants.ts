@@ -33,9 +33,9 @@ export const CONTROL_TOGGLES: ToggleDef[] = [
   { id: 'toggle-action_security_patch', key: 'toggle_action_security_patch', default: '0', icon: 'security_update_good', section: 'action', configurable: true },
   { id: 'toggle-action_pif', key: 'toggle_action_pif', icon: 'fingerprint', section: 'action' },
   { id: 'toggle-action_keybox', key: 'toggle_action_keybox', default: '1', icon: 'vpn_key', section: 'action', configurable: true },
-  { id: 'toggle-action_hma', key: 'toggle_action_hma', default: '1', icon: 'visibility_off', section: 'action', configurable: true },
+  { id: 'toggle-action_hma', key: 'toggle_action_hma', default: '0', icon: 'visibility_off', section: 'action', configurable: true },
   { id: 'toggle-background_auto_target', key: 'toggle_auto_target', icon: 'my_location', section: 'background', configurable: true },
-  { id: 'toggle-background_auto_hma', key: 'toggle_auto_hma', default: '1', icon: 'autorenew', section: 'background', configurable: true },
+  { id: 'toggle-background_auto_hma', key: 'toggle_auto_hma', default: '0', icon: 'autorenew', section: 'background', configurable: true },
   { id: 'toggle-background_keybox_info', key: 'toggle_keybox_info', icon: 'refresh', section: 'background', configurable: true },
   { id: 'toggle-background_autopif', key: 'toggle_autopif', default: '0', icon: 'fingerprint', section: 'background', configurable: true },
 ];

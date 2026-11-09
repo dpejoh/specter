@@ -14,7 +14,7 @@ export function openAutoHmaDialog() {
     ),
     masterToggle: {
       key: 'toggle_auto_hma',
-      defaultVal: '1',
+      defaultVal: '0',
       title: t('auto_hma_master', 'Use Auto-Update HMA Config'),
       syncSwitchId: 'toggle-background_auto_hma',
     },

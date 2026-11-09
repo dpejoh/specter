@@ -48,7 +48,7 @@ fi
 # Launch inotifyd for app install detection if available. The same watcher
 # serves instant auto-target and auto-HMA; polling auto-target disables only
 # its own handler path.
-if { [ "$(cfg_get toggle_auto_target 1)" = "1" ] && [ "$(cfg_get auto_target_method instant)" != "polling" ]; } || [ "$(cfg_get toggle_auto_hma 1)" = "1" ]; then
+if { [ "$(cfg_get toggle_auto_target 1)" = "1" ] && [ "$(cfg_get auto_target_method instant)" != "polling" ]; } || [ "$(cfg_get toggle_auto_hma 0)" = "1" ]; then
   _inotify_bin="$MODDIR/deps/inotifyd"
 
   if [ -x "$_inotify_bin" ]; then
@@ -62,7 +62,7 @@ if [ "\${_at_val:-1}" = "1" ] && [ "\${_at_method:-instant}" != "polling" ]; the
   su -c "sh \${MODDIR}/features/auto_target.sh" 2>/dev/null || true
 fi
 _hma_val="\$(su -c "cat \${SPECTER_DIR}/config/val/toggle_auto_hma.val" 2>/dev/null)"
-if [ "\${_hma_val:-1}" = "1" ]; then
+if [ "\${_hma_val:-0}" = "1" ]; then
   su -c "sh \${MODDIR}/features/hma.sh --watch >> '\${SPECTER_DIR}/log/sched_hma.log' 2>&1" 2>/dev/null || true
 fi
 . "\${MODDIR}/lib/common.sh" 2>/dev/null
@@ -145,7 +145,7 @@ while true; do
 
     _toggle_default=1
     case "$_toggle" in
-      toggle_autopif) _toggle_default=0 ;;
+      toggle_autopif|toggle_auto_hma) _toggle_default=0 ;;
     esac
     [ "$(cfg_get "$_toggle" "$_toggle_default")" = "0" ] && continue
 
