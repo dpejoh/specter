@@ -1,7 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
-import { UI_COMPONENTS, getUiComponent, isUiComponentDefined } from './index.js';
+import {
+  UI_COMPONENTS,
+  assertUiComponentsDefined,
+  getUiComponent,
+  isUiComponentDefined,
+} from './index.js';
+import { defineUiComponent } from './define.js';
 
 describe('ui registry', () => {
   it('defines every registered component', () => {
@@ -35,6 +41,23 @@ describe('ui registry', () => {
 
     for (const tag of used) {
       expect(getUiComponent(tag), tag).toBeDefined();
+    }
+  });
+
+  it('does not redefine a tag that is already registered', () => {
+    const existing = customElements.get('sp-settings-row');
+    const replacement = class extends HTMLElement {};
+
+    expect(() => defineUiComponent('sp-settings-row', replacement)).not.toThrow();
+    expect(customElements.get('sp-settings-row')).toBe(existing);
+  });
+
+  it('throws when a registered component is not defined', () => {
+    const getSpy = vi.spyOn(customElements, 'get').mockReturnValue(undefined);
+    try {
+      expect(() => assertUiComponentsDefined()).toThrow(/is registered but not defined/);
+    } finally {
+      getSpy.mockRestore();
     }
   });
 });

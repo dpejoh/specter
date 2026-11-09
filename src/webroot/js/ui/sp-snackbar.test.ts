@@ -131,4 +131,87 @@ describe('sp-snackbar', () => {
     await bar.updateComplete
     expect(bar.shadowRoot?.querySelector('.md-snackbar__action')).toBeNull()
   })
+
+  it('show() is idempotent while the snackbar is shown', () => {
+    const bar = createSnackbar()
+    bar.timeout = -1
+    const onOpen = vi.fn()
+    const onOpened = vi.fn()
+    bar.addEventListener('open', onOpen)
+    bar.addEventListener('opened', onOpened)
+
+    bar.show()
+    bar.show()
+    vi.advanceTimersByTime(200)
+
+    expect(onOpen).toHaveBeenCalledOnce()
+    expect(onOpened).toHaveBeenCalledOnce()
+  })
+
+  it('close() does nothing when the snackbar is not shown', () => {
+    const bar = createSnackbar()
+    const onClose = vi.fn()
+    const onClosed = vi.fn()
+    bar.addEventListener('close', onClose)
+    bar.addEventListener('closed', onClosed)
+
+    bar.close()
+    vi.advanceTimersByTime(400)
+
+    expect(onClose).not.toHaveBeenCalled()
+    expect(onClosed).not.toHaveBeenCalled()
+    expect(bar.open).toBe(false)
+  })
+
+  it('stays open when shown again during the close transition', () => {
+    const bar = createSnackbar()
+    bar.timeout = -1
+    const onClosed = vi.fn()
+    bar.addEventListener('closed', onClosed)
+
+    bar.show()
+    vi.advanceTimersByTime(200)
+    bar.close()
+    vi.advanceTimersByTime(100)
+    bar.show()
+    vi.advanceTimersByTime(400)
+
+    expect(onClosed).not.toHaveBeenCalled()
+    expect(bar.open).toBe(true)
+    expect(bar.classList.contains('opened')).toBe(true)
+  })
+
+  it('closes when the icon slot is clicked', async () => {
+    const bar = createSnackbar()
+    bar.timeout = -1
+    const icon = document.createElement('span')
+    icon.setAttribute('slot', 'icon')
+    icon.textContent = 'X'
+    bar.appendChild(icon)
+    await bar.updateComplete
+
+    bar.show()
+    vi.advanceTimersByTime(200)
+    expect(bar.classList.contains('opened')).toBe(true)
+
+    // happy-dom does not retarget a click from slotted content through the
+    // slot, so dispatch the click on the slot that carries the handler.
+    const slot = bar.shadowRoot!.querySelector('slot[name="icon"]') as HTMLSlotElement
+    slot.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }))
+    expect(bar.classList.contains('opened')).toBe(false)
+    vi.advanceTimersByTime(200)
+    expect(bar.open).toBe(false)
+  })
+
+  it('reflects fixed, two-lines, and timeout attributes', async () => {
+    const bar = createSnackbar()
+    bar.fixed = true
+    bar.twoLines = true
+    bar.timeout = 2500
+    await bar.updateComplete
+
+    expect(bar.hasAttribute('fixed')).toBe(true)
+    expect(bar.hasAttribute('two-lines')).toBe(true)
+    expect(bar.getAttribute('timeout')).toBe('2500')
+  })
 })

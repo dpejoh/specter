@@ -45,4 +45,37 @@ describe('sp-page-skeleton', () => {
     expect(root.querySelectorAll('.section').length).toBe(1);
     expect(root.querySelectorAll('.row').length).toBe(1);
   });
+
+  it('clamps counts to at most twelve', async () => {
+    const skeleton = makeSkeleton();
+    skeleton.sections = 99;
+    skeleton.rows = 99;
+    await skeleton.updateComplete;
+
+    const root = skeleton.shadowRoot!;
+    expect(root.querySelectorAll('.section').length).toBe(12);
+    expect(root.querySelectorAll('.row').length).toBe(144);
+  });
+
+  it('falls back to the defaults for non-finite counts', async () => {
+    const skeleton = makeSkeleton();
+    skeleton.sections = Number.NaN;
+    skeleton.rows = Number.NaN;
+    await skeleton.updateComplete;
+
+    const root = skeleton.shadowRoot!;
+    expect(root.querySelectorAll('.section').length).toBe(3);
+    expect(root.querySelectorAll('.row').length).toBe(9);
+  });
+
+  it('floors fractional counts', async () => {
+    const skeleton = makeSkeleton();
+    skeleton.sections = 2.9;
+    skeleton.rows = 1.9;
+    await skeleton.updateComplete;
+
+    const root = skeleton.shadowRoot!;
+    expect(root.querySelectorAll('.section').length).toBe(2);
+    expect(root.querySelectorAll('.row').length).toBe(2);
+  });
 });
