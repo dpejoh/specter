@@ -1,41 +1,34 @@
 # v2.0.0
 
-- **A New Component System**  
-  Every page is rebuilt on Specter's own components.  
-  Settings rows and sections, skeletons, tooltips, and a Material snackbar.  
-  The legacy list machinery is deleted.
-- **Material 3 Expressive, Everywhere**  
-  The whole WebUI now follows Material 3 Expressive.  
-  Connected grouped cards, expressive motion, consistent shapes and type.
-- **WebUI Performance**  
-  Pages open instantly on a skeleton; values load after the first paint.  
-  One cached snapshot at startup, pages load on demand.  
-  Heavy work runs in the background, not on the interface thread.
-- **HMA-OSS Scope Manager**  
-  A full page for HMA-OSS, built like App Targeting.  
-  Pick the apps that get the profile, edit the blacklist, apply in place.
-- **Keybox Revocation Watch**  
-  Your installed keybox is watched in the background.  
-  Revoked or expired, it is replaced automatically.
-- **App Targeting, Rebuilt**  
-  Grouped design, mode and status filters, icon search.  
-  Apply runs in the background, not blocking the page.
-- **Keybox Catalog on R2**  
-  Served from R2, with a last known-good fallback.  
-  Sorted by upload date; revoked keyboxes are never installed.
-- **Hot Install**  
-  Updates apply without a reboot, on Magisk, KernelSU, and APatch.
-- **Keybox Checks**: New certificate validity check, read from the keybox itself
-- **Keybox Checks**: Google revocation check fixed; it silently matched nothing before
-- **Keybox Checks**: Selection honors RKP certificate expiry
-- **Keybox Details**: The Home keybox card opens a full details page
-- **Pipeline**: Pipeline and target list generation are much faster now
-- **HMA-OSS**: Config generation no longer freezes the WebUI
-- **HMA-OSS**: Auto-Update regenerates the config in the background
-- **HMA-OSS**: Config refreshes when apps change, retries on failure
-- **Boot Hash**: Dedicated subpage, custom hash spoofing, cache controls
-- **Installer**: Falls back to Tricky Store OSS when no keystore backend is present
-- **Translations**: Complete coverage across all 10 locales
+### Highlights
+
+- **WebUI component system**: Settings, Tools, Control, and subpages use `sp-settings-row`, `sp-settings-section`, `sp-skeleton`, `sp-page-skeleton`, `sp-tooltip`, and `sp-snackbar`. The legacy row and corner machinery is removed.
+- **Material 3 Expressive**: connected grouped cards, shared shapes and type, theme-aware header branding and brand artwork, and the system Monet/HCT palette.
+- **Page loading**: Tools, Control, and Settings load on first open behind a skeleton. Page modules load on demand. Startup uses one state/config snapshot and Home no longer starts shell reads.
+- **HMA-OSS scope manager**: scope and blacklist editing per app, apply in place, on-device profile generation from presets, detector app handling, hidden Xposed modules, and `--list-raw` / `--set` CLI support. Auto-update is opt-in and off by default.
+- **Keybox catalog, details, and watch**: R2-backed catalog with Worker and last-known-good fallback, status/provider filters, upload-date order, full details page, and an hourly check that replaces revoked or expired keyboxes when auto-replace is enabled.
+- **App Targeting**: grouped rows, mode/status filters, header search, async apply with progress, immediate blacklist pruning, and background description refresh.
+- **Setup page**: native device/module/feature snapshot through `app_process` (`SetupProbe`) with a shell fallback. The Home keystore/security card opens it.
+- **Hot install**: userspace updates apply without reboot on Magisk, KernelSU, and APatch. Mounted payloads (`system`, `vendor`, `product`, `system_ext`, `sepolicy.rule`, `system.prop`, `zygisk`) still require a reboot.
+- **Boot Hash page**: dedicated subpage with custom hash spoofing and cache controls.
+- **Translations**: Arabic, Spanish, French, Hungarian, Indonesian, Polish, Russian, Turkish, Vietnamese, and Chinese.
+
+### Changed
+
+- HMA config is generated on-device; the downloaded config URL is removed.
+- Auto Keybox page and HMA launch policy/live-reload toggles removed. The keybox refresh watch replaces Auto Keybox.
+- HMA auto-update defaults off, interval 6 hours. Keybox watch defaults to 60 minutes with an auto-replace toggle.
+- Action pipeline is non-interactive and skips auto-managed target/HMA jobs unless forced.
+
+### Fixed
+
+- Keybox: Google revocation serial matching, minified XML and expired roots, revoked entries, and no-curl download fallback.
+- Hot install: Magisk no longer leaves a staging stub that wipes the module after reboot.
+- Also fixed: blacklist back navigation, fixed-target handling, HMA merge, theme persistence, log tab switching, keybox filters, home truncation, and other minor issues.
+
+### Under the hood
+
+- 585 WebUI tests, 589 shell assertions, mksh emulation, coverage for the `ui/` components, and fewer shell forks in target, keystore, and HMA paths.
 
 # v1.5.0
 
@@ -103,7 +96,7 @@
 - Keystore management prefers TEESimulator over the Tricky Store family
 - Action pipeline security patch step defaults off
 - Play Store data clear defaults off
-- Removed the TEE check, TEE status display, and custom boot hash stack — keystore backends run their own TEE checks; declaring a status only confused users into thinking their device was broken
+- Removed the TEE check, TEE status display, and custom boot hash stack; keystore backends run their own TEE checks, and declaring a status only confused users into thinking their device was broken
 - Singleton enforcement considers enabled modules only
 - Custom ROM props exposed in ROM Cleaner
 
@@ -172,9 +165,9 @@
 - `customize.sh`: omit TEE status line when status file missing
 
 **Fixed**
-- Auto-target not working after clean install — missing toggle `.val` files created on boot
+- Auto-target not working after clean install: missing toggle `.val` files created on boot
 - Scheduler stale PID check: `kill -0` can match reused PID after reboot; now verifies cmdline
-- inotifyd handler exits when `toggle_auto_target.val` missing — shell default fallback (`${_cg_val:-1}`)
+- inotifyd handler exits when `toggle_auto_target.val` missing; shell default fallback (`${_cg_val:-1}`)
 - Auto-target inotify handler uses `su -c` to bypass KernelSU SELinux restrictions
 
 # v1.4.4-14
@@ -183,13 +176,13 @@
 - Conflict system rewritten: toggle `.val` files are the single source of truth; `resolve_conflicts()` writes `toggle_<feature>=0` for claimed features; `_feature_should_run()` checks toggle only (removed separate `_conflict_claimed()` gate); conflict section priority switches batch-update toggles
 - `action.sh` and `auto_target.sh` use `_feature_should_run()` instead of manual `_conflict_claimed()` checks
 - `conflict_set_choice()` syncs feature toggles when priority changes
-- Dialog UIs (prop-handler, boot-harden, gms, adb-disabler, rom-fingerprint) check parent toggle state — child switches disabled with banner when parent is OFF
+- Dialog UIs (prop-handler, boot-harden, gms, adb-disabler, rom-fingerprint) check parent toggle state; child switches disabled with banner when parent is OFF
 - Feature names exposed in `conflict_status_json()` + shown in UI hint text
 - `exec()` bridge: added timeout, fixed exit code extraction from JSON responses
 - CI cleanup: removed Playwright e2e and coverage (trimmed ~50s per run), fixed shellcheck warnings
 
 **Fixed**
-- `_conflict_registry()` fallback path broke when `$MODDIR` unset in web bridge — BRENE never appeared in conflict section
+- `_conflict_registry()` fallback path broke when `$MODDIR` unset in web bridge; BRENE never appeared in conflict section
 - Passive module conflict choices overwritten every boot (user selection wiped on reboot)
 - sha256sum mock recursion in tests (hung for 18s on CI)
 
