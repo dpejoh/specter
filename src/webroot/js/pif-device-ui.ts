@@ -16,7 +16,7 @@ import { exec, getDataDir } from './bridge.js';
 import { cfgGet, cfgSet } from './cfg.js';
 import { openFileBrowser } from './file-browser.js';
 import { showConfirm } from './dialog.js';
-import { showToast } from './toast.js';
+import { showToast, showLoadingToast, updateToast } from './toast.js';
 import { afterPaint, escapeHtml, shellEscape } from './utils.js';
 import { t, tf } from './i18n.js';
 import { refreshPifChooseDesc as refreshChooseDesc } from './pif-choose-desc.js';
@@ -33,6 +33,17 @@ const pifBotUrls = (path: string): string[] => [
   `https://gh.sevencdn.com/https://raw.githubusercontent.com/${PIF_REPO}/${path}`,
 ];
 const DEVICE_LIST_URLS = pifBotUrls('bot/device_list.json');
+
+/** Resolve after two frames, once the disabled FAB and toast have painted. */
+function afterNextPaint(): Promise<void> {
+  return new Promise(resolve => {
+    if (typeof requestAnimationFrame !== 'function') {
+      resolve();
+      return;
+    }
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  });
+}
 
 const FALLBACK_CANARY_DEVICES: PifDevice[] = [
   { model: 'Pixel 6', product: 'oriole_beta' },
@@ -159,12 +170,16 @@ export async function openPifDeviceSubpage() {
   // list. Awaiting them first used to freeze the tap, worst on a slow
   // network. State the user changes before the load lands is kept.
   let selectedProduct = '';
+  let selectedModel = '';
   let blacklist = new Set<string>();
   let mode: 'target' | 'blacklist' = 'target';
   let imported: PifDevice[] = [];
   let canary: PifDevice[] = FALLBACK_CANARY_DEVICES;
   let searchQuery = '';
-  let interacted = false;
+  // Target selection and blacklist edits are independent: picking a device
+  // must not cause the loaded blacklist to be discarded.
+  let targetInteracted = false;
+  let blacklistInteracted = false;
 
   let listHostRef: HTMLElement | null = null;
   let searchFieldRef: MdOutlinedTextField | null = null;
@@ -194,18 +209,24 @@ export async function openPifDeviceSubpage() {
     } else {
       const all = getAllDevices();
       const chosen = all.find(d => d.product === selectedProduct);
-      if (chosen) {
-        await cfgSet('pif_preferred_devices', encodePreferred([chosen]));
-        await cfgSet('pif_preferred_product', '');
-        await cfgSet('pif_preferred_model', '');
-      }
+      // The chosen device may have come from the fallback list before the
+      // live list replaced it. Persist its product anyway, using the model
+      // remembered at selection time, instead of silently leaving the old
+      // preference in place.
+      const model = chosen?.model || selectedModel || selectedProduct;
+      await cfgSet('pif_preferred_devices', encodePreferred([{ model, product: selectedProduct }]));
+      await cfgSet('pif_preferred_product', '');
+      await cfgSet('pif_preferred_model', '');
     }
     void refreshChooseDesc();
   };
 
-  const selectProduct = (prod: string) => {
-    interacted = true;
+  const selectProduct = (prod: string, model?: string) => {
+    targetInteracted = true;
     selectedProduct = prod;
+    selectedModel = prod
+      ? (model ?? getAllDevices().find(d => d.product === prod)?.model ?? '')
+      : '';
     if (!listHostRef) return;
     listHostRef.querySelectorAll<MdRadio>('md-radio[name="pif-device"]').forEach(r => {
       r.checked = r.value === selectedProduct;
@@ -219,7 +240,7 @@ export async function openPifDeviceSubpage() {
   };
 
   const toggleBlacklistDevice = (prod: string) => {
-    interacted = true;
+    blacklistInteracted = true;
     if (blacklist.has(prod)) {
       blacklist.delete(prod);
     } else {
@@ -231,6 +252,7 @@ export async function openPifDeviceSubpage() {
 
   const clearAllBlacklist = () => {
     if (blacklist.size === 0) return;
+    blacklistInteracted = true;
     blacklist.clear();
     updateHeaderFn?.();
     renderLists();
@@ -360,14 +382,16 @@ export async function openPifDeviceSubpage() {
           );
           if (!ok) return;
 
-          interacted = true;
+          targetInteracted = true;
           const product = IMPORTED_PREFIX + id;
           const path = `${importedDir()}/${id}.prop`;
           await exec(`rm -f ${shellEscape(path)} 2>/dev/null || true`);
           if (selectedProduct === product) {
             selectedProduct = '';
+            selectedModel = '';
           }
           if (blacklist.has(product)) {
+            blacklistInteracted = true;
             blacklist.delete(product);
             await saveBlacklist(blacklist, getAllDevices());
           }
@@ -489,8 +513,9 @@ export async function openPifDeviceSubpage() {
     }
 
     const product = IMPORTED_PREFIX + id;
-    interacted = true;
+    targetInteracted = true;
     selectedProduct = product;
+    selectedModel = model;
     imported = imported.filter(d => d.product !== product);
     imported.unshift({ model, product, imported: true });
     renderLists();
@@ -611,6 +636,8 @@ export async function openPifDeviceSubpage() {
       applyBtn?.addEventListener('click', async () => {
         if (applyBtn.disabled) return;
         applyBtn.disabled = true;
+        const loadingToast = showLoadingToast(t('common_loading', 'Loading...'));
+        await afterNextPaint();
         try {
           await Promise.all([
             persistTarget(),
@@ -621,7 +648,8 @@ export async function openPifDeviceSubpage() {
           renderLists();
 
           if (mode === 'blacklist') {
-            showToast(
+            updateToast(
+              loadingToast,
               blacklist.size > 0
                 ? tf('menu_pif_blacklist_saved_count', 'Blacklist saved ({0} excluded)', String(blacklist.size))
                 : t('menu_pif_blacklist_saved_all', 'Blacklist saved (all allowed)'),
@@ -630,15 +658,17 @@ export async function openPifDeviceSubpage() {
           } else {
             const all = getAllDevices();
             const chosen = all.find(d => d.product === selectedProduct);
-            const label = chosen?.model || t('menu_pif_random', 'Random Canary (Default)');
-            showToast(tf('menu_pif_applied', '{0} applied', label), {
+            const label = selectedProduct
+              ? (chosen?.model || selectedModel || selectedProduct)
+              : t('menu_pif_random', 'Random Canary (Default)');
+            updateToast(loadingToast, tf('menu_pif_applied', '{0} applied', label), {
               icon: 'check_circle',
               type: 'success',
               autoCloseDelay: 2000,
             });
           }
         } catch (e) {
-          showToast(tf('menu_pif_apply_failed', 'Failed to apply: {0}', String(e)), {
+          updateToast(loadingToast, tf('menu_pif_apply_failed', 'Failed to apply: {0}', String(e)), {
             icon: 'error',
             type: 'error',
             autoCloseDelay: 2500,
@@ -710,10 +740,19 @@ export async function openPifDeviceSubpage() {
     ensureCanaryList(),
     loadBlacklist(),
   ]);
-  imported = loadedImported;
+  const pendingImported = imported;
+  imported = [
+    ...pendingImported,
+    ...loadedImported.filter(d => !pendingImported.some(p => p.product === d.product)),
+  ];
   canary = loadedCanary;
-  if (!interacted) {
+  if (!targetInteracted) {
     selectedProduct = saved[0]?.product || '';
+    selectedModel = saved[0]?.model || '';
+  }
+  // A saved blacklist still loads when only the target was touched (or a
+  // file was imported); explicit blacklist edits keep the user's state.
+  if (!blacklistInteracted) {
     blacklist = loadedBlacklist;
   }
   (updateHeaderFn as (() => void) | null)?.();

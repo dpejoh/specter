@@ -1,19 +1,30 @@
 // Dialogs used by the App Targeting overlay. openModeDialog /
 // openRegenerateDialog take a context with the overlay state they mutate;
 // openTeesimModeDialog only shells out to teesim_mode.sh.
-import { exec, getModuleDir } from './bridge.js';
+import { exec, getModuleDir, spawnCommand } from './bridge.js';
 import { cfgSet } from './cfg.js';
 import { escapeHtml, shellEscape } from './utils.js';
-import { showToast } from './toast.js';
+import { showToast, showLoadingToast, updateToast } from './toast.js';
 import { t } from './i18n.js';
-import { appendToOutput } from './terminal.js';
 import { showDialog } from './dialog.js';
 import { openSubPage, type SubPageInstance } from './subpage.js';
-import type { TargetApp, AppState } from './target-apps.js';
+import { openAppRegenerateDialog } from './app-list-dialogs.js';
+import type { AppListEntry } from './app-list-model.js';
+
+/** Resolve after two frames, once the disabled button and toast have painted. */
+function afterNextPaint(): Promise<void> {
+    return new Promise(resolve => {
+        if (typeof requestAnimationFrame !== 'function') {
+            resolve();
+            return;
+        }
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    });
+}
 
 
 export interface TargetDialogsContext {
-  apps: TargetApp[];
+  apps: AppListEntry[];
   getDefaultMode(): string;
   setDefaultMode(m: string): void;
   applyFilters(): void;
@@ -61,17 +72,19 @@ export function openTeesimModeDialog() {
         if ((b as HTMLElement & { selected: boolean }).selected) mode = b.getAttribute('value') || 'patch';
       });
       applyBtn.disabled = true;
+      const loadingToast = showLoadingToast(t('common_loading', 'Loading...'));
+      await afterNextPaint();
       try {
-        const { code, stderr } = await exec(`sh ${scriptPath} --set ${shellEscape(mode)}`);
+        const { code, stderr } = await spawnCommand(`sh ${scriptPath} --set ${shellEscape(mode)}`);
         if (code !== 0) {
-          showToast(stderr.trim() || t('simple_toast_error', 'Failed'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
-          applyBtn.disabled = false;
+          updateToast(loadingToast, stderr.trim() || t('simple_toast_error', 'Failed'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
           return;
         }
-        showToast(t('ta_teesim_mode_saved', 'Operation mode saved'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
+        updateToast(loadingToast, t('ta_teesim_mode_saved', 'Operation mode saved'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
         d.close();
       } catch {
-        showToast(t('simple_toast_error', 'Failed'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
+        updateToast(loadingToast, t('simple_toast_error', 'Failed'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
+      } finally {
         applyBtn.disabled = false;
       }
     });
@@ -196,7 +209,7 @@ export function openModeSubpage(ctx: TargetDialogsContext): Promise<SubPageInsta
                 let count = 0;
                 for (const app of ctx.apps) {
                   if (app.state !== 'unchecked') {
-                    app.state = mode as AppState;
+                    app.state = mode;
                     count++;
                   }
                 }
@@ -234,32 +247,22 @@ export function openModeSubpage(ctx: TargetDialogsContext): Promise<SubPageInsta
 export const openModeDialog = openModeSubpage;
 
 export function openRegenerateDialog(ctx: TargetDialogsContext) {
-    const d = showDialog(
-      escapeHtml(t('ta_regenerate', 'Regenerate')),
-      `<p class="supporting-text">${escapeHtml(t('ta_regenerate_confirm', 'This will re-scan all installed apps and fully rebuild target.txt. Custom per-app states will be overwritten. A backup will be saved.'))}</p>`,
-      `<md-text-button class="dialog-action-close">${escapeHtml(t('dialog_cancel', 'Cancel'))}</md-text-button>
-       <md-filled-button id="ta-regenerate-confirm">${escapeHtml(t('ta_regenerate', 'Regenerate'))}</md-filled-button>`
-    );
-
-    d.querySelector('#ta-regenerate-confirm')!.addEventListener('click', async () => {
-      d.close();
-      ctx.loading.style.display = '';
-      ctx.list.style.display = 'none';
-
-      appendToOutput('[TARGET] Regenerating target.txt from all apps...');
-      try {
-        await exec(`sh ${shellEscape(getModuleDir() + '/features/target.sh')}`);
-        appendToOutput('[TARGET] Regeneration complete');
-        showToast(t('ta_regenerate_success', 'Target list regenerated'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
-        await ctx.refreshApps();
-      } catch (e) {
-        appendToOutput(`[TARGET] Regeneration failed: ${e}`, true);
-      } finally {
-        ctx.loading.style.display = 'none';
-        ctx.list.style.display = '';
-      }
-    });
-
-    d.querySelector('.dialog-action-close')!.addEventListener('click', () => d.close());
-  }
+  openAppRegenerateDialog({
+    confirmId: 'ta-regenerate-confirm',
+    title: t('ta_regenerate', 'Regenerate'),
+    body: t('ta_regenerate_confirm', 'This will re-scan all installed apps and fully rebuild target.txt. Custom per-app states will be overwritten. A backup will be saved.'),
+    confirmLabel: t('ta_regenerate', 'Regenerate'),
+    cancelLabel: t('dialog_cancel', 'Cancel'),
+    successLabel: t('ta_regenerate_success', 'Target list regenerated'),
+    loading: ctx.loading,
+    list: ctx.list,
+    run: async () => {
+      await exec(`sh ${shellEscape(getModuleDir() + '/features/target.sh')}`);
+    },
+    refresh: ctx.refreshApps,
+    logStart: '[TARGET] Regenerating target.txt from all apps...',
+    logDone: '[TARGET] Regeneration complete',
+    logFailed: '[TARGET] Regeneration failed',
+  });
+}
 

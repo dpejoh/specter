@@ -1,9 +1,20 @@
-import { exec, getModuleDir } from './bridge.js';
+import { exec, getModuleDir, spawnCommand } from './bridge.js';
 import { t } from './i18n.js';
-import { showToast } from './toast.js';
+import { showToast, showLoadingToast, updateToast } from './toast.js';
 import { afterPaint, shellEscape, wireRowActivation } from './utils.js';
 import { runAction } from './actions.js';
 import { openSubPage } from './subpage.js';
+
+/** Resolve after two frames, once the disabled FAB and toast have painted. */
+function afterNextPaint(): Promise<void> {
+  return new Promise(resolve => {
+    if (typeof requestAnimationFrame !== 'function') {
+      resolve();
+      return;
+    }
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  });
+}
 
 function renderOmkRestartRow(
   container: HTMLElement,
@@ -206,19 +217,21 @@ export async function openOmkTrustPage(): Promise<void> {
 
         saving = true;
         fab.setAttribute('disabled', '');
+        const loadingToast = showLoadingToast(t('common_loading', 'Loading...'));
+        await afterNextPaint();
         try {
           const needsReboot = previousVbKey === 'random' && vbKey === 'auto';
-          const result = await exec(`sh ${scriptPath} --set ${args.join(' ')}`);
+          const result = await spawnCommand(`sh ${scriptPath} --set ${args.join(' ')}`);
           if (typeof result.code === 'number' && result.code !== 0) {
-            showToast(t('omk_save_error', result.stderr.trim() || 'Failed to save'), {
+            updateToast(loadingToast, t('omk_save_error', result.stderr.trim() || 'Failed to save'), {
               icon: 'error',
               type: 'error',
               autoCloseDelay: 4000,
             });
             return;
           }
-          await exec(`sh ${shellEscape(moddir + '/refresh_desc.sh')}`);
-          showToast(t('omk_saved', 'OMK OS & Boot Key saved'), {
+          await spawnCommand(`sh ${shellEscape(moddir + '/refresh_desc.sh')}`);
+          updateToast(loadingToast, t('omk_saved', 'OMK OS & Boot Key saved'), {
             icon: 'check_circle',
             type: 'success',
             autoCloseDelay: 2500,
@@ -232,7 +245,7 @@ export async function openOmkTrustPage(): Promise<void> {
           }
           page.close();
         } catch {
-          showToast(t('omk_save_error', 'Failed to save'), {
+          updateToast(loadingToast, t('omk_save_error', 'Failed to save'), {
             icon: 'error',
             type: 'error',
             autoCloseDelay: 4000,

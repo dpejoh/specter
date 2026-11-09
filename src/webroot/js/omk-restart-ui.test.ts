@@ -1,6 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { openSubPage, runAction, exec, afterPaint, paintState } = vi.hoisted(() => {
+const {
+  openSubPage,
+  runAction,
+  exec,
+  spawnCommand,
+  showToast,
+  showLoadingToast,
+  updateToast,
+  afterPaint,
+  paintState,
+} = vi.hoisted(() => {
   const paintState = { callback: null as (() => void) | null }
   return {
   openSubPage: vi.fn((config: {
@@ -20,6 +30,10 @@ const { openSubPage, runAction, exec, afterPaint, paintState } = vi.hoisted(() =
   }),
   runAction: vi.fn(async () => 0),
   exec: vi.fn(async (_cmd: string) => ({ code: 0, stdout: '', stderr: '' })),
+  spawnCommand: vi.fn(async (_cmd: string) => ({ code: 0, stdout: '', stderr: '' })),
+  showToast: vi.fn(),
+  showLoadingToast: vi.fn((_message: string) => document.createElement('div')),
+  updateToast: vi.fn(),
   afterPaint: vi.fn((fn: () => void) => { paintState.callback = fn }),
   paintState,
   }
@@ -27,20 +41,40 @@ const { openSubPage, runAction, exec, afterPaint, paintState } = vi.hoisted(() =
 
 vi.mock('./subpage.js', () => ({ openSubPage }))
 vi.mock('./actions.js', () => ({ runAction }))
-vi.mock('./bridge.js', () => ({ exec, getModuleDir: () => '/data/adb/modules/specter' }))
-vi.mock('./toast.js', () => ({ showToast: vi.fn() }))
+vi.mock('./bridge.js', () => ({
+  exec,
+  spawnCommand,
+  getModuleDir: () => '/data/adb/modules/specter',
+}))
+vi.mock('./toast.js', () => ({ showToast, showLoadingToast, updateToast }))
 vi.mock('./utils.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./utils.js')>()
   return { ...actual, afterPaint }
 })
 
 import { openOmkRestartPage, openOmkTrustPage } from './omk-trust-ui.js'
+import { t } from './i18n.js'
+
+const settle = async () => {
+  await new Promise(resolve => setTimeout(resolve, 0))
+  await new Promise(resolve => setTimeout(resolve, 0))
+}
+
+const paint = async () => {
+  await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+  await settle()
+}
 
 beforeEach(() => {
   openSubPage.mockClear()
   runAction.mockClear()
   exec.mockReset()
   exec.mockImplementation(async () => ({ code: 0, stdout: '', stderr: '' }))
+  spawnCommand.mockReset()
+  spawnCommand.mockImplementation(async () => ({ code: 0, stdout: '', stderr: '' }))
+  showToast.mockClear()
+  showLoadingToast.mockClear()
+  updateToast.mockClear()
   afterPaint.mockClear()
   paintState.callback = null
 })
@@ -186,13 +220,55 @@ describe('OMK trust page', () => {
     vbInput.value = 'auto'
     instance.overlay.append(osInput, vbInput)
 
-    mountFab(config, instance).click()
-    await new Promise(resolve => setTimeout(resolve, 0))
+    const fab = mountFab(config, instance)
+    fab.click()
 
-    const commands = exec.mock.calls.map(([cmd]) => String(cmd))
+    // The disabled FAB and loading toast paint before the shell work starts.
+    expect(fab.hasAttribute('disabled')).toBe(true)
+    expect(showLoadingToast).toHaveBeenCalledTimes(1)
+    expect(spawnCommand).not.toHaveBeenCalled()
+
+    await paint()
+
+    const commands = spawnCommand.mock.calls.map(([cmd]) => String(cmd))
     expect(commands.some(cmd => cmd.includes('--set') && cmd.includes('os_version=16') && cmd.includes('vb_key=auto'))).toBe(true)
     expect(commands.some(cmd => cmd.includes('refresh_desc.sh'))).toBe(true)
+    expect(updateToast).toHaveBeenCalledWith(
+      expect.anything(),
+      t('omk_saved', 'OMK OS & Boot Key saved'),
+      expect.objectContaining({ icon: 'check_circle', type: 'success' }),
+    )
     expect(instance.close).toHaveBeenCalled()
+    expect(fab.hasAttribute('disabled')).toBe(false)
+  })
+
+  it('reports a failed save, re-enables the FAB, and keeps the page open', async () => {
+    const { config, instance } = await openTrustPage()
+    const osInput = document.createElement('input')
+    osInput.id = 'omk-os-version'
+    osInput.value = '16'
+    instance.overlay.append(osInput)
+    spawnCommand.mockImplementation(async (cmd: string) => (
+      cmd.includes('--set')
+        ? { code: 1, stdout: '', stderr: 'denied\n' }
+        : { code: 0, stdout: '', stderr: '' }
+    ))
+
+    const fab = mountFab(config, instance)
+    fab.click()
+    expect(fab.hasAttribute('disabled')).toBe(true)
+    expect(showLoadingToast).toHaveBeenCalledTimes(1)
+    expect(spawnCommand).not.toHaveBeenCalled()
+
+    await paint()
+
+    expect(updateToast).toHaveBeenCalledWith(
+      expect.anything(),
+      t('omk_save_error', 'Failed to save OMK OS & Boot Key'),
+      expect.objectContaining({ icon: 'error', type: 'error' }),
+    )
+    expect(instance.close).not.toHaveBeenCalled()
+    expect(fab.hasAttribute('disabled')).toBe(false)
   })
 
   it('rejects a malformed VB key without saving', async () => {
@@ -205,7 +281,8 @@ describe('OMK trust page', () => {
     mountFab(config, instance).click()
     await new Promise(resolve => setTimeout(resolve, 0))
 
-    expect(exec.mock.calls.some(([cmd]) => String(cmd).includes('--set'))).toBe(false)
+    expect(spawnCommand.mock.calls.some(([cmd]) => String(cmd).includes('--set'))).toBe(false)
+    expect(showLoadingToast).not.toHaveBeenCalled()
     expect(instance.close).not.toHaveBeenCalled()
     expect(vbInput.getAttribute('aria-invalid')).toBe('true')
   })

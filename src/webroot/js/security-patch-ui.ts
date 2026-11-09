@@ -1,6 +1,6 @@
-import { exec, getModuleDir } from './bridge.js';
+import { exec, getModuleDir, spawnCommand } from './bridge.js';
 import { t } from './i18n.js';
-import { showToast, closeToast } from './toast.js';
+import { showToast, closeToast, showLoadingToast, updateToast } from './toast.js';
 import { API_URLS, defaultSecurityPatch } from './constants.js';
 import { afterPaint, fetchJson, shellEscape, wireRowActivation } from './utils.js';
 import { openSubPage } from './subpage.js';
@@ -9,12 +9,31 @@ import type { KeystoreManagerJson } from './types.js';
 import './ui/sp-skeleton.js';
 
 
-function isOmkPatchValue(val: string): boolean {
-  return val === 'auto' || val === 'latest' || /^\d{4}-\d{2}-\d{2}$/.test(val);
+/** Resolve after two frames, once the disabled FAB and toast have painted. */
+function afterNextPaint(): Promise<void> {
+  return new Promise(resolve => {
+    if (typeof requestAnimationFrame !== 'function') {
+      resolve();
+      return;
+    }
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  });
 }
 
 function isDatePatchValue(val: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(val);
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(val);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year
+    && date.getUTCMonth() === month - 1
+    && date.getUTCDate() === day;
+}
+
+function isOmkPatchValue(val: string): boolean {
+  return val === 'auto' || val === 'latest' || isDatePatchValue(val);
 }
 
 function formatDateInput(raw: string): string {
@@ -393,21 +412,23 @@ export async function openSecurityPatchPage() {
         }
 
         saveFab.setAttribute('disabled', '');
+        const loadingToast = showLoadingToast(t('common_loading', 'Loading...'));
+        await afterNextPaint();
         try {
-          const { code, stderr } = await exec(`sh ${scriptPath} --set ${shellEscape(next)}`);
+          const { code, stderr } = await spawnCommand(`sh ${scriptPath} --set ${shellEscape(next)}`);
           if (code !== 0) {
-            showToast(t('sp_save_error', stderr.trim() || 'Failed to save'), {
+            updateToast(loadingToast, stderr.trim() || t('sp_save_error', 'Failed to save'), {
               icon: 'error', type: 'error', autoCloseDelay: 4000,
             });
             return;
           }
-          await exec(`sh ${shellEscape(moddir + '/refresh_desc.sh')}`);
-          showToast(t('sp_saved', 'Security patch date saved'), {
+          await spawnCommand(`sh ${shellEscape(moddir + '/refresh_desc.sh')}`);
+          updateToast(loadingToast, t('sp_saved', 'Security patch date saved'), {
             icon: 'check_circle', type: 'success', autoCloseDelay: 2500,
           });
           page.close();
         } catch {
-          showToast(t('sp_save_error', 'Failed to save'), {
+          updateToast(loadingToast, t('sp_save_error', 'Failed to save'), {
             icon: 'error', type: 'error', autoCloseDelay: 4000,
           });
         } finally {

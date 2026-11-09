@@ -1,11 +1,22 @@
 import { cfgGet, cfgSet } from './cfg.js';
 import { t } from './i18n.js';
 import { openSubPage } from './subpage.js';
-import { showToast } from './toast.js';
-import { exec, getModuleDir } from './bridge.js';
+import { showToast, showLoadingToast, updateToast } from './toast.js';
+import { exec, getModuleDir, spawnCommand } from './bridge.js';
 import { afterPaint, escapeHtml, shellEscape } from './utils.js';
 import './ui/sp-skeleton.js';
 
+
+/** Resolve after two frames, once the disabled FAB and toast have painted. */
+function afterNextPaint(): Promise<void> {
+  return new Promise(resolve => {
+    if (typeof requestAnimationFrame !== 'function') {
+      resolve();
+      return;
+    }
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  });
+}
 
 export async function openBootHashSubpage() {
   const moddir = getModuleDir();
@@ -169,6 +180,12 @@ export async function openBootHashSubpage() {
           type: 'success',
           autoCloseDelay: 2500,
         });
+      } catch {
+        showToast(t('simple_toast_error', 'Failed'), {
+          icon: 'error',
+          type: 'error',
+          autoCloseDelay: 3000,
+        });
       } finally {
         if (refreshBtn) refreshBtn.removeAttribute('disabled');
       }
@@ -192,27 +209,31 @@ export async function openBootHashSubpage() {
       `;
       const clearBtn = container.querySelector('#bh-clear-btn') as HTMLElement | null;
       clearBtn?.addEventListener('click', async () => {
-        cfgSet('custom_boot_hash', '');
-        if (hashInputEl) hashInputEl.value = '';
-        if (moddir) {
-          await exec(`sh ${shellEscape(moddir + '/features/boot_hash.sh')} --refresh 2>/dev/null || true`);
-          try {
-            const { stdout: actOut } = await exec('resetprop ro.boot.vbmeta.digest 2>/dev/null || true');
-            if (activeHashEl) activeHashEl.textContent = actOut.trim() || t('boot_hash_active_empty', 'None');
-          } catch {}
-          try {
-            const { stdout: cOut } = await exec('cat /data/adb/specter/boot_hash 2>/dev/null || true');
-            const cVal = cOut.trim();
-            if (cacheHashEl) {
-              cacheHashEl.textContent = cVal || t('boot_hash_cache_empty', 'None');
-            }
-            if (clearCacheBtn) {
-              if (cVal) clearCacheBtn.removeAttribute('disabled');
-              else clearCacheBtn.setAttribute('disabled', '');
-            }
-          } catch {}
+        try {
+          await cfgSet('custom_boot_hash', '');
+          if (hashInputEl) hashInputEl.value = '';
+          if (moddir) {
+            await exec(`sh ${shellEscape(moddir + '/features/boot_hash.sh')} --refresh 2>/dev/null || true`);
+            try {
+              const { stdout: actOut } = await exec('resetprop ro.boot.vbmeta.digest 2>/dev/null || true');
+              if (activeHashEl) activeHashEl.textContent = actOut.trim() || t('boot_hash_active_empty', 'None');
+            } catch {}
+            try {
+              const { stdout: cOut } = await exec('cat /data/adb/specter/boot_hash 2>/dev/null || true');
+              const cVal = cOut.trim();
+              if (cacheHashEl) {
+                cacheHashEl.textContent = cVal || t('boot_hash_cache_empty', 'None');
+              }
+              if (clearCacheBtn) {
+                if (cVal) clearCacheBtn.removeAttribute('disabled');
+                else clearCacheBtn.setAttribute('disabled', '');
+              }
+            } catch {}
+          }
+          showToast(t('boot_hash_cleared', 'Custom hash cleared'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
+        } catch {
+          showToast(t('simple_toast_error', 'Failed'), { icon: 'error', type: 'error', autoCloseDelay: 3000 });
         }
-        showToast(t('boot_hash_cleared', 'Custom hash cleared'), { icon: 'check_circle', type: 'success', autoCloseDelay: 2500 });
       });
     },
     groups: [
@@ -325,20 +346,22 @@ export async function openBootHashSubpage() {
         }
 
         saveFab.setAttribute('disabled', '');
+        const loadingToast = showLoadingToast(t('common_loading', 'Loading...'));
+        await afterNextPaint();
         try {
-          cfgSet('custom_boot_hash', val);
+          await cfgSet('custom_boot_hash', val);
           if (moddir) {
             if (val) {
-              await exec(`su -c "resetprop -n ro.boot.vbmeta.digest ${shellEscape(val)}" 2>/dev/null || resetprop -n ro.boot.vbmeta.digest ${shellEscape(val)} 2>/dev/null || true`);
+              await spawnCommand(`su -c "resetprop -n ro.boot.vbmeta.digest ${shellEscape(val)}" 2>/dev/null || resetprop -n ro.boot.vbmeta.digest ${shellEscape(val)} 2>/dev/null || true`);
             } else {
-              await exec(`sh ${shellEscape(moddir + '/features/boot_hash.sh')} --refresh 2>/dev/null || true`);
+              await spawnCommand(`sh ${shellEscape(moddir + '/features/boot_hash.sh')} --refresh 2>/dev/null || true`);
             }
             try {
-              const { stdout } = await exec('resetprop ro.boot.vbmeta.digest 2>/dev/null || true');
+              const { stdout } = await spawnCommand('resetprop ro.boot.vbmeta.digest 2>/dev/null || true');
               if (activeHashEl) activeHashEl.textContent = stdout.trim() || t('boot_hash_active_empty', 'None');
             } catch {}
             try {
-              const { stdout: cOut } = await exec('cat /data/adb/specter/boot_hash 2>/dev/null || true');
+              const { stdout: cOut } = await spawnCommand('cat /data/adb/specter/boot_hash 2>/dev/null || true');
               const cVal = cOut.trim();
               if (cacheHashEl) {
                 cacheHashEl.textContent = cVal || t('boot_hash_cache_empty', 'None');
@@ -349,14 +372,14 @@ export async function openBootHashSubpage() {
               }
             } catch {}
           }
-          showToast(t('boot_hash_saved', 'Saved'), {
+          updateToast(loadingToast, t('boot_hash_saved', 'Saved'), {
             icon: 'check_circle',
             type: 'success',
             autoCloseDelay: 2500,
           });
           instance.close();
         } catch {
-          showToast(t('simple_toast_error', 'Failed'), {
+          updateToast(loadingToast, t('simple_toast_error', 'Failed'), {
             icon: 'error',
             type: 'error',
             autoCloseDelay: 3000,
