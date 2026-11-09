@@ -35,20 +35,24 @@ _hi_setup() {
 
 . "$REPO_ROOT/src/lib/hotinstall.sh"
 
-# ---- APatch skipped ----
+# ---- APatch happy path: swap, no stub ----
 bootstrap
 source_libs
 _hi_setup
+unset _specter_hot_done
 ROOT_SOL="apatch"
+ROOT_TYPE="APatch"
 specter_hot_install
-assert_file_eq "apatch: live unchanged" "$LIVE/module.prop" "$(printf 'id=specter\nname=OldVersion\nversionCode=1\n')"
-assert_eq "apatch: no hot-done" "" "${_specter_hot_done:-}"
-assert_file_exists "apatch: staging intact" "$STAGE/module.prop"
+assert_file_eq "apatch: live updated" "$LIVE/module.prop" "$(printf 'id=specter\nname=NewVersion\nversionCode=2\n')"
+assert_file_exists "apatch: executor ran" "$LIVE/hi.ran"
+assert_file_not_exists "apatch: no stub in staging" "$STAGE/module.prop"
+assert_eq "apatch: hot-done set" "1" "${_specter_hot_done:-}"
 
 # ---- first install skipped ----
 bootstrap
 source_libs
 _hi_setup
+unset _specter_hot_done
 rm -rf "$LIVE"
 specter_hot_install
 assert_file_exists "first-install: staging intact" "$STAGE/module.prop"

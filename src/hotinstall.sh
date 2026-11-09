@@ -18,6 +18,14 @@ rm -f "$SPECTER_DIR/.hotinstall_failed"
   # Normalize the bundled inotifyd binary; hot installs never run customize.sh.
   install_inotifyd "$MODDIR"
 
+  # APatch labels module files at boot only; a swapped-in tree keeps the
+  # staging contexts unless they are refreshed.
+  [ -n "${ROOT_SOL:-}" ] || detect_root_solution
+  if [ "$ROOT_SOL" = "apatch" ] && command -v restorecon >/dev/null 2>&1; then
+    restorecon -R "$MODDIR" >/dev/null 2>&1 || true
+    log_i "HOT" "Refreshed SELinux contexts (APatch)"
+  fi
+
   # Kill the boot-time scheduler + its inotifyd children (pre-update code), and
   # any inotifyd that was reparented to init during the move.
   for _p in $(pgrep -f "$MODDIR/deps/inotifyd" 2>/dev/null || true); do

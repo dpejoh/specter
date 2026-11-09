@@ -49,7 +49,7 @@ specter_hot_install() {
   fi
 
   case "$ROOT_SOL" in
-    kernelsu|magisk) ;;
+    kernelsu|magisk|apatch) ;;
     *) unset _hi_modid _hi_live _hi_stage; return 0 ;;
   esac
 
