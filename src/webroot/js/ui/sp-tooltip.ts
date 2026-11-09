@@ -66,7 +66,7 @@ export class SpTooltip extends LitElement {
       border-radius: var(--sp-tooltip-shape, 4px);
       background: var(--md-sys-color-inverse-surface, #313033);
       color: var(--md-sys-color-inverse-on-surface, #f4eff4);
-      font-family: var(--md-sys-typescale-body-small-font-family, inherit);
+      font-family: var(--md-sys-typescale-body-small-font, var(--md-ref-typeface-plain, inherit));
       font-size: 0.75rem;
       font-weight: 400;
       line-height: 1rem;

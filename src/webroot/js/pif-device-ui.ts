@@ -18,13 +18,10 @@ import { openFileBrowser } from './file-browser.js';
 import { showConfirm } from './dialog.js';
 import { showToast } from './toast.js';
 import { afterPaint, escapeHtml, shellEscape } from './utils.js';
-import { t } from './i18n.js';
+import { t, tf } from './i18n.js';
 import { refreshPifChooseDesc as refreshChooseDesc } from './pif-choose-desc.js';
 import { openSubPage } from './subpage.js';
 import { closeMenu, wireMenuTrigger } from './menu-utils.js';
-
-const tf = (key: string, fallback: string, value: string): string =>
-  t(key, fallback).replaceAll('{0}', value);
 
 const IMPORTED_PREFIX = 'imported:';
 

@@ -19,6 +19,9 @@ vi.mock('./utils.js', () => ({
 // mirroring a translation hit; everything else uses its literal fallback.
 vi.mock('./i18n.js', () => ({
   t: (key: string, fallback = '') => (fallback !== '' ? fallback : key || ''),
+  tf: (key: string, fallback = '', ...values: Array<string | number>) =>
+    (fallback !== '' ? fallback : key || '').replace(/\{(\d+)\}/g, (match: string, index: string) =>
+      values[Number(index)] === undefined ? match : String(values[Number(index)])),
 }));
 
 type HistoryModule = typeof import('./history.js');

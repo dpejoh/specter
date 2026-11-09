@@ -34,6 +34,7 @@ const m = vi.hoisted(() => ({
   refreshKeyboxWatchInBackground: vi.fn(async () => {}),
   refreshConflictStatus: vi.fn(async () => h.conflicts),
   reapplyKeyboxStatus: vi.fn(async () => {}),
+  reapplyKeystoreManager: vi.fn(),
   initTheme: vi.fn(),
   initI18n: vi.fn(async () => {}),
   loadContributors: vi.fn(async () => {}),
@@ -94,6 +95,7 @@ vi.mock('./device.js', () => ({
   initDevice: m.initDevice, refreshKeyboxStatus: m.refreshKeyboxStatus,
   refreshKeyboxWatchInBackground: m.refreshKeyboxWatchInBackground,
   refreshConflictStatus: m.refreshConflictStatus, reapplyKeyboxStatus: m.reapplyKeyboxStatus,
+  reapplyKeystoreManager: m.reapplyKeystoreManager,
 }));
 vi.mock('./theme.js', () => ({ initTheme: m.initTheme }));
 vi.mock('./i18n.js', () => ({

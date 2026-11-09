@@ -2,7 +2,7 @@ import { afterPaint, fetchJson } from './utils.js';
 import { runScript, spawnScript } from './bridge.js';
 import { appendToOutput } from './terminal.js';
 import { API_URLS } from './constants.js';
-import { getTranslation } from './i18n.js';
+import { getTranslation, t } from './i18n.js';
 import { getModulesSnapshot } from './modules.js';
 import { showToast } from './toast.js';
 import type { ConflictModule, InfoJson, KeyboxInfoJson, KeystoreManagerJson } from './types.js';
@@ -199,7 +199,10 @@ async function refreshKeystoreManagerFromScript(): Promise<KeystoreManagerJson |
   }
 }
 
+let _lastKeystoreManager: KeystoreManagerJson | null = null;
+
 function applyKeystoreManager(data: KeystoreManagerJson) {
+  _lastKeystoreManager = data;
   const show = data.id === 'omk';
   for (const id of ['omk-restart-btn', 'omk-trust-btn']) {
     const el = document.getElementById(id);
@@ -214,6 +217,11 @@ function applyKeystoreManager(data: KeystoreManagerJson) {
 
 function applyAllDeviceInfo(data: InfoJson) {
   applySecurityPatch(data);
+}
+
+/** Re-apply the last keystore snapshot, e.g. after the language changes. */
+export function reapplyKeystoreManager() {
+  if (_lastKeystoreManager) applyKeystoreManager(_lastKeystoreManager);
 }
 
 let _lastKeyboxData: KeyboxInfoJson | null = null;
@@ -251,7 +259,7 @@ export function applyKeyboxStatus(data: KeyboxInfoJson) {
 
   const setBy = (visible: boolean) => {
     if (byEl) {
-      byEl.textContent = 'by';
+      byEl.textContent = t('home_keybox_by', 'by');
       byEl.style.display = visible ? '' : 'none';
     }
   };
@@ -281,7 +289,7 @@ export function applyKeyboxStatus(data: KeyboxInfoJson) {
   const isRawbin = !!data.source && !isPrivate && data.source !== 'unknown';
 
   if (isPrivate) {
-    setName('Private Keybox', true);
+    setName(t('custom_kb_private_toggle', 'Private Keybox'), true);
     setBy(false);
     setSource('');
     versionEl.textContent = '';
@@ -311,7 +319,7 @@ export function applyKeyboxStatus(data: KeyboxInfoJson) {
   }
 
   if (isRawbin) {
-    setType(data.rkp === true ? 'RKP' : 'Normal', true);
+    setType(data.rkp === true ? t('keybox_info_rkp', 'RKP') : t('keybox_info_normal', 'Normal'), true);
   } else {
     setType('—');
   }

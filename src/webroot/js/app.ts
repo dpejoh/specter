@@ -1,7 +1,7 @@
 import { initBridge, getDataDir, getModuleDir, exec } from './bridge.js';
 import { shellEscape, setDevMode, wireLazyClick } from './utils.js';
 import { setDataDir, migrateLocalStorage, cfgInit, cfgGet } from './cfg.js';
-import { initDevice, refreshKeyboxStatus, refreshKeyboxWatchInBackground, refreshConflictStatus, reapplyKeyboxStatus } from './device.js';
+import { initDevice, refreshKeyboxStatus, refreshKeyboxWatchInBackground, refreshConflictStatus, reapplyKeyboxStatus, reapplyKeystoreManager } from './device.js';
 import { initTheme } from './theme.js';
 import { initI18n, t } from './i18n.js';
 import { loadContributors } from './contributors.js';
@@ -71,6 +71,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadContributors().catch(() => {});
     renderActivityPreview(true);
     refreshKeyboxStatus().catch(() => {});
+    reapplyKeystoreManager();
     void import('./pif-choose-desc.js').then(m => m.refreshPifChooseDesc()).catch(() => {});
     import('./dark-theme-ui.js').then(m => m.updateDarkThemeSummary()).catch(() => {});
     import('./language-ui.js').then(m => m.updateLanguageSummary()).catch(() => {});
@@ -91,7 +92,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   initDevice().catch(() => {});
   void cfgReady
     .then(() => initI18n())
-    .then(() => reapplyKeyboxStatus())
+    .then(() => {
+      reapplyKeyboxStatus();
+      reapplyKeystoreManager();
+      // Re-render dynamic Home strings (relative times, event count, action
+      // names) with the active language pack.
+      renderActivityPreview(true);
+    })
     .catch(() => {});
   // Revocation is server-side and random. Run the existing watcher in the
   // background on WebUI open so the snapshot is as fresh as the network allows;

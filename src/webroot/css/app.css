@@ -1697,7 +1697,7 @@ sp-snackbar.sp-snackbar--error .sp-snackbar__leading md-icon {
 }
 
 .ta-state-text {
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: var(--md-ref-typeface-plain, system-ui, sans-serif);
   font-weight: 700;
   font-size: 18px;
   line-height: 1;

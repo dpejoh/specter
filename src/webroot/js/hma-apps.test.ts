@@ -45,7 +45,7 @@ vi.mock('./dialog.js', () => ({
     return d;
   },
 }));
-vi.mock('./i18n.js', () => ({ getTranslation: () => '' }));
+vi.mock('./i18n.js', () => ({ getTranslation: () => '', t: (_key: string, fallback = '') => fallback }));
 vi.mock('./target-apps-icons.js', () => ({
   ksuGlobal: () => undefined,
   AppIconManager: class {

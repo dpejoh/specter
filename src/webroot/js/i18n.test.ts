@@ -13,7 +13,7 @@ vi.mock('./cfg.js', () => ({ cfgGet, cfgSet }));
 
 import {
   SUPPORTED_LANGUAGES, applyLanguage, applyTranslations,
-  getCurrentLanguageCode, getTranslation, initI18n, t,
+  getCurrentLanguageCode, getTranslation, initI18n, t, tf,
 } from './i18n.js';
 
 const AR_STRINGS = { dialog_apply: 'تطبيق', home_events: 'أحداث' };
@@ -50,6 +50,13 @@ describe('i18n', () => {
     expect(getTranslation('no_such_key_xyz')).toBeNull();
     expect(t('no_such_key_xyz', 'Fallback')).toBe('Fallback');
     expect(t('dialog_apply', 'Fallback')).toBe('Apply');
+  });
+
+  it('replaces numbered placeholders without breaking word order', async () => {
+    await applyLanguage('en', false);
+    expect(tf('no_such_key_xyz', '{0} events', 3)).toBe('3 events');
+    expect(tf('no_such_key_xyz', '{1} of {0}', 'ten', 2)).toBe('2 of ten');
+    expect(tf('no_such_key_xyz', '{0} and {1}')).toBe('{0} and {1}');
   });
 
   it('initI18n applies the saved language', async () => {
@@ -128,6 +135,7 @@ describe('i18n', () => {
       <span data-i18n="home_events">x</span>
       <span data-i18n="missing_key">keep me</span>
       <button data-i18n-aria="dialog_apply"></button>
+      <button data-i18n-title="dialog_apply" title="old"></button>
       <input data-i18n-placeholder="dialog_apply" />`;
     // <title> lives in head; move it there for a realistic query root.
     document.head.appendChild(document.querySelector('title')!);
@@ -140,6 +148,7 @@ describe('i18n', () => {
     expect(document.querySelector('[data-i18n="home_events"]')?.textContent).toBe('أحداث');
     expect(document.querySelector('[data-i18n="missing_key"]')?.textContent).toBe('keep me');
     expect(document.querySelector('[data-i18n-aria]')?.getAttribute('aria-label')).toBe('تطبيق');
+    expect(document.querySelector('[data-i18n-title]')?.getAttribute('title')).toBe('تطبيق');
     expect((document.querySelector('[data-i18n-placeholder]') as HTMLInputElement).placeholder).toBe('تطبيق');
   });
 });

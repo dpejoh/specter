@@ -25,6 +25,16 @@
     // Pre-populate config cache from localStorage to skip shell exec in cfgInit
     window.__preloadedCfg = {};
     try { for(var __i=0;__i<localStorage.length;__i++){var __k=localStorage.key(__i);if(__k&&__k.indexOf('sp_cfg_')===0&&__k!=='sp_cfg_ts')window.__preloadedCfg[__k.slice(7)]=localStorage.getItem(__k);} } catch(__e){}
+    // Apply the default Google Sans family before the app config loads so the
+    // first paint matches the configured typography. initFonts() still owns
+    // the toggle and removes these properties when the user disables it.
+    (function () {
+      var cfg = window.__preloadedCfg || {};
+      if (cfg['toggle_custom_font'] !== '0') {
+        document.documentElement.style.setProperty('--md-ref-typeface-brand', '"Google Sans Variable"');
+        document.documentElement.style.setProperty('--md-ref-typeface-plain', '"Google Sans Variable"');
+      }
+    })();
     (function () {
       var cfg = window.__preloadedCfg || {};
       var lang = cfg['lang'] || 'auto';
@@ -145,7 +155,7 @@
           <span class="sr-only" data-i18n="app_title">Specter</span>
         </h1>
         <div class="spacer"></div>
-        <md-icon-button id="theme-toggle" class="app-header-action" aria-label="Switch theme" title="Switch theme">
+        <md-icon-button id="theme-toggle" class="app-header-action" aria-label="Switch theme" title="Switch theme" data-i18n-aria="theme_toggle" data-i18n-title="theme_toggle">
           <md-icon aria-hidden="true">dark_mode</md-icon>
         </md-icon-button>
       </div>
@@ -163,7 +173,7 @@
                   <span class="kb-hero-provider-label" data-i18n="menu_keybox">Keybox</span>
                   <div class="kb-hero-name-row">
                     <span class="kb-hero-keybox-name" id="keybox-name">—</span>
-                    <span class="kb-hero-by" id="keybox-by" style="display: none;">by</span>
+                    <span class="kb-hero-by" id="keybox-by" style="display: none;" data-i18n="home_keybox_by">by</span>
                     <span class="kb-hero-provider-name" id="keybox-source" style="display: none;"></span>
                     <span class="kb-hero-provider-version kb-hero-provider-version--neutral" id="keybox-version" style="display: none;"></span>
                     <span class="kb-version-badge" id="kb-version-badge"></span>
@@ -288,7 +298,7 @@
             <sp-settings-row id="pif-choose-device" variant="navigation" hidden>
               <md-icon slot="icon" aria-hidden="true">smartphone</md-icon>
               <span slot="headline" data-i18n="menu_pif_choose">Choose PIF Device</span>
-              <span slot="supporting" id="pif-choose-device-desc">Pick which Pixel Canary models Specter may fetch</span>
+              <span slot="supporting" id="pif-choose-device-desc" data-i18n="menu_pif_choose_desc">Pick which Pixel Canary models Specter may fetch</span>
             </sp-settings-row>
           </sp-settings-section>
 
@@ -397,7 +407,7 @@
             <sp-settings-row id="language-row" variant="navigation">
               <md-icon slot="icon" aria-hidden="true">language</md-icon>
               <span slot="headline" data-i18n="settings_language">Language</span>
-              <span slot="supporting" id="language-summary">Auto</span>
+              <span slot="supporting" id="language-summary" data-i18n="theme_mode_auto">Auto</span>
             </sp-settings-row>
           </sp-settings-section>
 
@@ -406,8 +416,8 @@
             <sp-settings-row id="dark-theme-row" variant="toggle" has-page>
               <md-icon slot="icon" aria-hidden="true">dark_mode</md-icon>
               <span slot="headline" data-i18n="settings_theme_mode">Dark theme</span>
-              <span slot="supporting" id="dark-theme-summary">Off</span>
-              <button type="button" slot="trailing" class="li-config-btn" data-config aria-label="Configure Dark theme">
+              <span slot="supporting" id="dark-theme-summary" data-i18n="settings_theme_status_off">Off</span>
+              <button type="button" slot="trailing" class="li-config-btn" data-config aria-label="Configure Dark theme" data-i18n-aria="settings_theme_configure">
                 <svg class="li-config-chevron" viewBox="0 0 8 14" width="8" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 2L6.5 7L1.5 12"/></svg>
               </button>
               <div slot="trailing" class="li-config-divider" aria-hidden="true"></div>
@@ -416,7 +426,7 @@
             <sp-settings-row id="color-theme-row" variant="navigation">
               <md-icon slot="icon" aria-hidden="true">palette</md-icon>
               <span slot="headline" data-i18n="settings_colors_title">Colors</span>
-              <span slot="supporting" id="color-theme-summary">System (Dynamic)</span>
+              <span slot="supporting" id="color-theme-summary" data-i18n="colors_dynamic_name">System (Dynamic)</span>
               <div slot="trailing" class="li-color-action">
                 <span class="color-preview-dot" id="settings-color-dot"></span>
               </div>

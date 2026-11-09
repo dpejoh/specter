@@ -134,7 +134,7 @@ export async function openLogsSubPage() {
     description: t('settings_logs_desc', 'View terminal output and execution logs'),
     headerAction: (container) => {
       container.innerHTML = `
-        <md-icon-button id="logs-refresh-btn" aria-label="${t('btn_refresh', 'Refresh')}">
+        <md-icon-button id="logs-refresh-btn" aria-label="${t('common_refresh', 'Refresh')}">
           <md-icon aria-hidden="true">refresh</md-icon>
         </md-icon-button>
         <md-icon-button id="logs-copy-btn" aria-label="${t('terminal_copy', 'Copy')}">

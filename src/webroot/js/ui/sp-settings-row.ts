@@ -8,6 +8,7 @@
 
 import { LitElement, css, html, nothing } from 'lit';
 import { defineUiComponent } from './define.js';
+import { t } from '../i18n.js';
 
 export type SpSettingsRowVariant =
   | 'navigation'
@@ -685,7 +686,7 @@ export class SpSettingsRow extends LitElement {
           type="button"
           class="copy-btn"
           part="copy-action"
-          aria-label=${this.copyLabel || `Copy ${this.headline || this.label || 'value'}`}
+          aria-label=${this.copyLabel || t('common_copy', 'Copy')}
           @click=${this.#handleCopy}
         >
           <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">

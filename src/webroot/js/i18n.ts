@@ -99,6 +99,17 @@ export function t(key: string, fallback = ''): string {
   return getTranslation(key) || fallback;
 }
 
+/**
+ * Translate and replace `{0}`, `{1}`, … placeholders with the supplied values.
+ * Keeping the placeholders in the packs lets each language choose word order.
+ */
+export function tf(key: string, fallback = '', ...values: Array<string | number>): string {
+  return t(key, fallback).replace(/\{(\d+)\}/g, (match, index: string) => {
+    const value = values[Number(index)];
+    return value === undefined ? match : String(value);
+  });
+}
+
 export function applyTranslations() {
   for (const el of document.querySelectorAll('[data-i18n]')) {
     const key = (el as HTMLElement).dataset.i18n;
@@ -121,5 +132,9 @@ export function applyTranslations() {
   for (const el of document.querySelectorAll('[data-i18n-placeholder]')) {
     const val = currentStrings[(el as HTMLElement).dataset.i18nPlaceholder!] || fallbackStrings[(el as HTMLElement).dataset.i18nPlaceholder!];
     if (val) (el as HTMLInputElement).placeholder = val;
+  }
+  for (const el of document.querySelectorAll('[data-i18n-title]')) {
+    const val = currentStrings[(el as HTMLElement).dataset.i18nTitle!] || fallbackStrings[(el as HTMLElement).dataset.i18nTitle!];
+    if (val) el.setAttribute('title', val);
   }
 }

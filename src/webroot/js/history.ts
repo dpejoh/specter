@@ -1,6 +1,6 @@
 import { afterPaint, escapeHtml, getFriendlyNames } from './utils.js';
 import { STORAGE_KEY, MAX_ENTRIES } from './constants.js';
-import { t } from './i18n.js';
+import { t, tf } from './i18n.js';
 import { exec, getDataDir } from './bridge.js';
 import { shellEscape } from './utils.js';
 
@@ -60,10 +60,10 @@ function formatRelativeTime(iso: string): string {
     const diff = Date.now() - new Date(iso).getTime();
     const m = Math.floor(diff / 60000);
     if (m < 1) return t('home_just_now', 'Just now');
-    if (m < 60) return `${m}${t('home_min_ago', 'm ago')}`;
+    if (m < 60) return tf('home_min_ago', '{0}m ago', m);
     const h = Math.floor(m / 60);
-    if (h < 24) return `${h}${t('home_hour_ago', 'h ago')}`;
-    return `${Math.floor(h / 24)}${t('home_day_ago', 'd ago')}`;
+    if (h < 24) return tf('home_hour_ago', '{0}h ago', h);
+    return tf('home_day_ago', '{0}d ago', Math.floor(h / 24));
   } catch { return ''; }
 }
 
@@ -83,14 +83,14 @@ function wirePreviewClear() {
 function renderPreviewEntries(container: HTMLElement, allEntries: HistoryEntry[]) {
   const countEl = document.getElementById('activity-count');
   const count = allEntries.length;
-  if (countEl) countEl.textContent = `${count} ${t('home_events', 'events')}`;
+  if (countEl) countEl.textContent = tf('home_events', '{0} events', count);
   container.innerHTML = '';
 
   const VISIBLE = 4;
   for (let i = 0; i < count; i++) {
     const entry = allEntries[i]!;
     const isError = entry.code !== undefined ? entry.code !== 0 : entry.output.toLowerCase().includes('error');
-    const friendlyName = entry.script === 'action.sh' ? 'Action' : (t(getFriendlyNames()[entry.script] ?? '', '') || entry.script);
+    const friendlyName = entry.script === 'action.sh' ? t('history_action', 'Action') : (t(getFriendlyNames()[entry.script] ?? '', '') || entry.script);
     const stripLog = (l: string) => l.replace(/^\[\d{2}:\d{2}:\d{2}\] \[[DIWE]\] \[[^\]]*\] /, '');
     const desc = entry.output.split('\n').map(stripLog).reverse().find(l => l.trim() && !/^(>|x |\[!\])/.test(l))?.slice(0, 50) || '';
     const item = document.createElement('div');

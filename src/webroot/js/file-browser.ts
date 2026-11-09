@@ -1,5 +1,5 @@
 import { shellEscape, escapeHtml } from './utils.js';
-import { t } from './i18n.js';
+import { t, tf } from './i18n.js';
 import { exec } from './bridge.js';
 import '@material/web/menu/menu.js';
 import '@material/web/menu/menu-item.js';
@@ -37,13 +37,13 @@ function formatDate(epochSec: number): string {
   const time = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
   if (date.toDateString() === now.toDateString()) {
-    return `Today, ${time}`;
+    return `${t('time_today', 'Today at').trim()} ${time}`;
   }
 
   const yesterday = new Date(now);
   yesterday.setDate(now.getDate() - 1);
   if (date.toDateString() === yesterday.toDateString()) {
-    return `Yesterday, ${time}`;
+    return `${t('time_yesterday', 'Yesterday at').trim()} ${time}`;
   }
 
   const month = date.toLocaleDateString([], { month: 'short' });
@@ -63,14 +63,14 @@ function getFileVisual(name: string): FileVisual {
   if (lower.endsWith('.xml')) {
     return {
       icon: 'vpn_key',
-      typeLabel: 'XML Key Provider',
+      typeLabel: t('fb_type_xml', 'XML Key Provider'),
       tone: 'fb-icon--key',
     };
   }
   if (lower.endsWith('.key') || lower.endsWith('.pem') || lower.endsWith('.crt') || lower.endsWith('.cer') || lower.endsWith('.der')) {
     return {
       icon: 'key',
-      typeLabel: 'Certificate / Key',
+      typeLabel: t('fb_type_cert', 'Certificate / Key'),
       tone: 'fb-icon--key',
     };
   }
@@ -80,7 +80,7 @@ function getFileVisual(name: string): FileVisual {
       lower.endsWith('.bz2') || lower.endsWith('.xz') || lower.endsWith('.7z') || lower.endsWith('.rar')) {
     return {
       icon: 'folder_zip',
-      typeLabel: 'Archive',
+      typeLabel: t('fb_type_archive', 'Archive'),
       tone: 'fb-icon--archive',
     };
   }
@@ -89,7 +89,7 @@ function getFileVisual(name: string): FileVisual {
   if (lower.endsWith('.apk') || lower.endsWith('.apks') || lower.endsWith('.xapk') || lower.endsWith('.apkm')) {
     return {
       icon: 'android',
-      typeLabel: 'Android Package',
+      typeLabel: t('fb_type_apk', 'Android Package'),
       tone: 'fb-icon--apk',
     };
   }
@@ -98,14 +98,14 @@ function getFileVisual(name: string): FileVisual {
   if (lower.endsWith('.sh') || lower.endsWith('.bash') || lower.endsWith('.zsh')) {
     return {
       icon: 'terminal',
-      typeLabel: 'Shell Script',
+      typeLabel: t('fb_type_script', 'Shell Script'),
       tone: 'fb-icon--code',
     };
   }
   if (lower.endsWith('.js') || lower.endsWith('.ts') || lower.endsWith('.py') || lower.endsWith('.c') || lower.endsWith('.cpp')) {
     return {
       icon: 'code',
-      typeLabel: 'Source Code',
+      typeLabel: t('fb_type_code', 'Source Code'),
       tone: 'fb-icon--code',
     };
   }
@@ -114,14 +114,14 @@ function getFileVisual(name: string): FileVisual {
   if (lower.endsWith('.prop') || lower.endsWith('.conf') || lower.endsWith('.ini') || lower.endsWith('.cfg')) {
     return {
       icon: 'tune',
-      typeLabel: 'Build Properties',
+      typeLabel: t('fb_type_props', 'Build Properties'),
       tone: 'fb-icon--config',
     };
   }
   if (lower.endsWith('.json') || lower.endsWith('.toml') || lower.endsWith('.yaml') || lower.endsWith('.yml')) {
     return {
       icon: 'data_object',
-      typeLabel: 'Structured Config',
+      typeLabel: t('fb_type_config', 'Structured Config'),
       tone: 'fb-icon--config',
     };
   }
@@ -130,21 +130,21 @@ function getFileVisual(name: string): FileVisual {
   if (lower.endsWith('.png') || lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.webp') || lower.endsWith('.gif') || lower.endsWith('.svg')) {
     return {
       icon: 'image',
-      typeLabel: 'Image',
+      typeLabel: t('fb_type_image', 'Image'),
       tone: 'fb-icon--image',
     };
   }
   if (lower.endsWith('.mp3') || lower.endsWith('.ogg') || lower.endsWith('.flac') || lower.endsWith('.wav') || lower.endsWith('.m4a') || lower.endsWith('.aac')) {
     return {
       icon: 'audio_file',
-      typeLabel: 'Audio',
+      typeLabel: t('fb_type_audio', 'Audio'),
       tone: 'fb-icon--audio',
     };
   }
   if (lower.endsWith('.mp4') || lower.endsWith('.mkv') || lower.endsWith('.webm') || lower.endsWith('.avi') || lower.endsWith('.mov')) {
     return {
       icon: 'video_file',
-      typeLabel: 'Video',
+      typeLabel: t('fb_type_video', 'Video'),
       tone: 'fb-icon--video',
     };
   }
@@ -153,28 +153,28 @@ function getFileVisual(name: string): FileVisual {
   if (lower.endsWith('.pdf')) {
     return {
       icon: 'picture_as_pdf',
-      typeLabel: 'PDF Document',
+      typeLabel: t('fb_type_pdf', 'PDF Document'),
       tone: 'fb-icon--pdf',
     };
   }
   if (lower.endsWith('.txt') || lower.endsWith('.log') || lower.endsWith('.md')) {
     return {
       icon: 'article',
-      typeLabel: 'Text Document',
+      typeLabel: t('fb_type_text', 'Text Document'),
       tone: 'fb-icon--text',
     };
   }
   if (lower.endsWith('.bak')) {
     return {
       icon: 'history',
-      typeLabel: 'Backup File',
+      typeLabel: t('fb_type_backup', 'Backup File'),
       tone: 'fb-icon--backup',
     };
   }
 
   return {
     icon: 'description',
-    typeLabel: 'File',
+    typeLabel: t('fb_type_file', 'File'),
     tone: 'fb-icon--file',
   };
 }
@@ -209,7 +209,7 @@ function getBreadcrumbs(path: string, rootLabel: string): Breadcrumb[] {
       });
     });
   } else {
-    crumbs.push({ label: 'Root', path: '/', isCurrent: false });
+    crumbs.push({ label: t('fb_root', 'Root'), path: '/', isCurrent: false });
     const parts = norm.split('/').filter(Boolean);
     let accum = '';
     parts.forEach((part, idx) => {
@@ -267,7 +267,7 @@ export async function openFileBrowser(
 
   const filterLabel = extensions.some(e => e.toLowerCase().includes('xml'))
     ? t('fb_filter_keybox', 'Keybox Files')
-    : (extensions.join(', ') + ' files');
+    : tf('fb_filter_files', '{0} files', extensions.join(', '));
 
   function render() {
     const dirs = entries.filter(e => e.isFolder);
@@ -309,7 +309,7 @@ export async function openFileBrowser(
         })}
 
         <div class="fb-breadcrumbs-wrap">
-          <nav class="fb-breadcrumbs" id="fb-breadcrumbs" aria-label="Breadcrumb">
+          <nav class="fb-breadcrumbs" id="fb-breadcrumbs" aria-label="${escapeHtml(t('fb_breadcrumb_aria', 'Breadcrumb'))}">
             ${renderBreadcrumbsHtml(currentPath, t('fb_internal_storage', 'Internal storage'))}
           </nav>
         </div>
@@ -500,7 +500,7 @@ export async function openFileBrowser(
           titleId: 'fb-title',
         })}
         <div class="fb-breadcrumbs-wrap">
-          <nav class="fb-breadcrumbs" id="fb-breadcrumbs" aria-label="Breadcrumb">
+          <nav class="fb-breadcrumbs" id="fb-breadcrumbs" aria-label="${escapeHtml(t('fb_breadcrumb_aria', 'Breadcrumb'))}">
             ${renderBreadcrumbsHtml(path, t('fb_internal_storage', 'Internal storage'))}
           </nav>
         </div>

@@ -41,7 +41,7 @@ vi.mock('./utils.js', () => ({
 }));
 vi.mock('./toast.js', () => ({ showToast }));
 vi.mock('./terminal.js', () => ({ appendToOutput }));
-vi.mock('./i18n.js', () => ({ getTranslation: () => '' }));
+vi.mock('./i18n.js', () => ({ getTranslation: () => '', t: (_key: string, fallback = '') => fallback }));
 vi.mock('./constants.js', () => ({ API_URLS: { KEYSTORE_MANAGER: '/json/keystore_manager.json' } }));
 vi.mock('./target-apps-icons.js', () => ({
   ksuGlobal: () => undefined,
