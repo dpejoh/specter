@@ -91,7 +91,7 @@ public final class SetupProbe {
         addFeature(features, "Auto Keybox", dataDir, "toggle_autokeybox", "0",
                 "autokeybox_interval", "86400");
         if (hmaPresent) {
-            addFeature(features, "Auto HMA config", dataDir, "toggle_auto_hma", "1",
+            addFeature(features, "Auto HMA config", dataDir, "toggle_auto_hma", "0",
                     "hma_interval", "21600");
         }
         if (pifPresent) addFeature(features, "Auto PIF", dataDir, "toggle_autopif", "0", null, null);
