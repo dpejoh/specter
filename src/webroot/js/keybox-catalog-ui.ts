@@ -125,7 +125,7 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
 
   const canInstall = () =>
     !loading && !installing && (selectedEntry
-      ? isActiveEntry(selectedEntry)
+      ? true
       : activeInFilter().length > 0);
 
   const updateFab = () => {
@@ -275,7 +275,7 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
 
     const visible = visibleEntries();
     const autoAvailable = visible.some(isActiveEntry);
-    if (selectedEntry && !visible.some(entry => entryKey(entry) === selectedKey && isActiveEntry(entry))) {
+    if (selectedEntry && !visible.some(entry => entryKey(entry) === selectedKey)) {
       selectedKey = AUTO_KEY;
       selectedEntry = null;
     }
@@ -304,7 +304,7 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
         entryDescription(entry),
         'vpn_key',
         entryKey(entry) === installedKey ? t('kb_installed_badge', 'Installed') : undefined,
-        !active,
+        false,
       ));
     }
 
@@ -352,7 +352,7 @@ export function mountKeyboxCatalog(container: HTMLElement, options: KeyboxCatalo
     if (providerFilter !== 'all' && !sources.includes(providerFilter)) {
       providerFilter = 'all';
     }
-    if (selectedEntry && !entries.some(entry => entryKey(entry) === selectedKey && isActiveEntry(entry))) {
+    if (selectedEntry && !entries.some(entry => entryKey(entry) === selectedKey)) {
       selectedKey = AUTO_KEY;
       selectedEntry = null;
     }
