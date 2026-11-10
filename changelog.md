@@ -2,33 +2,28 @@
 
 ### Highlights
 
-- **WebUI component system**: Settings, Tools, Control, and subpages use `sp-settings-row`, `sp-settings-section`, `sp-skeleton`, `sp-page-skeleton`, `sp-tooltip`, and `sp-snackbar`. The legacy row and corner machinery is removed.
-- **Material 3 Expressive**: connected grouped cards, shared shapes and type, theme-aware header branding and brand artwork, and the system Monet/HCT palette.
-- **Page loading**: Tools, Control, and Settings load on first open behind a skeleton. Page modules load on demand. Startup uses one state/config snapshot and Home no longer starts shell reads.
-- **HMA-OSS scope manager**: scope and blacklist editing per app, apply in place, on-device profile generation from presets, detector app handling, hidden Xposed modules, and `--list-raw` / `--set` CLI support. Auto-update is opt-in and off by default.
-- **Keybox catalog, details, and watch**: R2-backed catalog with Worker and last-known-good fallback, status/provider filters, upload-date order, full details page, and an hourly check that replaces revoked or expired keyboxes when auto-replace is enabled.
-- **App Targeting**: grouped rows, mode/status filters, header search, async apply with progress, immediate blacklist pruning, and background description refresh.
-- **Setup page**: native device/module/feature snapshot through `app_process` (`SetupProbe`) with a shell fallback. The Home keystore/security card opens it.
-- **Hot install**: userspace updates apply without reboot on Magisk, KernelSU, and APatch. Mounted payloads (`system`, `vendor`, `product`, `system_ext`, `sepolicy.rule`, `system.prop`, `zygisk`) still require a reboot.
-- **Boot Hash page**: dedicated subpage with custom hash spoofing and cache controls.
-- **Translations**: Arabic, Spanish, French, Hungarian, Indonesian, Polish, Russian, Turkish, Vietnamese, and Chinese.
+- **WebUI performance fixes**: skeleton-first page loading, on-demand modules, one startup snapshot, no Home shell reads, heavy work off the UI thread.
+- **WebUI component system**: shared rows, sections, skeletons, tooltips and snackbar. Legacy list code removed.
+- **Material 3 Expressive**: grouped cards, shared shapes and type, themed branding, Monet/HCT palette.
+- **HMA-OSS scope manager**: per-app scope and blacklist editing, on-device presets, detector and Xposed handling. Auto-update off by default.
+- **Keybox catalog and watch**: R2 catalog with fallback, filters, details page, hourly revoked/expired replacement.
+- **App Targeting**: grouped rows, filters, search, async apply, blacklist pruning.
+- **Setup page**: native snapshot with shell fallback.
+- **Hot install**: userspace updates without reboot; mounted payloads still reboot.
+- **Boot Hash page**: custom hash and cache controls.
+- **10 locales**: Arabic, Spanish, French, Hungarian, Indonesian, Polish, Russian, Turkish, Vietnamese, Chinese.
 
-### Changed
+### Changes and fixes
 
-- HMA config is generated on-device; the downloaded config URL is removed.
-- Auto Keybox page and HMA launch policy/live-reload toggles removed. The keybox refresh watch replaces Auto Keybox.
-- HMA auto-update defaults off, interval 6 hours. Keybox watch defaults to 60 minutes with an auto-replace toggle.
-- Action pipeline is non-interactive and skips auto-managed target/HMA jobs unless forced.
-
-### Fixed
-
-- Keybox: Google revocation serial matching, minified XML and expired roots, revoked entries, and no-curl download fallback.
-- Hot install: Magisk no longer leaves a staging stub that wipes the module after reboot.
-- Also fixed: blacklist back navigation, fixed-target handling, HMA merge, theme persistence, log tab switching, keybox filters, home truncation, and other minor issues.
-
-### Under the hood
-
-- 585 WebUI tests, 589 shell assertions, mksh emulation, coverage for the `ui/` components, and fewer shell forks in target, keystore, and HMA paths.
+- HMA config generated on-device; downloaded config URL removed.
+- Auto Keybox page and HMA launch/reload toggles removed; refresh watch replaces Auto Keybox.
+- HMA auto-update off by default, 6h. Keybox watch 60m with auto-replace toggle.
+- Action pipeline non-interactive, skips auto-managed target/HMA jobs unless forced.
+- Save actions run out of process; Security Patch, Boot Hash and OMK stay open.
+- Keybox fixes: revocation serial matching, minified XML, expired roots, revoked entries.
+- Hot install: no leftover Magisk staging stub after reboot.
+- Also fixed: blacklist back navigation, fixed targets, HMA merge, theme persistence, log tabs, keybox filters, home truncation.
+- 1032 WebUI tests, 589 shell assertions, mksh emulation, UI coverage, fewer shell forks.
 
 # v1.5.0
 
