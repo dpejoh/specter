@@ -91,6 +91,7 @@ jobs:
           COMMIT_AUTHOR=$(git log -1 --pretty=%an)
           COMMIT_BODY=$(git log -1 --pretty=%b)
           GIT_HASH=$(git rev-parse --short=8 HEAD)
+          export COMMIT_SUBJECT COMMIT_AUTHOR COMMIT_BODY GIT_HASH
 
           caption=$(python3 - <<'PY'
           import os
