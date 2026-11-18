@@ -7,7 +7,7 @@
 [![latest release](https://img.shields.io/github/v/release/dpejoh/specter?label=Release&logo=github)](https://github.com/dpejoh/specter/releases/latest)
 [![CI](https://github.com/dpejoh/specter/actions/workflows/build-test.yml/badge.svg)](https://github.com/dpejoh/specter/actions/workflows/build-test.yml)
 
-Strong integrity, TEESimulator management, detection cleanup. Clean, focused, no bloat.
+Strong integrity, Tricky Store management, detection cleanup. Clean, focused, no bloat.
 
 [Download](https://github.com/dpejoh/specter/releases/latest)
 
@@ -23,12 +23,13 @@ Strong integrity, TEESimulator management, detection cleanup. Clean, focused, no
 1. Install [Tricky Store](https://github.com/5ec1cff/TrickyStore/releases/latest) /
    [TEESimulator](https://github.com/JingMatrix/TEESimulator/releases/latest) /
    [Tricky Store OSS](https://github.com/beakthoven/TrickyStoreOSS/releases/latest)
-   (Specter auto-installs Tricky Store OSS if none found; skip if using OhMyKeymint)
-2. Install [Play Integrity Inject](https://github.com/KOWX712/PlayIntegrityFix/releases/latest)
+   [OhMyKeymint](https://github.com/qwq233/OhMyKeymint/releases/latest)
+   (Specter auto-installs Tricky Store OSS if none found)
+3. Install [Play Integrity Inject](https://github.com/KOWX712/PlayIntegrityFix/releases/latest)
    or [Play Integrity Fork](https://github.com/osm0sis/PlayIntegrityFork/releases/latest)
-3. Install Specter via Magisk / KernelSU / APatch
-4. Reboot. First-boot runs backup, target, security patch, keybox.
-5. Open the WebUI
+4. Install Specter via Magisk / KernelSU / APatch
+5. Reboot. First-boot runs backup, target, keybox.
+6. Open the WebUI
 
 ## Features
 
@@ -43,10 +44,10 @@ Strong integrity, TEESimulator management, detection cleanup. Clean, focused, no
 - **HMA-OSS**: scope manager page, config generation, auto-update
 - **Zygisk Next**: detection and configuration
 - **Detection Cleanup**: removes detector logs, temp dirs, caches
-- **Widevine L1**: attestation keys via KmInstallKeybox
+- **Widevine L1**: writes DRM attestation keys via KmInstallKeybox
 - **Conflict Resolution**: aggressive modules disabled, passive coexists, TEESimulator WebUI feature ownership
 - **Scheduler**: keybox revocation watch, auto-target, HMA auto-update, autopif
-- **First-Boot**: backup originals, run full pipeline once
+- **First-Boot**: backup originals, run default actions pipeline once
 
 ## Build
 
@@ -76,8 +77,8 @@ Specter is programmed not to cause problems, but an unlocked phone always comes 
 ## Thanks
 
 - [chiteroman](https://github.com/chiteroman/PlayIntegrityFix), [KOWX712](https://github.com/KOWX712/PlayIntegrityFix) and [osm0sis](https://github.com/osm0sis/PlayIntegrityFork). PIF and forks.
-- [5ec1cff](https://github.com/5ec1cff/TrickyStore), [JingMatrix](https://github.com/JingMatrix/TEESimulator), [beakthoven](https://github.com/beakthoven/TrickyStoreOSS). Tricky Store and forks.
-- [KOWX712](https://github.com/KOWX712/Tricky-Addon-Update-Target-List), [Enginex0](https://github.com/Enginex0/tricky-addon-enhanced). Tricky Store Addon.
+- [5ec1cff](https://github.com/5ec1cff/TrickyStore), [JingMatrix](https://github.com/JingMatrix/TEESimulator), [beakthoven](https://github.com/beakthoven/TrickyStoreOSS), [qwq233](https://github.com/qwq233/OhMyKeymint). Tricky Store and forks.
+- [KOWX712](https://github.com/KOWX712/Tricky-Addon-Update-Target-List), [Enginex0](https://github.com/Enginex0/tricky-addon-enhanced). Tricky Addon.
 - [eltavine](https://github.com/eltavine/Duck-Detector-Refactoring). Duck Detector.
 - [Citra-Standalone](https://github.com/Citra-Standalone/TSupport-Advance). TSupport-Advance.
 
