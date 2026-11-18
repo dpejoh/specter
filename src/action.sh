@@ -37,16 +37,6 @@ _force_keybox=$(cfg_get toggle_action_force_keybox 0)
 {
   log_i "ACTION" "Running full integrity pipeline"
 
-  _feature_should_run "gms" && {
-    log_u "ACTION" ""
-    log_u "ACTION" "-> Play Store:"
-    if [ "$_first_boot" = "1" ]; then
-      log_i "ACTION" "First boot, skipping Play Store data clear"
-    else
-      sh "$MODDIR/features/kill_play_store.sh" || true
-    fi
-  }
-
   if _feature_should_run "target"; then
     log_u "ACTION" ""
     log_u "ACTION" "-> App Targeting:"
@@ -101,7 +91,15 @@ _force_keybox=$(cfg_get toggle_action_force_keybox 0)
       sh "$MODDIR/features/pif.sh" || true
     fi
   fi
-
+  _feature_should_run "gms" && {
+    log_u "ACTION" ""
+    log_u "ACTION" "-> GMS:"
+    if [ "$_first_boot" = "1" ]; then
+      log_i "ACTION" "First boot, skipping GMS restart"
+    else
+      sh "$MODDIR/features/gms.sh" || true
+    fi
+  }
   if _feature_should_run "hma" 0; then
     log_u "ACTION" ""
     log_u "ACTION" "-> HMA-OSS Config:"
