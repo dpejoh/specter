@@ -78,7 +78,7 @@ Specter is programmed not to cause problems, but an unlocked phone always comes 
 
 - [chiteroman](https://github.com/chiteroman/PlayIntegrityFix), [KOWX712](https://github.com/KOWX712/PlayIntegrityFix) and [osm0sis](https://github.com/osm0sis/PlayIntegrityFork). PIF and forks.
 - [5ec1cff](https://github.com/5ec1cff/TrickyStore), [JingMatrix](https://github.com/JingMatrix/TEESimulator), [beakthoven](https://github.com/beakthoven/TrickyStoreOSS), [qwq233](https://github.com/qwq233/OhMyKeymint). Tricky Store and forks.
-- [KOWX712](https://github.com/KOWX712/Tricky-Addon-Update-Target-List), [Enginex0](https://github.com/Enginex0/tricky-addon-enhanced). Tricky Addon.
+- [KOWX712](https://github.com/KOWX712/Tricky-Addon-Update-Target-List). Tricky Addon.
 - [eltavine](https://github.com/eltavine/Duck-Detector-Refactoring). Duck Detector.
 - [Citra-Standalone](https://github.com/Citra-Standalone/TSupport-Advance). TSupport-Advance.
 
